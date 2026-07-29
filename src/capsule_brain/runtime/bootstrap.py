@@ -39,7 +39,24 @@ def load_config(path: str | Path) -> dict[str, Any]:
 
 
 def _validate_config(cfg: dict[str, Any]) -> None:
-    """Validate configuration consistency before building the application."""
+    """Validate configuration consistency before building the application.
+
+    The runtime uses ``enable`` consistently for service activation.  A common
+    integration mistake is to write ``enabled`` instead; silently accepting that
+    typo makes a qualification run appear to boot correctly while major services
+    are actually absent.  Reject that alias explicitly with a corrective hint.
+    """
+    service_sections = {
+        "llm_gateway", "conversation", "feedback", "reflection", "execution",
+        "verification", "workflow", "redis_bridge", "memory_consolidator",
+    }
+    for section in service_sections:
+        section_cfg = cfg.get(section)
+        if isinstance(section_cfg, dict) and "enabled" in section_cfg:
+            raise ConfigurationError(
+                f"Unknown configuration key '{section}.enabled'. "
+                f"Use '{section}.enable' instead."
+            )
     llm_enabled = cfg.get("llm_gateway", {}).get("enable", False)
 
     # LLM-dependent services that are explicitly enabled require the LLM gateway.

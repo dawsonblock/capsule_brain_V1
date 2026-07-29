@@ -1,0 +1,34 @@
+{
+  "expected_version": "2.14.0",
+  "installed_version": "2.14.0",
+  "source_tree_sha256": "90ce7853e538b3d3e697a0e908336d8fcd67cae27c0f82aa7866e155f4a623ac",
+  "installed_wheel_sha256": "d6e6abb0a6b0b2f7fcadcaf98a553ece004309afdc2606690b84dfb65037c8a7",
+  "python_version": "3.12.0",
+  "platform": "macOS-26.2-arm64-arm-64bit",
+  "ollama_version": "ollama version is 0.12.0",
+  "models": [
+    {
+      "model": "qwen2.5-coder:3b",
+      "parameter_size": "3.1B",
+      "quantization": "Q4_K_M",
+      "architecture": "qwen2"
+    },
+    {
+      "model": "llama3.1:8b",
+      "parameter_size": "8.0B",
+      "quantization": "Q4_K_M",
+      "architecture": "llama"
+    }
+  ],
+  "harness_files": [
+    "cb_common.py",
+    "provenance.py",
+    "run_tests.py",
+    "smoke.py",
+    "test11_container.py",
+    "test8_check.py",
+    "test8_store.py",
+    "test9_resume.py",
+    "test9_start.py"
+  ]
+}

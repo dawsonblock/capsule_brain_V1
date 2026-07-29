@@ -1,0 +1,104 @@
+Capsule Brain v2.14.0 — Connected Build Validation
+===================================================
+
+Date: 2026-07-29
+Host: Darwin 25.2.0 arm64
+Python: 3.12.0
+
+PROVENANCE
+----------
+Source-tree SHA-256 (src/**/*.py + tests/**/*.py + pyproject.toml):
+  90ce7853e538b3d3e697a0e908336d8fcd67cae27c0f82aa7866e155f4a623ac
+Source-built wheel SHA-256:
+  d6e6abb0a6b0b2f7fcadcaf98a553ece004309afdc2606690b84dfb65037c8a7
+Installed-package byte comparison (src/ vs site-packages):
+  diff -rq: NO DIFFERENCES (byte-identical capsule_brain package)
+pyproject.toml version: 2.14.0
+importlib.metadata.version("capsule-brain") after install: 2.14.0
+
+SOURCE CORRECTIONS PRESENT
+--------------------------
+src/capsule_brain/runtime/bootstrap.py:
+  - "Unknown configuration key '<section>.enabled'" rejection: PRESENT
+src/capsule_brain/workflow/builtins.py:
+  - normalize_python_artifact(): PRESENT
+  - verifier-conditioned repair prompt ("VERIFIER / ACCEPTANCE FAILURE",
+    "Do not weaken or bypass the acceptance test"): PRESENT
+src/capsule_brain/execution/container_runner.py:
+  - CID-file bug fix (delete reserved path before docker run): PRESENT
+
+src/ vs installed v2.14.0 package:
+  diff -rq src/capsule_brain <site-packages>/capsule_brain: NO DIFFERENCES
+
+BUILD COMMANDS
+--------------
+python -m compileall -q src tests
+  -> PASS (exit 0)
+
+PYTHONPATH=src pytest -q
+  -> PASS: 199 passed in 5.78s
+     (182 pre-existing + 17 new test_v214_connected.py)
+
+PYTHONPATH=src python demo.py
+  -> PASS: application started, full event flow executed,
+     all services stopped cleanly.
+
+python -m pip wheel . --no-deps --no-build-isolation -w dist
+  -> PASS: capsule_brain-2.14.0-py3-none-any.whl built.
+
+LIVE LOCAL-LLM QUALIFICATION (qual214/)
+----------------------------------------
+Inference server: Ollama 0.12.0 (OpenAI-compatible endpoint)
+Primary model: qwen2.5-coder:3b (digest f72c60cabf62, 3.1B Q4_K_M)
+Secondary model: llama3.1:8b (digest 46e0c10c039e, 8.0B Q4_K_M)
+
+Provenance enforcement: harness asserts version("capsule-brain") == "2.14.0"
+before any test runs; records manifest.json with source-tree SHA-256, wheel
+SHA-256, Python version, platform, Ollama version, model digests.
+
+Results (qual214/qualification_results.json):
+  2_boot                    PASS     (runtime)
+  3_conversation            PASS     (runtime)
+  4_tools_qwen              BLOCKED  (model — no native tool_calls emission)
+  4_tools_llama31           PARTIAL  (model — tool machinery proven,
+                                      grounding fails: hallucinated return value)
+  5_acceptance              PASS     (runtime)
+  6_false_success           PASS     (runtime)
+  7_reflection              PASS     (runtime)
+  8_persistence             PASS     (runtime)
+  9_recovery                PASS     (runtime — same workflow both sides,
+                                      resume into real acceptance gate)
+  10_failure_injection      PASS     (runtime)
+  11_container_execution    PASS     (runtime — Docker, full production controls)
+
+Overall qualification: PASS.
+One sub-case BLOCKED (model limitation).
+One sub-case PARTIAL (model grounding limitation, runtime tool path proven).
+Neither converted to PASS.
+
+TOOL-RESULT GROUNDING (honest assessment)
+-----------------------------------------
+Four properties tracked separately:
+  1. tool_selection_success       — proven (llama3.1:8b)
+  2. tool_execution_success       — proven (llama3.1:8b)
+  3. tool_result_delivery_success — proven (llama3.1:8b)
+  4. final_answer_grounding_success — NOT proven with available local models
+     (llama3.1:8b hallucinates a different return value; qwen2.5-coder:3b
+     cannot emit native tool calls at all)
+
+The Capsule Brain tool protocol is correct (verified by transcript inspection
+and raw-endpoint tests). The grounding failure is a local-model behavior.
+
+CONTAINER EXECUTION
+-------------------
+Test 11 ran the real acceptance workflow through Docker with:
+  - read-only root, network none, non-root (65534:65534)
+  - memory 512m, swap 512m, cpus 1.0, pids 128, nofile 1024
+  - cap-drop ALL, no-new-privileges, pinned image digest
+  - python:3.11-slim resolved to immutable digest
+Acceptance passed inside the container (exit 0, ACCEPTANCE_OK).
+
+NOT CLAIMED
+-----------
+No AutoLearn, reinforcement learning, model-weight learning, learned
+executive policy, or autonomous self-improvement is asserted.

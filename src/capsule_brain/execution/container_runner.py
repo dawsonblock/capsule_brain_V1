@@ -170,14 +170,23 @@ class ContainerExecutionRunner:
         # Use a CID file so we can explicitly kill/remove the container on
         # timeout. Killing the Docker CLI process does not guarantee the
         # backing container is stopped.
+        #
+        # We create a NamedTemporaryFile solely to reserve a unique path, then
+        # delete it. docker's --cidfile refuses to write to an existing file
+        # (exit 125: "container ID file found"), so the path must not exist
+        # when docker runs.
         cid_file = tempfile.NamedTemporaryFile(
             mode="w",
             suffix=".cid",
             delete=False,
             prefix="capsule_exec_",
         )
-        cid_file.close()
         cid_path = cid_file.name
+        cid_file.close()
+        try:
+            os.unlink(cid_path)
+        except OSError:
+            pass
 
         command = [
             self.engine,

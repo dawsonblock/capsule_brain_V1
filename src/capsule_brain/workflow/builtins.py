@@ -17,6 +17,34 @@ log = logging.getLogger(__name__)
 DEFAULT_MAX_REFLECT_ITERATIONS = 3
 
 
+def normalize_python_artifact(text: str) -> tuple[str, bool]:
+    """Normalize common presentation wrappers around a Python artifact.
+
+    Small/local chat models frequently obey the code-generation request but
+    still wrap the entire artifact in a single Markdown code fence.  That is a
+    transport/presentation defect, not a semantic programming defect, and it
+    should not consume the reflection budget.  Only an *outer* fence is removed;
+    arbitrary prose or embedded fences are left untouched so verification still
+    fails closed.
+
+    Returns ``(normalized_text, changed)``.
+    """
+    raw = (text or "").strip()
+    if not raw.startswith("```"):
+        return raw, False
+    lines = raw.splitlines()
+    if len(lines) < 3 or lines[-1].strip() != "```":
+        return raw, False
+    opener = lines[0].strip().lower()
+    if opener not in {"```", "```python", "```py"}:
+        return raw, False
+    inner = "\n".join(lines[1:-1]).strip()
+    # Refuse to normalize nested fences or prose-like trailing wrappers.
+    if "```" in inner:
+        return raw, False
+    return inner, inner != raw
+
+
 def _safe_get(services: Any, name: str) -> Any:
     """Fetch a service from a registry/dict, returning None if absent."""
     if services is None:
@@ -135,7 +163,8 @@ def build_plan_generate_test_reflect_workflow(
                 ),
                 route="coding",
             )
-            state.code = result.text.strip()
+            state.code, normalized = normalize_python_artifact(result.text)
+            state.extra["artifact_normalized"] = bool(normalized)
             state.extra["generation_failed"] = not bool(state.code)
             if not state.code:
                 state.errors.append("generation returned empty code")
@@ -396,20 +425,29 @@ def build_plan_generate_test_reflect_workflow(
                         prompt=(
                             f"GOAL:\n{state.goal}\n\n"
                             f"PLAN:\n{state.plan}\n\n"
-                            f"CODE:\n{state.code}\n\n"
-                            f"STDERR:\n{state.stderr[:1000]}\n\n"
-                            f"Produce a corrected version of the code. "
-                            f"Output ONLY the code."
+                            f"CURRENT PYTHON ARTIFACT:\n{state.code}\n\n"
+                            f"VERIFICATION KIND: "
+                            f"{state.extra.get('verification_kind', 'unknown')}\n"
+                            f"VERIFIER / ACCEPTANCE FAILURE:\n"
+                            f"{state.stderr[:1400]}\n\n"
+                            "REPAIR REQUIREMENTS:\n"
+                            "- Fix the specific verifier or acceptance failure above.\n"
+                            "- Preserve required public function/class signatures.\n"
+                            "- Return raw Python source only.\n"
+                            "- Do not include Markdown fences or explanations.\n"
+                            "- Do not weaken or bypass the acceptance test.\n"
                         ),
                         temperature=0.0,
                         system=(
-                            "You are a reflection module. Analyze the test "
-                            "failure and output corrected code."
+                            "You are a verifier-conditioned code repair module. "
+                            "The external verifier is authoritative. Produce only "
+                            "the corrected Python artifact."
                         ),
                     ),
                     route="reflection",
                 )
-                state.code = result.text.strip()
+                state.code, normalized = normalize_python_artifact(result.text)
+                state.extra["artifact_normalized"] = bool(normalized)
                 state.extra["generation_failed"] = not bool(state.code)
             except Exception as exc:
                 log.warning("reflect node LLM call failed: %s", exc)

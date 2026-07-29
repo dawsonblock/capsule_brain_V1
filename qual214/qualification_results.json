@@ -1,319 +1,467 @@
 {
-  "2_boot": {
-    "test": "2_boot",
-    "status": "PASS",
-    "classification": "runtime",
-    "evidence": {
-      "services": [
-        "llm_gateway",
-        "tool_registry",
-        "conversation",
-        "experience_store",
-        "execution",
-        "verification",
-        "workflow_runner"
-      ],
-      "unhealthy": {},
-      "smoke_success_disabled_rejects": true
-    },
-    "error": null
+  "provenance": {
+    "expected_version": "2.14.0",
+    "installed_version": "2.14.0",
+    "source_tree_sha256": "90ce7853e538b3d3e697a0e908336d8fcd67cae27c0f82aa7866e155f4a623ac",
+    "installed_wheel_sha256": "d6e6abb0a6b0b2f7fcadcaf98a553ece004309afdc2606690b84dfb65037c8a7",
+    "python_version": "3.12.0",
+    "platform": "macOS-26.2-arm64-arm-64bit",
+    "ollama_version": "ollama version is 0.12.0",
+    "models": [
+      {
+        "model": "qwen2.5-coder:3b",
+        "parameter_size": "3.1B",
+        "quantization": "Q4_K_M",
+        "architecture": "qwen2"
+      },
+      {
+        "model": "llama3.1:8b",
+        "parameter_size": "8.0B",
+        "quantization": "Q4_K_M",
+        "architecture": "llama"
+      }
+    ],
+    "harness_files": [
+      "cb_common.py",
+      "provenance.py",
+      "run_tests.py",
+      "smoke.py",
+      "test11_container.py",
+      "test8_check.py",
+      "test8_store.py",
+      "test9_resume.py",
+      "test9_start.py"
+    ]
   },
-  "3_conversation": {
-    "test": "3_conversation",
-    "status": "PASS",
-    "classification": "runtime",
-    "evidence": {
-      "successes": 10,
-      "total": 10,
-      "experience_records": 10,
-      "records": [
-        {
-          "kind": "exact",
-          "prompt": "Reply with exactly the word PONG. Nothing else.",
-          "response": "PONG",
-          "success": true,
-          "latency_ms": 781.7,
-          "model_latency_ms": 778.1549170031212,
-          "model": "qwen2.5-coder:3b",
-          "provider": "openai",
-          "exception": null
-        },
-        {
-          "kind": "arithmetic",
-          "prompt": "What is 7 * 8? Reply with only the number.",
-          "response": "56",
-          "success": true,
-          "latency_ms": 221.1,
-          "model_latency_ms": 216.05066600022838,
-          "model": "qwen2.5-coder:3b",
-          "provider": "openai",
-          "exception": null
-        },
-        {
-          "kind": "json",
-          "prompt": "Return JSON only: {\"answer\": 42}. No other text.",
-          "response": "{\"answer\": 42}",
-          "success": true,
-          "latency_ms": 245.4,
-          "model_latency_ms": 242.64079102431424,
-          "model": "qwen2.5-coder:3b",
-          "provider": "openai",
-          "exception": null
-        },
-        {
-          "kind": "python",
-          "prompt": "Write a one-line Python expression that adds 2 and 3. Just the expression.",
-          "response": "2 + 3",
-          "success": true,
-          "latency_ms": 220.5,
-          "model_latency_ms": 219.2781250050757,
-          "model": "qwen2.5-coder:3b",
-          "provider": "openai",
-          "exception": null
-        },
-        {
-          "kind": "reasoning",
-          "prompt": "If a train travels 60km in 1 hour, what is its speed in km/h? Reply with only the number.",
-          "response": "60",
-          "success": true,
-          "latency_ms": 197.2,
-          "model_latency_ms": 191.74383400240913,
-          "model": "qwen2.5-coder:3b",
-          "provider": "openai",
-          "exception": null
-        },
-        {
-          "kind": "continuity_a",
-          "prompt": "My name is TestUser42. Remember it for the next message.",
-          "response": "Hello, TestUser42! How can I assist you today?",
-          "success": true,
-          "latency_ms": 363.3,
-          "model_latency_ms": 361.951292026788,
-          "model": "qwen2.5-coder:3b",
-          "provider": "openai",
-          "exception": null
-        },
-        {
-          "kind": "continuity_b",
-          "prompt": "What name did I just tell you? Reply with only the name.",
-          "response": "TestUser42",
-          "success": true,
-          "latency_ms": 217.5,
-          "model_latency_ms": 216.2782499799505,
-          "model": "qwen2.5-coder:3b",
-          "provider": "openai",
-          "exception": null
-        },
-        {
-          "kind": "exact2",
-          "prompt": "Reply with exactly: HELLO_CAPSULE",
-          "response": "HELLO_CAPSULE",
-          "success": true,
-          "latency_ms": 196.4,
-          "model_latency_ms": 195.33104199217632,
-          "model": "qwen2.5-coder:3b",
-          "provider": "openai",
-          "exception": null
-        },
-        {
-          "kind": "arithmetic2",
-          "prompt": "What is 100 - 37? Reply with only the number.",
-          "response": "63",
-          "success": true,
-          "latency_ms": 183.9,
-          "model_latency_ms": 182.78999999165535,
-          "model": "qwen2.5-coder:3b",
-          "provider": "openai",
-          "exception": null
-        },
-        {
-          "kind": "short_reasoning",
-          "prompt": "Is 9 prime? Reply with only YES or NO.",
-          "response": "NO",
-          "success": true,
-          "latency_ms": 136.7,
-          "model_latency_ms": 135.59433299815282,
-          "model": "qwen2.5-coder:3b",
-          "provider": "openai",
-          "exception": null
-        }
-      ]
+  "results": {
+    "2_boot": {
+      "test": "2_boot",
+      "status": "PASS",
+      "classification": "runtime",
+      "evidence": {
+        "services": [
+          "llm_gateway",
+          "tool_registry",
+          "conversation",
+          "experience_store",
+          "execution",
+          "verification",
+          "workflow_runner"
+        ],
+        "unhealthy": {},
+        "smoke_success_disabled_rejects": true
+      },
+      "error": null
     },
-    "error": null
-  },
-  "4_tools_qwen": {
-    "model": "qwen2.5-coder:3b",
-    "status": "BLOCKED",
-    "classification": "model",
-    "evidence": {
-      "response": "{\n  \"name\": \"secret_nonce\",\n  \"arguments\": {}\n}",
-      "nonce_in_response": false,
-      "counter_calls": 0,
-      "tool_calls_executed": 0,
-      "tools_used": [],
-      "tool_failures": 0,
-      "raw_endpoint_finding": "qwen2.5-coder:3b via Ollama 0.12.0 emits tool calls as JSON content, never as native tool_calls (confirmed at /v1/chat/completions with tool_choice auto/required/specific). Capsule Brain's OpenAI-compatible provider only parses native tool_calls, so native execution cannot occur with this model. This is a model/inference-server limitation, not a Capsule Brain defect."
+    "3_conversation": {
+      "test": "3_conversation",
+      "status": "PASS",
+      "classification": "runtime",
+      "evidence": {
+        "successes": 10,
+        "total": 10,
+        "experience_records": 10,
+        "records": [
+          {
+            "kind": "exact",
+            "prompt": "Reply with exactly the word PONG. Nothing else.",
+            "response": "PONG",
+            "success": true,
+            "latency_ms": 2253.5,
+            "model_latency_ms": 2251.6950000135694,
+            "model": "qwen2.5-coder:3b",
+            "provider": "openai",
+            "exception": null
+          },
+          {
+            "kind": "arithmetic",
+            "prompt": "What is 7 * 8? Reply with only the number.",
+            "response": "56",
+            "success": true,
+            "latency_ms": 151.9,
+            "model_latency_ms": 150.73566598584875,
+            "model": "qwen2.5-coder:3b",
+            "provider": "openai",
+            "exception": null
+          },
+          {
+            "kind": "json",
+            "prompt": "Return JSON only: {\"answer\": 42}. No other text.",
+            "response": "{\"answer\": 42}",
+            "success": true,
+            "latency_ms": 222.9,
+            "model_latency_ms": 221.74487501615658,
+            "model": "qwen2.5-coder:3b",
+            "provider": "openai",
+            "exception": null
+          },
+          {
+            "kind": "python",
+            "prompt": "Write a one-line Python expression that adds 2 and 3. Just the expression.",
+            "response": "2 + 3",
+            "success": true,
+            "latency_ms": 212.9,
+            "model_latency_ms": 211.56833300483413,
+            "model": "qwen2.5-coder:3b",
+            "provider": "openai",
+            "exception": null
+          },
+          {
+            "kind": "reasoning",
+            "prompt": "If a train travels 60km in 1 hour, what is its speed in km/h? Reply with only the number.",
+            "response": "60",
+            "success": true,
+            "latency_ms": 183.3,
+            "model_latency_ms": 182.15924999094568,
+            "model": "qwen2.5-coder:3b",
+            "provider": "openai",
+            "exception": null
+          },
+          {
+            "kind": "continuity_a",
+            "prompt": "My name is TestUser42. Remember it for the next message.",
+            "response": "Hello, TestUser42! How can I assist you today?",
+            "success": true,
+            "latency_ms": 352.7,
+            "model_latency_ms": 351.6015409841202,
+            "model": "qwen2.5-coder:3b",
+            "provider": "openai",
+            "exception": null
+          },
+          {
+            "kind": "continuity_b",
+            "prompt": "What name did I just tell you? Reply with only the name.",
+            "response": "TestUser42",
+            "success": true,
+            "latency_ms": 229.4,
+            "model_latency_ms": 226.72837498248555,
+            "model": "qwen2.5-coder:3b",
+            "provider": "openai",
+            "exception": null
+          },
+          {
+            "kind": "exact2",
+            "prompt": "Reply with exactly: HELLO_CAPSULE",
+            "response": "HELLO_CAPSULE",
+            "success": true,
+            "latency_ms": 208.0,
+            "model_latency_ms": 206.76341699436307,
+            "model": "qwen2.5-coder:3b",
+            "provider": "openai",
+            "exception": null
+          },
+          {
+            "kind": "arithmetic2",
+            "prompt": "What is 100 - 37? Reply with only the number.",
+            "response": "63",
+            "success": true,
+            "latency_ms": 182.9,
+            "model_latency_ms": 181.60933299805038,
+            "model": "qwen2.5-coder:3b",
+            "provider": "openai",
+            "exception": null
+          },
+          {
+            "kind": "short_reasoning",
+            "prompt": "Is 9 prime? Reply with only YES or NO.",
+            "response": "NO",
+            "success": true,
+            "latency_ms": 132.0,
+            "model_latency_ms": 130.80624997382984,
+            "model": "qwen2.5-coder:3b",
+            "provider": "openai",
+            "exception": null
+          }
+        ]
+      },
+      "error": null
+    },
+    "4_tools_qwen": {
+      "model": "qwen2.5-coder:3b",
+      "status": "BLOCKED",
+      "classification": "model",
+      "evidence": {
+        "response": "{\"name\": \"secret_nonce\", \"arguments\": {}}",
+        "response_normalized": "NAMESECRET_NONCEARGUMENTS",
+        "expected_nonce": "CAPSULE_TOOL_9F31B7",
+        "tool_selection_success": false,
+        "tool_execution_success": false,
+        "tool_result_delivery_success": false,
+        "final_answer_grounding_success": false,
+        "nonce_in_response_substring": false,
+        "nonce_present_as_token": false,
+        "counter_calls": 0,
+        "tool_calls_executed": 0,
+        "tools_used": [],
+        "tool_failures": 0,
+        "raw_endpoint_finding": "qwen2.5-coder:3b via Ollama 0.12.0 emits tool calls as JSON content, never as native tool_calls (confirmed at /v1/chat/completions with tool_choice auto/required/specific). Capsule Brain's OpenAI-compatible provider only parses native tool_calls, so native execution cannot occur with this model. This is a model/inference-server limitation, not a Capsule Brain defect."
+      }
+    },
+    "4_tools_llama31": {
+      "model": "llama3.1:8b",
+      "status": "PARTIAL",
+      "classification": "model",
+      "evidence": {
+        "response": "The tool 'CAPSULE_TOOL_9F31B7' returned: \n\n{'nonce': 0}",
+        "response_normalized": "THETOOLCAPSULE_TOOL_9F31B7RETURNEDNONCE0",
+        "expected_nonce": "CAPSULE_TOOL_9F31B7",
+        "tool_selection_success": true,
+        "tool_execution_success": true,
+        "tool_result_delivery_success": true,
+        "final_answer_grounding_success": false,
+        "nonce_in_response_substring": true,
+        "nonce_present_as_token": true,
+        "counter_calls": 1,
+        "tool_calls_executed": 1,
+        "tools_used": [
+          "secret_nonce"
+        ],
+        "tool_failures": 0,
+        "attempts": [
+          {
+            "status": "FAIL",
+            "tool_selection_success": true,
+            "tool_execution_success": true,
+            "tool_result_delivery_success": true,
+            "final_answer_grounding_success": false,
+            "counter_calls": 1,
+            "tool_calls_executed": 1
+          },
+          {
+            "status": "FAIL",
+            "tool_selection_success": true,
+            "tool_execution_success": true,
+            "tool_result_delivery_success": true,
+            "final_answer_grounding_success": false,
+            "counter_calls": 1,
+            "tool_calls_executed": 1
+          },
+          {
+            "status": "FAIL",
+            "tool_selection_success": true,
+            "tool_execution_success": true,
+            "tool_result_delivery_success": true,
+            "final_answer_grounding_success": false,
+            "counter_calls": 1,
+            "tool_calls_executed": 1
+          },
+          {
+            "status": "FAIL",
+            "tool_selection_success": true,
+            "tool_execution_success": true,
+            "tool_result_delivery_success": true,
+            "final_answer_grounding_success": false,
+            "counter_calls": 1,
+            "tool_calls_executed": 1
+          },
+          {
+            "status": "FAIL",
+            "tool_selection_success": true,
+            "tool_execution_success": true,
+            "tool_result_delivery_success": true,
+            "final_answer_grounding_success": false,
+            "counter_calls": 1,
+            "tool_calls_executed": 1
+          }
+        ],
+        "finding": "Runtime native tool machinery is proven (tool selection, execution, and result delivery all succeed). However, llama3.1:8b hallucinates a different return value in the final answer instead of echoing the actual tool result. This is a model grounding limitation, not a Capsule Brain runtime defect. The tool protocol transcript is correct (assistant tool_call -> tool result -> assistant final); the model simply does not faithfully reproduce the tool's return value in its natural-language response."
+      }
+    },
+    "5_acceptance": {
+      "test": "5_acceptance",
+      "status": "PASS",
+      "classification": "runtime",
+      "evidence": {
+        "status": "completed",
+        "test_passed": true,
+        "verification_kind": "acceptance",
+        "verification_contract_present": true,
+        "exit_code": 0,
+        "iterations": 0,
+        "artifact_normalized": true,
+        "stdout_tail": "3\n-2\n5\n6.0\nACCEPTANCE_OK\n",
+        "stderr_tail": "",
+        "code": "def add(a, b):\n    return a + b\n\n# Test cases\nprint(add(1, 2))  # Expected output: 3\nprint(add(-1, -1))  # Expected output: -2\nprint(add(0, 5))  # Expected output: 5\nprint(add(3.5, 2.5))  # Expected output: 6.0"
+      },
+      "error": null
+    },
+    "6_false_success": {
+      "test": "6_false_success",
+      "status": "PASS",
+      "classification": "runtime",
+      "evidence": {
+        "status": "failed",
+        "test_passed": false,
+        "verification_kind": "acceptance",
+        "verification_contract_present": true,
+        "exit_code": 1,
+        "iterations": 0,
+        "promoted_false_success": false,
+        "stderr_tail": "ceback (most recent call last):\n  File \"/Users/dawsonblock/Downloads/capsule_brain_v2_13_1_corrected/qual214/stores/t6_false_aa188b28/sandbox/workflow_2489a385b8ab4ce392e0e5d900961767/test_solution.py\", line 2, in <module>\n    assert add(2, 3) == 5, 'add(2,3) failed'\nAssertionError: add(2,3) failed\n",
+        "code": "def add(a, b):\n    return a - b"
+      },
+      "error": null
+    },
+    "7_reflection": {
+      "test": "7_reflection",
+      "status": "PASS",
+      "classification": "runtime",
+      "evidence": {
+        "status": "completed",
+        "test_passed": true,
+        "iterations": 1,
+        "reflected": true,
+        "verifier_error_in_errors": true,
+        "errors": [
+          "Iteration 1: test failed. stderr: [static verification failed] Python syntax is invalid.; python_compile failed with exit code 1."
+        ],
+        "steps": [
+          {
+            "node": "plan",
+            "step_index": 0
+          },
+          {
+            "node": "generate",
+            "step_index": 1
+          },
+          {
+            "node": "test",
+            "step_index": 2
+          },
+          {
+            "node": "reflect",
+            "step_index": 3
+          },
+          {
+            "node": "test",
+            "step_index": 4
+          },
+          {
+            "node": "complete",
+            "step_index": 5
+          }
+        ],
+        "artifact_normalized": true,
+        "final_code": "def merge_sort(lst):\n    if len(lst) <= 1:\n        return lst\n    \n    mid = len(lst) // 2\n    left_half = lst[:mid]\n    right_half = lst[mid:]\n    \n    left_sorted = merge_sort(left_half)\n    right_sorted = merge_sort(right_half)\n    \n    def merge(left, right):\n        merged = []\n        i, j = 0, 0\n        \n        while i < len(left) and j < len(right):\n            if left[i] <= right[j]:\n                merged.append(left[i])\n                i += 1\n            else:\n                merged.append(right[j])\n                j += 1\n        \n        merged.extend(left[i:])\n        merged.extend(right[j:])\n        \n        return merged\n    \n    return merge(left_sorted, right_sorted)\n\n# Example usage:\nunsorted_list = [38, 27, 43, 3, 9, 82, 10]\nsorted_list = merge_sort(unsorted_list)\nprint(sorted_list)",
+        "stderr_tail": "",
+        "attempts": [
+          {
+            "repaired": true,
+            "reflected": true,
+            "iterations": 1,
+            "status": "completed",
+            "verifier_error_in_errors": true
+          }
+        ]
+      },
+      "error": null
+    },
+    "10_failure_injection": {
+      "test": "10_failure_injection",
+      "status": "PASS",
+      "classification": "runtime",
+      "evidence": {
+        "10a_llm_unavailable_fail_closed": true,
+        "10a_error": "All models in route 'chat' failed",
+        "10b_timeout_fail_closed": true,
+        "10c_malformed_args_is_error": true,
+        "10c_malformed_args_content": "Invalid tool arguments: 'not_a_number' is not of type 'number'",
+        "10c_parse_error_is_error": true,
+        "10d_tool_exception_is_error": true,
+        "10d_tool_exception_content": "Tool boom_tool raised: boom",
+        "10e_exec_exception_status": "failed",
+        "10e_exec_exception_test_passed": false,
+        "10e_exec_exception_fail_closed": true,
+        "10f_verification_exception_status": "failed",
+        "10f_verification_exception_test_passed": false,
+        "10f_verification_exception_kind": "static",
+        "10f_verification_exception_fail_closed": true
+      },
+      "error": null
+    },
+    "8_persistence": {
+      "test": "8_persistence",
+      "status": "PASS",
+      "classification": "runtime",
+      "evidence": {
+        "nonce": "ORBIT-41-a19f9b736e2b49ac8858aea5f8f18f96",
+        "store_stdout": "STORED:ORBIT-41-a19f9b736e2b49ac8858aea5f8f18f96\nMEMORY_ID:ad2193f8d8814ffd8b4091b696f2c499\n",
+        "check_stdout": "FOUND_IN_PERSISTENT_STORAGE:True\nRECORD_COUNT:1\nVERDICT:PASS\n",
+        "store_rc": 0,
+        "check_rc": 0
+      },
+      "error": null
+    },
+    "9_recovery": {
+      "test": "9_recovery",
+      "status": "PASS",
+      "classification": "runtime",
+      "evidence": {
+        "run_id": "e8803ea0e3ec4480a1489c8032c26b9d",
+        "start_fields": {
+          "NONCE": "ORBIT-RECOVERY-2e040c637f354f7cbecaf2956fe339b4",
+          "NODE_AT_CRASH": "generate",
+          "STEPS_BEFORE_CRASH": "2",
+          "PLAN_STEP_PERSISTED": "True",
+          "WORKFLOW_NAME": "plan_generate_test_reflect"
+        },
+        "resume_fields": {
+          "SAME_RUN_ID": "True",
+          "SAME_WORKFLOW": "True",
+          "STATUS_BEFORE_RESUME": "interrupted",
+          "INTERRUPTED_RECOGNIZED": "True",
+          "STEPS_PRESERVED": "2",
+          "PLAN_STEP_PRESERVED": "True",
+          "CONTRACT_PRESERVED": "True",
+          "NONCE_PRESERVED": "True",
+          "STATUS_AFTER_RESUME": "completed",
+          "STEPS_AFTER_RESUME": "5",
+          "ACCEPTANCE_RAN": "True",
+          "ACCEPTANCE_PASSED": "True",
+          "ACCEPTANCE_CONTRACT_PRESENT": "True",
+          "EXIT_CODE": "0",
+          "ITERATIONS": "0"
+        },
+        "start_stdout": "RUN_ID:e8803ea0e3ec4480a1489c8032c26b9d\nNONCE:ORBIT-RECOVERY-2e040c637f354f7cbecaf2956fe339b4\nNODE_AT_CRASH:generate\nSTEPS_BEFORE_CRASH:2\nPLAN_STEP_PERSISTED:True\nWORKFLOW_NAME:plan_generate_test_reflect\n",
+        "resume_stdout": "SAME_RUN_ID:True\nSAME_WORKFLOW:True\nSTATUS_BEFORE_RESUME:interrupted\nINTERRUPTED_RECOGNIZED:True\nSTEPS_PRESERVED:2\nPLAN_STEP_PRESERVED:True\nPLAN_TEXT_PRESERVED:True\nCONTRACT_PRESERVED:True\nNONCE_PRESERVED:True\nSTATUS_AFTER_RESUME:completed\nSTEPS_AFTER_RESUME:5\nACCEPTANCE_RAN:True\nACCEPTANCE_PASSED:True\nACCEPTANCE_CONTRACT_PRESENT:True\nEXIT_CODE:0\nITERATIONS:0\nFINAL_CODE:'def add(a, b):\\n    return a + b'\nSTDOUT_TAIL:'ACCEPTANCE_OK\\n'\nVERDICT:PASS\n",
+        "start_rc": 2,
+        "resume_rc": 0
+      },
+      "error": null
+    },
+    "11_container_execution": {
+      "test": "11_container_execution",
+      "status": "PASS",
+      "classification": "runtime",
+      "evidence": {
+        "docker_available": true,
+        "runner": "container",
+        "container_controls": {
+          "read_only_root": true,
+          "network_none": true,
+          "non_root_user": "65534:65534",
+          "memory_limit": "512m",
+          "memory_swap": "512m",
+          "cpus": "1.0",
+          "pids_limit": 128,
+          "nofile_limit": 1024,
+          "cap_drop_all": true,
+          "no_new_privileges": true,
+          "pinned_image_digest": true,
+          "image": "python:3.11-slim"
+        },
+        "status": "completed",
+        "test_passed": true,
+        "verification_kind": "acceptance",
+        "verification_contract_present": true,
+        "exit_code": 0,
+        "iterations": 0,
+        "artifact_normalized": true,
+        "stdout_tail": "ACCEPTANCE_OK\n",
+        "stderr_tail": "",
+        "code": "def add(a, b):\n    return a + b"
+      },
+      "error": null
     }
-  },
-  "4_tools_llama31": {
-    "model": "llama3.1:8b",
-    "status": "PASS",
-    "classification": "runtime",
-    "evidence": {
-      "response": "The tool 'CAPSULE_TOOL_9F31B7' returned: 0x7f8a5d6c8000.",
-      "nonce_in_response": true,
-      "counter_calls": 1,
-      "tool_calls_executed": 1,
-      "tools_used": [
-        "secret_nonce"
-      ],
-      "tool_failures": 0,
-      "attempts": [
-        {
-          "status": "PASS",
-          "nonce_in_response": true,
-          "counter_calls": 1,
-          "tool_calls_executed": 1
-        }
-      ]
-    }
-  },
-  "5_acceptance": {
-    "test": "5_acceptance",
-    "status": "PASS",
-    "classification": "runtime",
-    "evidence": {
-      "status": "completed",
-      "test_passed": true,
-      "verification_kind": "acceptance",
-      "verification_contract_present": true,
-      "exit_code": 0,
-      "iterations": 0,
-      "artifact_normalized": true,
-      "stdout_tail": "ACCEPTANCE_OK\n",
-      "stderr_tail": "",
-      "code": "def add(a, b):\n    return a + b"
-    },
-    "error": null
-  },
-  "6_false_success": {
-    "test": "6_false_success",
-    "status": "PASS",
-    "classification": "runtime",
-    "evidence": {
-      "status": "failed",
-      "test_passed": false,
-      "verification_kind": "acceptance",
-      "verification_contract_present": true,
-      "exit_code": 1,
-      "iterations": 0,
-      "promoted_false_success": false,
-      "stderr_tail": "ceback (most recent call last):\n  File \"/Users/dawsonblock/Downloads/capsule_brain_v2_13_1_corrected/qual214/stores/t6_false_051e79fa/sandbox/workflow_53bbd6ebc0494b8d8dce0c7b1f54c692/test_solution.py\", line 2, in <module>\n    assert add(2, 3) == 5, 'add(2,3) failed'\nAssertionError: add(2,3) failed\n",
-      "code": "def add(a, b):\n    return a - b"
-    },
-    "error": null
-  },
-  "7_reflection": {
-    "test": "7_reflection",
-    "status": "PASS",
-    "classification": "runtime",
-    "evidence": {
-      "status": "completed",
-      "test_passed": true,
-      "iterations": 1,
-      "reflected": true,
-      "verifier_error_in_errors": true,
-      "errors": [
-        "Iteration 1: test failed. stderr: [static verification failed] Python syntax is invalid.; python_compile failed with exit code 1."
-      ],
-      "steps": [
-        {
-          "node": "plan",
-          "step_index": 0
-        },
-        {
-          "node": "generate",
-          "step_index": 1
-        },
-        {
-          "node": "test",
-          "step_index": 2
-        },
-        {
-          "node": "reflect",
-          "step_index": 3
-        },
-        {
-          "node": "test",
-          "step_index": 4
-        },
-        {
-          "node": "complete",
-          "step_index": 5
-        }
-      ],
-      "artifact_normalized": true,
-      "final_code": "def merge_sort(lst):\n    if len(lst) <= 1:\n        return lst\n    \n    mid = len(lst) // 2\n    left_half = lst[:mid]\n    right_half = lst[mid:]\n    \n    left_sorted = merge_sort(left_half)\n    right_sorted = merge_sort(right_half)\n    \n    return merge(left_sorted, right_sorted)\n\ndef merge(left, right):\n    merged = []\n    i = j = 0\n    \n    while i < len(left) and j < len(right):\n        if left[i] <= right[j]:\n            merged.append(left[i])\n            i += 1\n        else:\n            merged.append(right[j])\n            j += 1\n    \n    merged.extend(left[i:])\n    merged.extend(right[j:])\n    \n    return merged\n\n# Example usage:\nunsorted_list = [34, 7, 23, 32, 5, 62]\nsorted_list = merge_sort(unsorted_list)\nprint(sorted_list)",
-      "stderr_tail": "",
-      "attempts": [
-        {
-          "repaired": true,
-          "reflected": true,
-          "iterations": 1,
-          "status": "completed",
-          "verifier_error_in_errors": true
-        }
-      ]
-    },
-    "error": null
-  },
-  "10_failure_injection": {
-    "test": "10_failure_injection",
-    "status": "PASS",
-    "classification": "runtime",
-    "evidence": {
-      "10a_llm_unavailable_fail_closed": true,
-      "10a_error": "All models in route 'chat' failed",
-      "10b_timeout_fail_closed": true,
-      "10c_malformed_args_is_error": true,
-      "10c_malformed_args_content": "Invalid tool arguments: 'not_a_number' is not of type 'number'",
-      "10c_parse_error_is_error": true,
-      "10d_tool_exception_is_error": true,
-      "10d_tool_exception_content": "Tool boom_tool raised: boom",
-      "10e_exec_exception_status": "failed",
-      "10e_exec_exception_test_passed": false,
-      "10e_exec_exception_fail_closed": true,
-      "10f_verification_exception_status": "failed",
-      "10f_verification_exception_test_passed": false,
-      "10f_verification_exception_kind": "static",
-      "10f_verification_exception_fail_closed": true
-    },
-    "error": null
-  },
-  "8_persistence": {
-    "test": "8_persistence",
-    "status": "PASS",
-    "classification": "runtime",
-    "evidence": {
-      "nonce": "ORBIT-41-efd21042c18748f1adade1337cf2d7d4",
-      "store_stdout": "STORED:ORBIT-41-efd21042c18748f1adade1337cf2d7d4\nMEMORY_ID:03782cf98e0b465981f09718a7a9a1bf\n",
-      "check_stdout": "FOUND_IN_PERSISTENT_STORAGE:True\nRECORD_COUNT:1\nVERDICT:PASS\n",
-      "store_rc": 0,
-      "check_rc": 0
-    },
-    "error": null
-  },
-  "9_recovery": {
-    "test": "9_recovery",
-    "status": "PASS",
-    "classification": "runtime",
-    "evidence": {
-      "run_id": "9ee88242fa454257bb4845f9ee7f728e",
-      "start_stdout": "RUN_ID:9ee88242fa454257bb4845f9ee7f728e\nNONCE:ORBIT-RECOVERY-4ab196a486c44fca9a338bb629cefb7e\nNODE_AT_CRASH:hold\nSTEPS_BEFORE_CRASH:2\n",
-      "resume_stdout": "SAME_RUN_ID:True\nSTATUS_BEFORE_RESUME:interrupted\nINTERRUPTED_RECOGNIZED:True\nSTEPS_PRESERVED:2\nPREP_STEP_PRESERVED:True\nCONTRACT_PRESERVED:True\nNONCE_PRESERVED:True\nSTATUS_AFTER_RESUME:completed\nSTEPS_AFTER_RESUME:4\nCOMPLETED:True\nVERDICT:PASS\n",
-      "start_rc": 2,
-      "resume_rc": 0
-    },
-    "error": null
   }
 }
