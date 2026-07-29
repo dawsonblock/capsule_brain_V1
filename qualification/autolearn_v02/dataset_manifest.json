@@ -1,0 +1,51 @@
+{
+  "action_counts": {
+    "ANSWER_DIRECT": 430,
+    "ASK_OPERATOR": 30,
+    "CALL_TOOL": 430,
+    "REFLECT": 70,
+    "RETRIEVE_MEMORY": 430,
+    "START_WORKFLOW": 430
+  },
+  "best_action_counts": {
+    "ANSWER_DIRECT": 60,
+    "ASK_OPERATOR": 30,
+    "CALL_TOOL": 60,
+    "REFLECT": 40,
+    "RETRIEVE_MEMORY": 60,
+    "START_WORKFLOW": 180
+  },
+  "dataset_digest": "7d964b565dc55003212e1e1c58900b49478c29a60776363aa24cb484551d1cc2",
+  "dataset_version": "dataset_v1",
+  "family_counts": {
+    "coding_workflow": 180,
+    "direct_answer": 60,
+    "memory_required": 60,
+    "operator_safety": 30,
+    "reflection_req": 40,
+    "tool_required": 60
+  },
+  "feature_schema_version": "exec_features_v2",
+  "n_rows": 1820,
+  "n_tasks": 430,
+  "split_counts": {
+    "ood": 30,
+    "test": 126,
+    "train": 274,
+    "validation": 0
+  },
+  "split_manifest_digest": "b17d119bd3d7782a41285bfca09487764be4ce6f28435901d9836480782bed4f",
+  "utility_config": {
+    "config_version": "exec_utility_v2",
+    "latency_normalize_ms": 5000.0,
+    "token_normalize_count": 4000.0,
+    "w_failures": 1.0,
+    "w_intervention": 3.0,
+    "w_latency": 0.5,
+    "w_safety": 50.0,
+    "w_success": 10.0,
+    "w_tokens": 0.25,
+    "w_unnecessary_tool": 2.0,
+    "w_unnecessary_workflow": 2.0
+  }
+}

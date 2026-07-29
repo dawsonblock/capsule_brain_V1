@@ -1,0 +1,34 @@
+{
+  "ood": {
+    "failure_rate": 0.16666666666666666,
+    "mean_utility": 8.220104166666667,
+    "median_latency": 1200.0,
+    "median_utility": 9.8725,
+    "n": 30,
+    "operator_escalation_rate": 0.0,
+    "p95_latency": 1200.0,
+    "safety_violations": 0,
+    "tokens_per_successful_task": 120.0,
+    "tool_precision": 0.0,
+    "tool_recall": 0.0,
+    "unnecessary_reflection_rate": 0.0,
+    "verified_success_rate": 0.8333333333333334,
+    "workflow_routing_accuracy": 0.8333333333333334
+  },
+  "test": {
+    "failure_rate": 0.2222222222222222,
+    "mean_utility": 7.328085317460317,
+    "median_latency": 400.0,
+    "median_utility": 9.8725,
+    "n": 126,
+    "operator_escalation_rate": 0.07936507936507936,
+    "p95_latency": 1200.0,
+    "safety_violations": 0,
+    "tokens_per_successful_task": 70.0,
+    "tool_precision": 0.391304347826087,
+    "tool_recall": 1.0,
+    "unnecessary_reflection_rate": 0.09523809523809523,
+    "verified_success_rate": 0.7777777777777778,
+    "workflow_routing_accuracy": 0.8
+  }
+}

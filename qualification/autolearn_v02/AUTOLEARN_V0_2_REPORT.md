@@ -32,25 +32,25 @@ deterministic baseline (BaselinePolicyV2). Promotion requires passing the
 }
 
 ## Policy
-- policy_id: `candidate_v2_1785367929`
+- policy_id: `candidate_v2_1785368507`
 - policy_version: `learned_router_v2`
 - policy_type: `multinomial_logistic`
 - feature_schema_version: `exec_features_v2`
 - parent_policy: `baseline_v2`
-- training_data_digest: `546dc7f80d5d1d8c5c7b19be79ac6bca446b2e7c30960a1f6e045cf9af764137`
+- training_data_digest: `7d964b565dc55003212e1e1c58900b49478c29a60776363aa24cb484551d1cc2`
 - split_manifest_digest: `b17d119bd3d7782a41285bfca09487764be4ce6f28435901d9836480782bed4f`
 
 ### Training metrics
 {
-  "final_weights_norm": 9.346107111581473,
+  "final_weights_norm": 9.525385447614648,
   "n_epochs": 800,
   "n_train": 274,
   "n_validation": 27,
   "train_accuracy": 1.0,
-  "train_loss": 0.014644685547794753,
+  "train_loss": 0.015267609071421164,
   "train_weighted_accuracy": 1.0,
   "validation_accuracy": 1.0,
-  "validation_loss": 0.1405044314262765,
+  "validation_loss": 0.14821402387633664,
   "validation_weighted_accuracy": 1.0
 }
 
@@ -167,7 +167,7 @@ deterministic baseline (BaselinePolicyV2). Promotion requires passing the
     "passed": true
   },
   {
-    "candidate": 1.5447585586980076e-07,
+    "candidate": 8.916539843150788e-08,
     "name": "calibration_brier_below_threshold",
     "passed": true,
     "threshold": 1.0
@@ -176,17 +176,17 @@ deterministic baseline (BaselinePolicyV2). Promotion requires passing the
 
 ## Provenance (SHA-256)
 {
-  "counterfactuals.json": "05aa8773f275e67b88113b7823553d40e1d84d7c3a107b248fb6f7bc78e0df11",
+  "counterfactuals.json": "84695c3c0f20dd4091c6bae7acfdf49cb88510b68fcab605a240c0c42ccb68ba",
   "split_manifest.json": "800e87dfa4a2e928df7a0f4910ed0d81a3af09d0a7593aba88efd38b58d2717c",
-  "dataset_manifest.json": "fbca3a88ce57ecd284fae27cae830abcb53e164cc19a5b135a92ced3ce3fec36",
-  "policy_manifest.json": "06a212287038e24063f880dee7a70c2e6fce8d8e75c435b621f97baab1463298",
-  "evaluation.json": "b17c2ea87a6c72584d3a2224adad7cf2a8787d43214a1f745d5bfaedfcb1a49c",
-  "shadow_eval.json": "c333b09c6016b6af8de871a3426c24239d713befc53c5f1836b17d13abda5a76",
-  "promotion_result.json": "8c85a5efaafd7a2125e13d2229dcdaacda15721ffdc61543255d8577602b3df4"
+  "dataset_manifest.json": "be0a46b6935c575922e0ff59fa0dc7b68175ccd2a4588dd7cbc6845d64321c13",
+  "policy_manifest.json": "9680a051483bfa102bf62a8e138a13b7539cc68014bc20b7831bfd21b2aec7c6",
+  "evaluation.json": "87d34993de2578c28b7469a5a996b3bff177094257c0256463bf6a0bb22c7ffa",
+  "shadow_eval.json": "51758695a3f1434aae93600897c0b9d8130a312fbd2a42d6051a4fca22380db2",
+  "promotion_result.json": "a490c9b474986556c0871708f7092c535ac28ac9c48945760bb295a8459701e4"
 }
 
 ## Active policy after evaluation
-- `candidate_v2_1785367929`
+- `candidate_v2_1785368507`
 
 ## Definition of done (v0.2)
 1. ExecutiveController dispatches through real Capsule Brain services ✓

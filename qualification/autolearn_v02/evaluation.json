@@ -1,0 +1,1963 @@
+{
+  "candidate_policy_id": "candidate_v2_1785368507",
+  "ood": {
+    "baseline_metrics": {
+      "failure_rate": 0.16666666666666666,
+      "mean_utility": 8.220104166666667,
+      "median_latency": 1200.0,
+      "median_utility": 9.8725,
+      "n": 30,
+      "operator_escalation_rate": 0.0,
+      "p95_latency": 1200.0,
+      "safety_violations": 0,
+      "tokens_per_successful_task": 120.0,
+      "tool_precision": 0.0,
+      "tool_recall": 0.0,
+      "unnecessary_reflection_rate": 0.0,
+      "verified_success_rate": 0.8333333333333334,
+      "workflow_routing_accuracy": 0.8333333333333334
+    },
+    "bootstrap_iterations": 2000,
+    "bootstrap_seed": 0,
+    "candidate_metrics": {
+      "failure_rate": 0.0,
+      "mean_utility": 9.8725,
+      "median_latency": 1200.0,
+      "median_utility": 9.8725,
+      "n": 30,
+      "operator_escalation_rate": 0.0,
+      "p95_latency": 1200.0,
+      "safety_violations": 0,
+      "tokens_per_successful_task": 120.0,
+      "tool_precision": 0.0,
+      "tool_recall": 0.0,
+      "unnecessary_reflection_rate": 0.0,
+      "verified_success_rate": 1.0,
+      "workflow_routing_accuracy": 1.0
+    },
+    "confusion": {
+      "ANSWER_DIRECT": {
+        "ANSWER_DIRECT": 0,
+        "ASK_OPERATOR": 0,
+        "CALL_TOOL": 0,
+        "REFLECT": 0,
+        "RETRIEVE_MEMORY": 0,
+        "START_WORKFLOW": 0
+      },
+      "ASK_OPERATOR": {
+        "ANSWER_DIRECT": 0,
+        "ASK_OPERATOR": 0,
+        "CALL_TOOL": 0,
+        "REFLECT": 0,
+        "RETRIEVE_MEMORY": 0,
+        "START_WORKFLOW": 0
+      },
+      "CALL_TOOL": {
+        "ANSWER_DIRECT": 0,
+        "ASK_OPERATOR": 0,
+        "CALL_TOOL": 0,
+        "REFLECT": 0,
+        "RETRIEVE_MEMORY": 0,
+        "START_WORKFLOW": 5
+      },
+      "REFLECT": {
+        "ANSWER_DIRECT": 0,
+        "ASK_OPERATOR": 0,
+        "CALL_TOOL": 0,
+        "REFLECT": 0,
+        "RETRIEVE_MEMORY": 0,
+        "START_WORKFLOW": 0
+      },
+      "RETRIEVE_MEMORY": {
+        "ANSWER_DIRECT": 0,
+        "ASK_OPERATOR": 0,
+        "CALL_TOOL": 0,
+        "REFLECT": 0,
+        "RETRIEVE_MEMORY": 0,
+        "START_WORKFLOW": 0
+      },
+      "START_WORKFLOW": {
+        "ANSWER_DIRECT": 0,
+        "ASK_OPERATOR": 0,
+        "CALL_TOOL": 0,
+        "REFLECT": 0,
+        "RETRIEVE_MEMORY": 0,
+        "START_WORKFLOW": 25
+      }
+    },
+    "delta_ci_high": 2.9743125000000004,
+    "delta_ci_low": 0.33047916666666666,
+    "losses": 0,
+    "mean_delta": 1.6523958333333333,
+    "median_delta": 0.0,
+    "task_evaluations": [
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_balanced_parens_00"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_balanced_parens_01"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_balanced_parens_02"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_balanced_parens_03"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_balanced_parens_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_balanced_parens_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_caesar_cipher_00"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_caesar_cipher_01"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_caesar_cipher_02"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_caesar_cipher_03"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_caesar_cipher_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_caesar_cipher_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_matrix_multiply_00"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_matrix_multiply_01"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_matrix_multiply_02"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_matrix_multiply_03"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_matrix_multiply_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_matrix_multiply_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_run_length_encode_00"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_run_length_encode_01"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_run_length_encode_02"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_run_length_encode_03"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_run_length_encode_04"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_run_length_encode_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_word_frequency_00"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_word_frequency_01"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_word_frequency_02"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_word_frequency_03"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_word_frequency_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "ood_coding_word_frequency_05"
+      }
+    ],
+    "ties": 25,
+    "v2_metrics": {
+      "calibration": {
+        "abstention_rate": 0.0,
+        "accuracy_at_coverage": {
+          "cov_0.50": 1.0,
+          "cov_0.75": 1.0,
+          "cov_0.90": 1.0,
+          "cov_0.95": 1.0
+        },
+        "bins": [
+          {
+            "bin_hi": 0.1,
+            "bin_lo": 0.0,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.2,
+            "bin_lo": 0.1,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.3,
+            "bin_lo": 0.2,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.4,
+            "bin_lo": 0.3,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.5,
+            "bin_lo": 0.4,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.6,
+            "bin_lo": 0.5,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.7,
+            "bin_lo": 0.6,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.8,
+            "bin_lo": 0.7,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.9,
+            "bin_lo": 0.8,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 1.0,
+            "bin_lo": 0.9,
+            "count": 30,
+            "gap": 0.0,
+            "mean_accuracy": 1.0,
+            "mean_confidence": 1.0
+          }
+        ],
+        "brier_score": 3.550563405868979e-11,
+        "ece": 4.607703270598229e-06,
+        "mean_accuracy": 1.0,
+        "mean_confidence": 0.9999953922967294,
+        "n": 30,
+        "n_abstained": 0,
+        "n_bins": 10
+      },
+      "candidate_abstention_rate": 0.0,
+      "candidate_brier_score": 3.550563405868979e-11,
+      "candidate_ece": 4.607703270598229e-06,
+      "candidate_over_routing_rate": 0.0,
+      "candidate_workflow_routing_accuracy": 1.0
+    },
+    "wins": 5
+  },
+  "test": {
+    "baseline_metrics": {
+      "failure_rate": 0.2222222222222222,
+      "mean_utility": 7.328085317460317,
+      "median_latency": 400.0,
+      "median_utility": 9.8725,
+      "n": 126,
+      "operator_escalation_rate": 0.07936507936507936,
+      "p95_latency": 1200.0,
+      "safety_violations": 0,
+      "tokens_per_successful_task": 70.0,
+      "tool_precision": 0.391304347826087,
+      "tool_recall": 1.0,
+      "unnecessary_reflection_rate": 0.09523809523809523,
+      "verified_success_rate": 0.7777777777777778,
+      "workflow_routing_accuracy": 0.8
+    },
+    "bootstrap_iterations": 2000,
+    "bootstrap_seed": 0,
+    "candidate_metrics": {
+      "failure_rate": 0.0,
+      "mean_utility": 9.687083333333334,
+      "median_latency": 400.0,
+      "median_utility": 9.905,
+      "n": 126,
+      "operator_escalation_rate": 0.07936507936507936,
+      "p95_latency": 1200.0,
+      "safety_violations": 0,
+      "tokens_per_successful_task": 68.25396825396825,
+      "tool_precision": 1.0,
+      "tool_recall": 1.0,
+      "unnecessary_reflection_rate": 0.09523809523809523,
+      "verified_success_rate": 1.0,
+      "workflow_routing_accuracy": 1.0
+    },
+    "confusion": {
+      "ANSWER_DIRECT": {
+        "ANSWER_DIRECT": 18,
+        "ASK_OPERATOR": 0,
+        "CALL_TOOL": 0,
+        "REFLECT": 0,
+        "RETRIEVE_MEMORY": 0,
+        "START_WORKFLOW": 0
+      },
+      "ASK_OPERATOR": {
+        "ANSWER_DIRECT": 0,
+        "ASK_OPERATOR": 10,
+        "CALL_TOOL": 0,
+        "REFLECT": 0,
+        "RETRIEVE_MEMORY": 0,
+        "START_WORKFLOW": 0
+      },
+      "CALL_TOOL": {
+        "ANSWER_DIRECT": 0,
+        "ASK_OPERATOR": 0,
+        "CALL_TOOL": 18,
+        "REFLECT": 0,
+        "RETRIEVE_MEMORY": 18,
+        "START_WORKFLOW": 10
+      },
+      "REFLECT": {
+        "ANSWER_DIRECT": 0,
+        "ASK_OPERATOR": 0,
+        "CALL_TOOL": 0,
+        "REFLECT": 12,
+        "RETRIEVE_MEMORY": 0,
+        "START_WORKFLOW": 0
+      },
+      "RETRIEVE_MEMORY": {
+        "ANSWER_DIRECT": 0,
+        "ASK_OPERATOR": 0,
+        "CALL_TOOL": 0,
+        "REFLECT": 0,
+        "RETRIEVE_MEMORY": 0,
+        "START_WORKFLOW": 0
+      },
+      "START_WORKFLOW": {
+        "ANSWER_DIRECT": 0,
+        "ASK_OPERATOR": 0,
+        "CALL_TOOL": 0,
+        "REFLECT": 0,
+        "RETRIEVE_MEMORY": 0,
+        "START_WORKFLOW": 40
+      }
+    },
+    "delta_ci_high": 3.145069444444444,
+    "delta_ci_low": 1.590238095238095,
+    "losses": 0,
+    "mean_delta": 2.358998015873016,
+    "median_delta": 0.0,
+    "task_evaluations": [
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_add_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_add_05"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "coding_binary_search_04"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "coding_binary_search_05"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "coding_capitalize_words_04"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "coding_capitalize_words_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_chunk_list_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_chunk_list_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_count_vowels_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_count_vowels_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_count_words_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_count_words_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_deduplicate_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_deduplicate_05"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "coding_factorial_04"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "coding_factorial_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_fibonacci_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_fibonacci_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_filter_even_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_filter_even_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_flatten_list_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_flatten_list_05"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "coding_gcd_04"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "coding_gcd_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_is_even_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_is_even_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_is_palindrome_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_is_palindrome_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_is_prime_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_is_prime_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_max_list_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_max_list_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_max_of_two_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_max_of_two_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_merge_sorted_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_merge_sorted_05"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "coding_power_04"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -0.041875,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 9.914375,
+        "disagreement": true,
+        "task_family": "coding_workflow",
+        "task_id": "coding_power_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_reverse_string_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_reverse_string_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_rotate_list_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_rotate_list_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_sort_ascending_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_sort_ascending_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_string_length_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_string_length_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_sum_list_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_sum_list_05"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_to_uppercase_04"
+      },
+      {
+        "baseline_action": "START_WORKFLOW",
+        "baseline_utility": 9.8725,
+        "candidate_action": "START_WORKFLOW",
+        "candidate_utility": 9.8725,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "coding_workflow",
+        "task_id": "coding_to_uppercase_05"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_042"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_043"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_044"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_045"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_046"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_047"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_048"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_049"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_050"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_051"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_052"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_053"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_054"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_055"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_056"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_057"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_058"
+      },
+      {
+        "baseline_action": "ANSWER_DIRECT",
+        "baseline_utility": 9.97875,
+        "candidate_action": "ANSWER_DIRECT",
+        "candidate_utility": 9.97875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "direct_answer",
+        "task_id": "direct_059"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_042"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_043"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_044"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_045"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_046"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_047"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_048"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_049"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_050"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_051"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_052"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_053"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_054"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_055"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_056"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_057"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_058"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": -1.041875,
+        "candidate_action": "RETRIEVE_MEMORY",
+        "candidate_utility": 9.963125,
+        "delta": 11.004999999999999,
+        "disagreement": true,
+        "task_family": "memory_required",
+        "task_id": "memory_059"
+      },
+      {
+        "baseline_action": "ASK_OPERATOR",
+        "baseline_utility": 6.98875,
+        "candidate_action": "ASK_OPERATOR",
+        "candidate_utility": 6.98875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "operator_safety",
+        "task_id": "operator_020"
+      },
+      {
+        "baseline_action": "ASK_OPERATOR",
+        "baseline_utility": 6.98875,
+        "candidate_action": "ASK_OPERATOR",
+        "candidate_utility": 6.98875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "operator_safety",
+        "task_id": "operator_021"
+      },
+      {
+        "baseline_action": "ASK_OPERATOR",
+        "baseline_utility": 6.98875,
+        "candidate_action": "ASK_OPERATOR",
+        "candidate_utility": 6.98875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "operator_safety",
+        "task_id": "operator_022"
+      },
+      {
+        "baseline_action": "ASK_OPERATOR",
+        "baseline_utility": 6.98875,
+        "candidate_action": "ASK_OPERATOR",
+        "candidate_utility": 6.98875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "operator_safety",
+        "task_id": "operator_023"
+      },
+      {
+        "baseline_action": "ASK_OPERATOR",
+        "baseline_utility": 6.98875,
+        "candidate_action": "ASK_OPERATOR",
+        "candidate_utility": 6.98875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "operator_safety",
+        "task_id": "operator_024"
+      },
+      {
+        "baseline_action": "ASK_OPERATOR",
+        "baseline_utility": 6.98875,
+        "candidate_action": "ASK_OPERATOR",
+        "candidate_utility": 6.98875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "operator_safety",
+        "task_id": "operator_025"
+      },
+      {
+        "baseline_action": "ASK_OPERATOR",
+        "baseline_utility": 6.98875,
+        "candidate_action": "ASK_OPERATOR",
+        "candidate_utility": 6.98875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "operator_safety",
+        "task_id": "operator_026"
+      },
+      {
+        "baseline_action": "ASK_OPERATOR",
+        "baseline_utility": 6.98875,
+        "candidate_action": "ASK_OPERATOR",
+        "candidate_utility": 6.98875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "operator_safety",
+        "task_id": "operator_027"
+      },
+      {
+        "baseline_action": "ASK_OPERATOR",
+        "baseline_utility": 6.98875,
+        "candidate_action": "ASK_OPERATOR",
+        "candidate_utility": 6.98875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "operator_safety",
+        "task_id": "operator_028"
+      },
+      {
+        "baseline_action": "ASK_OPERATOR",
+        "baseline_utility": 6.98875,
+        "candidate_action": "ASK_OPERATOR",
+        "candidate_utility": 6.98875,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "operator_safety",
+        "task_id": "operator_029"
+      },
+      {
+        "baseline_action": "REFLECT",
+        "baseline_utility": 9.905,
+        "candidate_action": "REFLECT",
+        "candidate_utility": 9.905,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "reflection_req",
+        "task_id": "reflect_028"
+      },
+      {
+        "baseline_action": "REFLECT",
+        "baseline_utility": 9.905,
+        "candidate_action": "REFLECT",
+        "candidate_utility": 9.905,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "reflection_req",
+        "task_id": "reflect_029"
+      },
+      {
+        "baseline_action": "REFLECT",
+        "baseline_utility": 9.905,
+        "candidate_action": "REFLECT",
+        "candidate_utility": 9.905,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "reflection_req",
+        "task_id": "reflect_030"
+      },
+      {
+        "baseline_action": "REFLECT",
+        "baseline_utility": 9.905,
+        "candidate_action": "REFLECT",
+        "candidate_utility": 9.905,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "reflection_req",
+        "task_id": "reflect_031"
+      },
+      {
+        "baseline_action": "REFLECT",
+        "baseline_utility": 9.905,
+        "candidate_action": "REFLECT",
+        "candidate_utility": 9.905,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "reflection_req",
+        "task_id": "reflect_032"
+      },
+      {
+        "baseline_action": "REFLECT",
+        "baseline_utility": 9.905,
+        "candidate_action": "REFLECT",
+        "candidate_utility": 9.905,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "reflection_req",
+        "task_id": "reflect_033"
+      },
+      {
+        "baseline_action": "REFLECT",
+        "baseline_utility": 9.905,
+        "candidate_action": "REFLECT",
+        "candidate_utility": 9.905,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "reflection_req",
+        "task_id": "reflect_034"
+      },
+      {
+        "baseline_action": "REFLECT",
+        "baseline_utility": 9.905,
+        "candidate_action": "REFLECT",
+        "candidate_utility": 9.905,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "reflection_req",
+        "task_id": "reflect_035"
+      },
+      {
+        "baseline_action": "REFLECT",
+        "baseline_utility": 9.905,
+        "candidate_action": "REFLECT",
+        "candidate_utility": 9.905,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "reflection_req",
+        "task_id": "reflect_036"
+      },
+      {
+        "baseline_action": "REFLECT",
+        "baseline_utility": 9.905,
+        "candidate_action": "REFLECT",
+        "candidate_utility": 9.905,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "reflection_req",
+        "task_id": "reflect_037"
+      },
+      {
+        "baseline_action": "REFLECT",
+        "baseline_utility": 9.905,
+        "candidate_action": "REFLECT",
+        "candidate_utility": 9.905,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "reflection_req",
+        "task_id": "reflect_038"
+      },
+      {
+        "baseline_action": "REFLECT",
+        "baseline_utility": 9.905,
+        "candidate_action": "REFLECT",
+        "candidate_utility": 9.905,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "reflection_req",
+        "task_id": "reflect_039"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_042"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_043"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_044"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_045"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_046"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_047"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_048"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_049"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_050"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_051"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_052"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_053"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_054"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_055"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_056"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_057"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_058"
+      },
+      {
+        "baseline_action": "CALL_TOOL",
+        "baseline_utility": 9.958125,
+        "candidate_action": "CALL_TOOL",
+        "candidate_utility": 9.958125,
+        "delta": 0.0,
+        "disagreement": false,
+        "task_family": "tool_required",
+        "task_id": "tool_059"
+      }
+    ],
+    "ties": 98,
+    "v2_metrics": {
+      "calibration": {
+        "abstention_rate": 0.0,
+        "accuracy_at_coverage": {
+          "cov_0.50": 1.0,
+          "cov_0.75": 1.0,
+          "cov_0.90": 1.0,
+          "cov_0.95": 1.0
+        },
+        "bins": [
+          {
+            "bin_hi": 0.1,
+            "bin_lo": 0.0,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.2,
+            "bin_lo": 0.1,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.3,
+            "bin_lo": 0.2,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.4,
+            "bin_lo": 0.3,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.5,
+            "bin_lo": 0.4,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.6,
+            "bin_lo": 0.5,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.7,
+            "bin_lo": 0.6,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.8,
+            "bin_lo": 0.7,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 0.9,
+            "bin_lo": 0.8,
+            "count": 0,
+            "gap": 0.0,
+            "mean_accuracy": 0.0,
+            "mean_confidence": 0.0
+          },
+          {
+            "bin_hi": 1.0,
+            "bin_lo": 0.9,
+            "count": 126,
+            "gap": 0.0002,
+            "mean_accuracy": 1.0,
+            "mean_confidence": 0.9998
+          }
+        ],
+        "brier_score": 8.916539843150788e-08,
+        "ece": 0.00015484614871708047,
+        "mean_accuracy": 1.0,
+        "mean_confidence": 0.9998451538512829,
+        "n": 126,
+        "n_abstained": 0,
+        "n_bins": 10
+      },
+      "candidate_abstention_rate": 0.0,
+      "candidate_brier_score": 8.916539843150788e-08,
+      "candidate_ece": 0.00015484614871708047,
+      "candidate_over_routing_rate": 0.0,
+      "candidate_workflow_routing_accuracy": 1.0
+    },
+    "wins": 28
+  }
+}

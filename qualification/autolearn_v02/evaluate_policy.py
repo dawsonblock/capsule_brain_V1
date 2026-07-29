@@ -35,6 +35,31 @@ def _build_outcome_lookup(tasks: list[RoutingTask]) -> dict[tuple[str, str], dic
     for task in tasks:
         for action in task.allowed_actions:
             result = runtime.execute(task, action)
+            if result.not_executed:
+                lookup[(task.task_id, action.value)] = {
+                    "verified_success": False,
+                    "verification_status": "not_executed",
+                    "latency_ms": 0.0,
+                    "token_count": 0,
+                    "tool_failures": 0,
+                    "workflow_iterations": 0,
+                    "operator_intervention": False,
+                    "safety_violation": False,
+                    "runtime_error": False,
+                    "action_completed": False,
+                    "tool_name": None,
+                    "tool_calls_executed": 0,
+                    "tool_result_valid": False,
+                    "final_answer_grounded": False,
+                    "workflow_name": None,
+                    "workflow_run_id": None,
+                    "acceptance_present": False,
+                    "acceptance_passed": False,
+                    "exit_code": None,
+                    "unnecessary_tool_use": False,
+                    "unnecessary_workflow_use": False,
+                }
+                continue
             passed, status = task.verifier(action, {
                 "text": result.text,
                 "expected_token": task.setup.get("expected_token", ""),
@@ -49,6 +74,18 @@ def _build_outcome_lookup(tasks: list[RoutingTask]) -> dict[tuple[str, str], dic
                 "tool_failures": result.outcome.tool_failures,
                 "workflow_iterations": result.outcome.workflow_iterations,
                 "operator_intervention": result.outcome.operator_intervention,
+                "tool_calls_executed": result.outcome.tool_calls_executed,
+                "tool_result_valid": result.outcome.tool_result_valid,
+                "tool_name": result.outcome.tool_name,
+                "final_answer_grounded": result.outcome.final_answer_grounded,
+                "workflow_name": result.outcome.workflow_name,
+                "workflow_run_id": result.outcome.workflow_run_id,
+                "acceptance_present": result.outcome.acceptance_present,
+                "exit_code": result.outcome.exit_code,
+                "runtime_error": result.outcome.runtime_error,
+                "action_completed": result.outcome.action_completed,
+                "unnecessary_tool_use": result.outcome.unnecessary_tool_use,
+                "unnecessary_workflow_use": result.outcome.unnecessary_workflow_use,
             })
             lookup[(task.task_id, action.value)] = {
                 "verified_success": passed,

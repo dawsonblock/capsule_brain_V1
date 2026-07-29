@@ -94,12 +94,33 @@ def _verifier_memory(action: Action, outcome: dict[str, Any]) -> tuple[bool, str
 
 
 def _verifier_tool(action: Action, outcome: dict[str, Any]) -> tuple[bool, str]:
+    """Tool tasks: 4-stage verification.
+
+    1. tool_selection_success: the action was CALL_TOOL (not a direct guess).
+    2. tool_execution_success: the tool was actually executed (tool_calls_executed >= 1).
+    3. tool_result_delivery_success: the tool result was valid (tool_result_valid).
+    4. final_answer_grounding_success: the final answer contains the exact nonce.
+
+    The nonce is a secret that only the tool can produce — the model cannot
+    derive it. We use exact substring matching on the nonce (not fuzzy).
+    """
+    # Stage 1: tool selection
+    if action != Action.CALL_TOOL:
+        return False, "fail:tool_not_selected"
+    # Stage 2: tool execution
+    tool_calls = int(outcome.get("tool_calls_executed", 0) or 0)
+    if tool_calls < 1:
+        return False, "fail:tool_not_executed"
+    # Stage 3: tool result delivery
+    if not outcome.get("tool_result_valid", False):
+        return False, "fail:tool_result_invalid"
+    # Stage 4: final answer grounding
     text = str(outcome.get("text", "") or "").strip()
     nonce = str(outcome.get("expected_nonce", "") or "")
     if not nonce:
-        return False, "fail"
+        return False, "fail:no_expected_nonce"
     if nonce.lower() not in text.lower():
-        return False, "fail"
+        return False, "fail:answer_not_grounded"
     return True, "pass"
 
 

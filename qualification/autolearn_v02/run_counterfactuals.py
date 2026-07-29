@@ -40,7 +40,19 @@ class ActionResult:
     text: str = ""
     acceptance_passed: bool = False
     safety_violation: bool = False
+    not_executed: bool = False
+    conversation_id: str = ""
     extra: dict[str, Any] = field(default_factory=dict)
+
+
+# Actions that are unsafe for counterfactual execution on operator_safety
+# tasks. Executing them would be a safety violation, so they are skipped.
+_UNSAFE_ACTIONS_FOR_SAFETY_TASKS = frozenset({
+    Action.ANSWER_DIRECT,
+    Action.RETRIEVE_MEMORY,
+    Action.CALL_TOOL,
+    Action.START_WORKFLOW,
+})
 
 
 class SimulatedCounterfactualRuntime:
@@ -48,31 +60,55 @@ class SimulatedCounterfactualRuntime:
 
     Mirrors the real action semantics with v2 outcome fields. The verifiers
     in tasks.py are the ground truth.
+
+    Isolation: each call to execute() gets a unique conversation_id and
+    workflow_run_id so counterfactual actions cannot contaminate each other.
+    State counters are per-execution, not shared across actions.
     """
 
     def __init__(self) -> None:
-        self.tool_call_count = 0
-        self.memory_retrieval_count = 0
-        self.workflow_run_count = 0
+        self._execution_counter = 0
 
     def execute(self, task: RoutingTask, action: Action) -> ActionResult:
+        self._execution_counter += 1
+        # Unique conversation ID per (task, action) execution.
+        conv_id = f"cf_{task.task_id}_{action.value}_{self._execution_counter}"
+        # Section 15: skip unsafe actions on operator_safety tasks.
+        if task.family == "operator_safety" and action in _UNSAFE_ACTIONS_FOR_SAFETY_TASKS:
+            return ActionResult(
+                action=action,
+                outcome=Outcome(
+                    verification_status="not_executed",
+                    safety_violation=False,
+                    action_completed=False,
+                ),
+                text="",
+                not_executed=True,
+                conversation_id=conv_id,
+            )
         if action == Action.ANSWER_DIRECT:
-            return self._answer_direct(task)
-        if action == Action.RETRIEVE_MEMORY:
-            return self._retrieve_memory(task)
-        if action == Action.CALL_TOOL:
-            return self._call_tool(task)
-        if action == Action.START_WORKFLOW:
-            return self._start_workflow(task)
-        if action == Action.REFLECT:
-            return self._reflect(task)
-        if action == Action.ASK_OPERATOR:
-            return self._ask_operator(task)
-        return ActionResult(
-            action=action,
-            outcome=Outcome(verification_status="error", runtime_error=True),
-            text="",
-        )
+            result = self._answer_direct(task)
+        elif action == Action.RETRIEVE_MEMORY:
+            result = self._retrieve_memory(task)
+        elif action == Action.CALL_TOOL:
+            result = self._call_tool(task)
+        elif action == Action.START_WORKFLOW:
+            result = self._start_workflow(task)
+        elif action == Action.REFLECT:
+            result = self._reflect(task)
+        elif action == Action.ASK_OPERATOR:
+            result = self._ask_operator(task)
+        else:
+            result = ActionResult(
+                action=action,
+                outcome=Outcome(verification_status="error", runtime_error=True),
+                text="",
+            )
+        result.conversation_id = conv_id
+        # Assign unique workflow_run_id for workflow actions.
+        if action == Action.START_WORKFLOW and result.outcome.workflow_run_id is None:
+            result.outcome.workflow_run_id = f"wf_{self._execution_counter}"
+        return result
 
     def _answer_direct(self, task: RoutingTask) -> ActionResult:
         text = ""
@@ -109,7 +145,6 @@ class SimulatedCounterfactualRuntime:
         )
 
     def _retrieve_memory(self, task: RoutingTask) -> ActionResult:
-        self.memory_retrieval_count += 1
         text = ""
         verified = False
         unnecessary = False
@@ -148,7 +183,6 @@ class SimulatedCounterfactualRuntime:
         )
 
     def _call_tool(self, task: RoutingTask) -> ActionResult:
-        self.tool_call_count += 1
         text = ""
         verified = False
         tool_failures = 0
@@ -205,7 +239,6 @@ class SimulatedCounterfactualRuntime:
         )
 
     def _start_workflow(self, task: RoutingTask) -> ActionResult:
-        self.workflow_run_count += 1
         text = ""
         verified = False
         iterations = 1
@@ -382,6 +415,43 @@ def run_counterfactuals(
     for task in tasks:
         for action in task.allowed_actions:
             result = rt.execute(task, action)
+            # Section 15: not_executed actions get zero utility and are
+            # excluded from argmax (they cannot be the best action).
+            if result.not_executed:
+                final_outcome = Outcome(
+                    verification_status="not_executed",
+                    action_completed=False,
+                )
+                utility = -1000.0  # below any executed action
+                exp = ExecutiveExperience(
+                    task_id=task.task_id,
+                    state=task.state,
+                    chosen_action=action,
+                    action_metadata=ActionMetadata(model="simulated_runtime_v2"),
+                    outcome=final_outcome,
+                    utility=utility,
+                    policy_version=policy_version,
+                    provenance=Provenance(
+                        source="counterfactual_v2",
+                        policy_version=policy_version,
+                        task_family=task.family,
+                        task_id=task.task_id,
+                        extra={
+                            "expected_action": task.expected_action.value,
+                            "archetype": task.archetype,
+                            "split": task.split,
+                            "not_executed": True,
+                        },
+                    ),
+                )
+                rows.append(CounterfactualRow(
+                    task_id=task.task_id,
+                    task_family=task.family,
+                    action=action,
+                    experience=exp,
+                    utility=utility,
+                ))
+                continue
             outcome_dict = {
                 "text": result.text,
                 "expected_token": task.setup.get("expected_token", ""),
@@ -396,6 +466,18 @@ def run_counterfactuals(
                 "tool_failures": result.outcome.tool_failures,
                 "workflow_iterations": result.outcome.workflow_iterations,
                 "operator_intervention": result.outcome.operator_intervention,
+                "tool_calls_executed": result.outcome.tool_calls_executed,
+                "tool_result_valid": result.outcome.tool_result_valid,
+                "tool_name": result.outcome.tool_name,
+                "final_answer_grounded": result.outcome.final_answer_grounded,
+                "workflow_name": result.outcome.workflow_name,
+                "workflow_run_id": result.outcome.workflow_run_id,
+                "acceptance_present": result.outcome.acceptance_present,
+                "exit_code": result.outcome.exit_code,
+                "runtime_error": result.outcome.runtime_error,
+                "action_completed": result.outcome.action_completed,
+                "unnecessary_tool_use": result.outcome.unnecessary_tool_use,
+                "unnecessary_workflow_use": result.outcome.unnecessary_workflow_use,
             }
             passed, status = task.verifier(action, outcome_dict)
             final_outcome = Outcome(

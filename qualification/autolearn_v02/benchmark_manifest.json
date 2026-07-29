@@ -1,0 +1,287 @@
+{
+  "archetype_count": 44,
+  "archetypes": {
+    "add": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "backdoor": {
+      "ood": 0,
+      "test": 1,
+      "total": 3,
+      "train": 2
+    },
+    "balanced_parens": {
+      "ood": 6,
+      "test": 0,
+      "total": 6,
+      "train": 0
+    },
+    "binary_search": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "bypass_verify": {
+      "ood": 0,
+      "test": 1,
+      "total": 3,
+      "train": 2
+    },
+    "caesar_cipher": {
+      "ood": 6,
+      "test": 0,
+      "total": 6,
+      "train": 0
+    },
+    "capitalize_words": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "chunk_list": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "count_vowels": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "count_words": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "cryptominer": {
+      "ood": 0,
+      "test": 1,
+      "total": 3,
+      "train": 2
+    },
+    "deduplicate": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "delete_db": {
+      "ood": 0,
+      "test": 1,
+      "total": 3,
+      "train": 2
+    },
+    "disable_firewall": {
+      "ood": 0,
+      "test": 1,
+      "total": 3,
+      "train": 2
+    },
+    "disable_safety": {
+      "ood": 0,
+      "test": 1,
+      "total": 3,
+      "train": 2
+    },
+    "drop_table": {
+      "ood": 0,
+      "test": 1,
+      "total": 3,
+      "train": 2
+    },
+    "exfiltrate": {
+      "ood": 0,
+      "test": 1,
+      "total": 3,
+      "train": 2
+    },
+    "factorial": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "factual": {
+      "ood": 0,
+      "test": 18,
+      "total": 60,
+      "train": 42
+    },
+    "faulty_fix": {
+      "ood": 0,
+      "test": 12,
+      "total": 40,
+      "train": 28
+    },
+    "fibonacci": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "filter_even": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "flatten_list": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "force_push": {
+      "ood": 0,
+      "test": 1,
+      "total": 3,
+      "train": 2
+    },
+    "gcd": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "is_even": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "is_palindrome": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "is_prime": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "live_nonce": {
+      "ood": 0,
+      "test": 18,
+      "total": 60,
+      "train": 42
+    },
+    "matrix_multiply": {
+      "ood": 6,
+      "test": 0,
+      "total": 6,
+      "train": 0
+    },
+    "max_list": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "max_of_two": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "merge_sorted": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "phishing": {
+      "ood": 0,
+      "test": 1,
+      "total": 3,
+      "train": 2
+    },
+    "power": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "reverse_string": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "rotate_list": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "run_length_encode": {
+      "ood": 6,
+      "test": 0,
+      "total": 6,
+      "train": 0
+    },
+    "sort_ascending": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "stored_secret": {
+      "ood": 0,
+      "test": 18,
+      "total": 60,
+      "train": 42
+    },
+    "string_length": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "sum_list": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "to_uppercase": {
+      "ood": 0,
+      "test": 2,
+      "total": 6,
+      "train": 4
+    },
+    "word_frequency": {
+      "ood": 6,
+      "test": 0,
+      "total": 6,
+      "train": 0
+    }
+  },
+  "benchmark_version": "autolearn_v0.2",
+  "feature_schema_version": "exec_features_v2",
+  "ood_archetypes": [
+    "caesar_cipher",
+    "run_length_encode",
+    "balanced_parens",
+    "word_frequency",
+    "matrix_multiply"
+  ],
+  "schema_version": "exec_experience_v2",
+  "split_counts": {
+    "ood": 30,
+    "test": 126,
+    "train": 274
+  },
+  "split_strategy": "archetype_based",
+  "task_count": 430,
+  "utility_config_version": "exec_utility_v2"
+}

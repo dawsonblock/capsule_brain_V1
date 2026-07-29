@@ -1,0 +1,25 @@
+{
+  "benchmark_manifest_sha256": "1da431ce153c9f1b8dfb8d48754634e5a75cd88aa8b8fe897b31b0ec6ab9b1b9",
+  "counterfactual_results_sha256": "84695c3c0f20dd4091c6bae7acfdf49cb88510b68fcab605a240c0c42ccb68ba",
+  "dataset_manifest_sha256": "be0a46b6935c575922e0ff59fa0dc7b68175ccd2a4588dd7cbc6845d64321c13",
+  "dataset_sha256": "29362e2e78e730e231d1894144e97237cab7be2959da39593141b6ee915f1a21",
+  "evaluation_results_sha256": "87d34993de2578c28b7469a5a996b3bff177094257c0256463bf6a0bb22c7ffa",
+  "paths": {
+    "benchmark_manifest": "qualification/autolearn_v02/benchmark_manifest.json",
+    "counterfactual_results": "qualification/autolearn_v02/counterfactuals.json",
+    "dataset": "qualification/autolearn_v02/dataset.json",
+    "dataset_manifest": "qualification/autolearn_v02/dataset_manifest.json",
+    "evaluation_results": "qualification/autolearn_v02/evaluation.json",
+    "policy_manifest": "qualification/autolearn_v02/policy_manifest.json",
+    "promotion_result": "qualification/autolearn_v02/promotion_result.json",
+    "shadow_eval": "qualification/autolearn_v02/shadow_eval.json",
+    "split_manifest": "qualification/autolearn_v02/split_manifest.json"
+  },
+  "policy_artifact_sha256": "315f21e2dd019b065805490886e4e052a7ed17a588fcac294bcdfa7ca2826786",
+  "policy_manifest_sha256": "9680a051483bfa102bf62a8e138a13b7539cc68014bc20b7831bfd21b2aec7c6",
+  "promotion_result_sha256": "a490c9b474986556c0871708f7092c535ac28ac9c48945760bb295a8459701e4",
+  "qualification_harness_sha256": "756466d634c851eb45af6bafd2964b839f39c89e8faa6987f22b8858fead8b70",
+  "shadow_eval_sha256": "51758695a3f1434aae93600897c0b9d8130a312fbd2a42d6051a4fca22380db2",
+  "source_tree_sha256": "eee353c20aa581b8b87e3d82b3a221070e9736ad",
+  "split_manifest_sha256": "800e87dfa4a2e928df7a0f4910ed0d81a3af09d0a7593aba88efd38b58d2717c"
+}

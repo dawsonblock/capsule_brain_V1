@@ -1,0 +1,98 @@
+{
+  "abstention_rate": 0.0,
+  "accuracy_at_coverage": {
+    "cov_0.50": 1.0,
+    "cov_0.75": 1.0,
+    "cov_0.90": 1.0,
+    "cov_0.95": 1.0
+  },
+  "bins": [
+    {
+      "bin_hi": 0.1,
+      "bin_lo": 0.0,
+      "count": 0,
+      "gap": 0.0,
+      "mean_accuracy": 0.0,
+      "mean_confidence": 0.0
+    },
+    {
+      "bin_hi": 0.2,
+      "bin_lo": 0.1,
+      "count": 0,
+      "gap": 0.0,
+      "mean_accuracy": 0.0,
+      "mean_confidence": 0.0
+    },
+    {
+      "bin_hi": 0.3,
+      "bin_lo": 0.2,
+      "count": 0,
+      "gap": 0.0,
+      "mean_accuracy": 0.0,
+      "mean_confidence": 0.0
+    },
+    {
+      "bin_hi": 0.4,
+      "bin_lo": 0.3,
+      "count": 0,
+      "gap": 0.0,
+      "mean_accuracy": 0.0,
+      "mean_confidence": 0.0
+    },
+    {
+      "bin_hi": 0.5,
+      "bin_lo": 0.4,
+      "count": 0,
+      "gap": 0.0,
+      "mean_accuracy": 0.0,
+      "mean_confidence": 0.0
+    },
+    {
+      "bin_hi": 0.6,
+      "bin_lo": 0.5,
+      "count": 0,
+      "gap": 0.0,
+      "mean_accuracy": 0.0,
+      "mean_confidence": 0.0
+    },
+    {
+      "bin_hi": 0.7,
+      "bin_lo": 0.6,
+      "count": 0,
+      "gap": 0.0,
+      "mean_accuracy": 0.0,
+      "mean_confidence": 0.0
+    },
+    {
+      "bin_hi": 0.8,
+      "bin_lo": 0.7,
+      "count": 0,
+      "gap": 0.0,
+      "mean_accuracy": 0.0,
+      "mean_confidence": 0.0
+    },
+    {
+      "bin_hi": 0.9,
+      "bin_lo": 0.8,
+      "count": 0,
+      "gap": 0.0,
+      "mean_accuracy": 0.0,
+      "mean_confidence": 0.0
+    },
+    {
+      "bin_hi": 1.0,
+      "bin_lo": 0.9,
+      "count": 126,
+      "gap": 0.0002,
+      "mean_accuracy": 1.0,
+      "mean_confidence": 0.9998
+    }
+  ],
+  "brier_score": 8.916539843150788e-08,
+  "ece": 0.00015484614871708047,
+  "mean_accuracy": 1.0,
+  "mean_confidence": 0.9998451538512829,
+  "n": 126,
+  "n_abstained": 0,
+  "n_bins": 10
+}

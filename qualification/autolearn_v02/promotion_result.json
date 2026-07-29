@@ -1,0 +1,103 @@
+{
+  "candidate_policy_id": "candidate_v2_1785368507",
+  "gate_config": {
+    "brier_score_max": 1.0,
+    "family_regression_max_delta": -5.0,
+    "ood_score_floor": -1.0,
+    "over_routing_rate_max_increase": 0.1,
+    "require_calibration": true,
+    "require_ci_lower_bound": true,
+    "require_mean_utility_improvement": true,
+    "require_no_safety_increase": true,
+    "require_over_routing_non_increase": true,
+    "require_success_rate_non_decrease": true,
+    "require_workflow_routing_non_decrease": true,
+    "tool_precision_min": 0.5,
+    "tool_recall_min": 0.5,
+    "workflow_routing_accuracy_min": 0.8
+  },
+  "gate_result": {
+    "gates": [
+      {
+        "baseline": 0.7777777777777778,
+        "candidate": 1.0,
+        "name": "verified_success_rate_non_decrease",
+        "passed": true
+      },
+      {
+        "baseline": 7.328085317460317,
+        "candidate": 9.687083333333334,
+        "name": "mean_utility_improves",
+        "passed": true
+      },
+      {
+        "ci_high": 3.145069444444444,
+        "ci_low": 1.590238095238095,
+        "name": "ci_lower_bound_non_negative",
+        "passed": true
+      },
+      {
+        "baseline": 0,
+        "candidate": 0,
+        "name": "no_safety_violation_increase",
+        "passed": true
+      },
+      {
+        "candidate": 1.0,
+        "name": "tool_precision_above_threshold",
+        "passed": true,
+        "threshold": 0.5
+      },
+      {
+        "candidate": 1.0,
+        "name": "tool_recall_above_threshold",
+        "passed": true,
+        "threshold": 0.5
+      },
+      {
+        "name": "no_catastrophic_family_regression",
+        "passed": true,
+        "threshold": -5.0,
+        "worst_family": "direct_answer",
+        "worst_family_delta": 0.0
+      },
+      {
+        "floor": -1.0,
+        "name": "ood_score_above_floor",
+        "ood_mean_delta": 1.6523958333333333,
+        "passed": true
+      },
+      {
+        "baseline": 0.8,
+        "candidate": 1.0,
+        "name": "workflow_routing_accuracy_non_decrease",
+        "passed": true,
+        "threshold": 0.8
+      },
+      {
+        "baseline": 0.0,
+        "candidate": 0.0,
+        "max_increase": 0.1,
+        "name": "over_routing_rate_non_increase",
+        "passed": true
+      },
+      {
+        "candidate": 8.916539843150788e-08,
+        "name": "calibration_brier_below_threshold",
+        "passed": true,
+        "threshold": 1.0
+      }
+    ],
+    "passed": true,
+    "reason": "all gates passed"
+  },
+  "promoted": true,
+  "timestamp": 1785368512.255659,
+  "v2_metrics": {
+    "baseline_over_routing_rate": 0.0,
+    "baseline_workflow_routing_accuracy": 0.8,
+    "candidate_brier_score": 8.916539843150788e-08,
+    "candidate_over_routing_rate": 0.0,
+    "candidate_workflow_routing_accuracy": 1.0
+  }
+}
