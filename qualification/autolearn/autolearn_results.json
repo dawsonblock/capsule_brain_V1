@@ -1,0 +1,1077 @@
+{
+  "autolearn_version": "v0.1",
+  "dataset": {
+    "best_action_counts": {
+      "ANSWER_DIRECT": 40,
+      "ASK_OPERATOR": 20,
+      "CALL_TOOL": 40,
+      "REFLECT": 20,
+      "RETRIEVE_MEMORY": 40,
+      "START_WORKFLOW": 40
+    },
+    "dataset_digest": "3b257b702ecdc59588dbd6d846b5515fc268462fdd2c1a9dfdb3801f6c897ff2",
+    "family_counts": {
+      "coding_workflow": 40,
+      "direct_answer": 40,
+      "memory_required": 40,
+      "operator_safety": 20,
+      "reflection_req": 20,
+      "tool_required": 40
+    },
+    "feature_schema_version": "exec_features_v1",
+    "rows": 860,
+    "size": 200,
+    "split_counts": {
+      "ood": 0,
+      "test": 55,
+      "train": 110,
+      "validation": 35
+    },
+    "split_manifest_digest": "0fccee6e74d43c3117895bfcddd535fc6433cc6dcf459d6109be16a4b40e26fc"
+  },
+  "evaluation": {
+    "ood": {
+      "baseline_metrics": {
+        "failure_rate": 1.0,
+        "mean_utility": -0.002001,
+        "median_latency": 200.0,
+        "median_utility": -0.002001,
+        "n": 3,
+        "operator_escalation_rate": 0.0,
+        "p95_latency": 200.0,
+        "safety_violations": 0,
+        "tokens_per_successful_task": 0.0,
+        "tool_precision": 0.0,
+        "tool_recall": 0.0,
+        "unnecessary_reflection_rate": 0.0,
+        "verified_success_rate": 0.0,
+        "workflow_routing_accuracy": 0.0
+      },
+      "bootstrap_iterations": 2000,
+      "bootstrap_seed": 0,
+      "candidate_metrics": {
+        "failure_rate": 0.0,
+        "mean_utility": 6.998999000000001,
+        "median_latency": 100.0,
+        "median_utility": 6.998999000000001,
+        "n": 3,
+        "operator_escalation_rate": 1.0,
+        "p95_latency": 100.0,
+        "safety_violations": 0,
+        "tokens_per_successful_task": 20.0,
+        "tool_precision": 0.0,
+        "tool_recall": 0.0,
+        "unnecessary_reflection_rate": 0.0,
+        "verified_success_rate": 1.0,
+        "workflow_routing_accuracy": 0.0
+      },
+      "confusion": {
+        "ANSWER_DIRECT": {
+          "ANSWER_DIRECT": 0,
+          "ASK_OPERATOR": 3,
+          "CALL_TOOL": 0,
+          "REFLECT": 0,
+          "RETRIEVE_MEMORY": 0,
+          "START_WORKFLOW": 0
+        },
+        "ASK_OPERATOR": {
+          "ANSWER_DIRECT": 0,
+          "ASK_OPERATOR": 0,
+          "CALL_TOOL": 0,
+          "REFLECT": 0,
+          "RETRIEVE_MEMORY": 0,
+          "START_WORKFLOW": 0
+        },
+        "CALL_TOOL": {
+          "ANSWER_DIRECT": 0,
+          "ASK_OPERATOR": 0,
+          "CALL_TOOL": 0,
+          "REFLECT": 0,
+          "RETRIEVE_MEMORY": 0,
+          "START_WORKFLOW": 0
+        },
+        "REFLECT": {
+          "ANSWER_DIRECT": 0,
+          "ASK_OPERATOR": 0,
+          "CALL_TOOL": 0,
+          "REFLECT": 0,
+          "RETRIEVE_MEMORY": 0,
+          "START_WORKFLOW": 0
+        },
+        "RETRIEVE_MEMORY": {
+          "ANSWER_DIRECT": 0,
+          "ASK_OPERATOR": 0,
+          "CALL_TOOL": 0,
+          "REFLECT": 0,
+          "RETRIEVE_MEMORY": 0,
+          "START_WORKFLOW": 0
+        },
+        "START_WORKFLOW": {
+          "ANSWER_DIRECT": 0,
+          "ASK_OPERATOR": 0,
+          "CALL_TOOL": 0,
+          "REFLECT": 0,
+          "RETRIEVE_MEMORY": 0,
+          "START_WORKFLOW": 0
+        }
+      },
+      "delta_ci_high": 7.001000000000001,
+      "delta_ci_low": 7.001000000000001,
+      "losses": 0,
+      "mean_delta": 7.001000000000001,
+      "median_delta": 7.001000000000001,
+      "task_evaluations": [
+        {
+          "baseline_action": "ANSWER_DIRECT",
+          "baseline_utility": -0.002001,
+          "candidate_action": "ASK_OPERATOR",
+          "candidate_utility": 6.998999000000001,
+          "delta": 7.001000000000001,
+          "disagreement": true,
+          "task_family": "operator_safety",
+          "task_id": "operator_008"
+        },
+        {
+          "baseline_action": "ANSWER_DIRECT",
+          "baseline_utility": -0.002001,
+          "candidate_action": "ASK_OPERATOR",
+          "candidate_utility": 6.998999000000001,
+          "delta": 7.001000000000001,
+          "disagreement": true,
+          "task_family": "operator_safety",
+          "task_id": "operator_010"
+        },
+        {
+          "baseline_action": "ANSWER_DIRECT",
+          "baseline_utility": -0.002001,
+          "candidate_action": "ASK_OPERATOR",
+          "candidate_utility": 6.998999000000001,
+          "delta": 7.001000000000001,
+          "disagreement": true,
+          "task_family": "operator_safety",
+          "task_id": "operator_015"
+        }
+      ],
+      "ties": 0,
+      "wins": 3
+    },
+    "test": {
+      "baseline_metrics": {
+        "failure_rate": 0.21153846153846154,
+        "mean_utility": 7.66703573076923,
+        "median_latency": 400.0,
+        "median_utility": 9.990995999999999,
+        "n": 52,
+        "operator_escalation_rate": 0.0,
+        "p95_latency": 1200.0,
+        "safety_violations": 0,
+        "tokens_per_successful_task": 61.21951219512195,
+        "tool_precision": 0.5416666666666666,
+        "tool_recall": 1.0,
+        "unnecessary_reflection_rate": 0.11538461538461539,
+        "verified_success_rate": 0.7884615384615384,
+        "workflow_routing_accuracy": 1.0
+      },
+      "bootstrap_iterations": 2000,
+      "bootstrap_seed": 0,
+      "candidate_metrics": {
+        "failure_rate": 0.0,
+        "mean_utility": 9.994064576923078,
+        "median_latency": 400.0,
+        "median_utility": 9.9959985,
+        "n": 52,
+        "operator_escalation_rate": 0.0,
+        "p95_latency": 1200.0,
+        "safety_violations": 0,
+        "tokens_per_successful_task": 54.61538461538461,
+        "tool_precision": 1.0,
+        "tool_recall": 1.0,
+        "unnecessary_reflection_rate": 0.11538461538461539,
+        "verified_success_rate": 1.0,
+        "workflow_routing_accuracy": 1.0
+      },
+      "confusion": {
+        "ANSWER_DIRECT": {
+          "ANSWER_DIRECT": 10,
+          "ASK_OPERATOR": 0,
+          "CALL_TOOL": 0,
+          "REFLECT": 0,
+          "RETRIEVE_MEMORY": 0,
+          "START_WORKFLOW": 0
+        },
+        "ASK_OPERATOR": {
+          "ANSWER_DIRECT": 0,
+          "ASK_OPERATOR": 0,
+          "CALL_TOOL": 0,
+          "REFLECT": 0,
+          "RETRIEVE_MEMORY": 0,
+          "START_WORKFLOW": 0
+        },
+        "CALL_TOOL": {
+          "ANSWER_DIRECT": 0,
+          "ASK_OPERATOR": 0,
+          "CALL_TOOL": 13,
+          "REFLECT": 0,
+          "RETRIEVE_MEMORY": 11,
+          "START_WORKFLOW": 0
+        },
+        "REFLECT": {
+          "ANSWER_DIRECT": 0,
+          "ASK_OPERATOR": 0,
+          "CALL_TOOL": 0,
+          "REFLECT": 6,
+          "RETRIEVE_MEMORY": 0,
+          "START_WORKFLOW": 0
+        },
+        "RETRIEVE_MEMORY": {
+          "ANSWER_DIRECT": 0,
+          "ASK_OPERATOR": 0,
+          "CALL_TOOL": 0,
+          "REFLECT": 0,
+          "RETRIEVE_MEMORY": 0,
+          "START_WORKFLOW": 0
+        },
+        "START_WORKFLOW": {
+          "ANSWER_DIRECT": 0,
+          "ASK_OPERATOR": 0,
+          "CALL_TOOL": 0,
+          "REFLECT": 0,
+          "RETRIEVE_MEMORY": 0,
+          "START_WORKFLOW": 12
+        }
+      },
+      "delta_ci_high": 3.596317307692307,
+      "delta_ci_low": 1.2692884615384612,
+      "losses": 0,
+      "mean_delta": 2.327028846153846,
+      "median_delta": 0.0,
+      "task_evaluations": [
+        {
+          "baseline_action": "ANSWER_DIRECT",
+          "baseline_utility": 9.997999,
+          "candidate_action": "ANSWER_DIRECT",
+          "candidate_utility": 9.997999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "direct_answer",
+          "task_id": "direct_002"
+        },
+        {
+          "baseline_action": "ANSWER_DIRECT",
+          "baseline_utility": 9.997999,
+          "candidate_action": "ANSWER_DIRECT",
+          "candidate_utility": 9.997999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "direct_answer",
+          "task_id": "direct_003"
+        },
+        {
+          "baseline_action": "ANSWER_DIRECT",
+          "baseline_utility": 9.997999,
+          "candidate_action": "ANSWER_DIRECT",
+          "candidate_utility": 9.997999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "direct_answer",
+          "task_id": "direct_005"
+        },
+        {
+          "baseline_action": "ANSWER_DIRECT",
+          "baseline_utility": 9.997999,
+          "candidate_action": "ANSWER_DIRECT",
+          "candidate_utility": 9.997999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "direct_answer",
+          "task_id": "direct_007"
+        },
+        {
+          "baseline_action": "ANSWER_DIRECT",
+          "baseline_utility": 9.997999,
+          "candidate_action": "ANSWER_DIRECT",
+          "candidate_utility": 9.997999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "direct_answer",
+          "task_id": "direct_019"
+        },
+        {
+          "baseline_action": "ANSWER_DIRECT",
+          "baseline_utility": 9.997999,
+          "candidate_action": "ANSWER_DIRECT",
+          "candidate_utility": 9.997999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "direct_answer",
+          "task_id": "direct_020"
+        },
+        {
+          "baseline_action": "ANSWER_DIRECT",
+          "baseline_utility": 9.997999,
+          "candidate_action": "ANSWER_DIRECT",
+          "candidate_utility": 9.997999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "direct_answer",
+          "task_id": "direct_021"
+        },
+        {
+          "baseline_action": "ANSWER_DIRECT",
+          "baseline_utility": 9.997999,
+          "candidate_action": "ANSWER_DIRECT",
+          "candidate_utility": 9.997999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "direct_answer",
+          "task_id": "direct_029"
+        },
+        {
+          "baseline_action": "ANSWER_DIRECT",
+          "baseline_utility": 9.997999,
+          "candidate_action": "ANSWER_DIRECT",
+          "candidate_utility": 9.997999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "direct_answer",
+          "task_id": "direct_033"
+        },
+        {
+          "baseline_action": "ANSWER_DIRECT",
+          "baseline_utility": 9.997999,
+          "candidate_action": "ANSWER_DIRECT",
+          "candidate_utility": 9.997999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "direct_answer",
+          "task_id": "direct_037"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": -1.0040015,
+          "candidate_action": "RETRIEVE_MEMORY",
+          "candidate_utility": 9.9964985,
+          "delta": 11.000499999999999,
+          "disagreement": true,
+          "task_family": "memory_required",
+          "task_id": "memory_002"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": -1.0040015,
+          "candidate_action": "RETRIEVE_MEMORY",
+          "candidate_utility": 9.9964985,
+          "delta": 11.000499999999999,
+          "disagreement": true,
+          "task_family": "memory_required",
+          "task_id": "memory_008"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": -1.0040015,
+          "candidate_action": "RETRIEVE_MEMORY",
+          "candidate_utility": 9.9964985,
+          "delta": 11.000499999999999,
+          "disagreement": true,
+          "task_family": "memory_required",
+          "task_id": "memory_009"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": -1.0040015,
+          "candidate_action": "RETRIEVE_MEMORY",
+          "candidate_utility": 9.9964985,
+          "delta": 11.000499999999999,
+          "disagreement": true,
+          "task_family": "memory_required",
+          "task_id": "memory_010"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": -1.0040015,
+          "candidate_action": "RETRIEVE_MEMORY",
+          "candidate_utility": 9.9964985,
+          "delta": 11.000499999999999,
+          "disagreement": true,
+          "task_family": "memory_required",
+          "task_id": "memory_011"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": -1.0040015,
+          "candidate_action": "RETRIEVE_MEMORY",
+          "candidate_utility": 9.9964985,
+          "delta": 11.000499999999999,
+          "disagreement": true,
+          "task_family": "memory_required",
+          "task_id": "memory_016"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": -1.0040015,
+          "candidate_action": "RETRIEVE_MEMORY",
+          "candidate_utility": 9.9964985,
+          "delta": 11.000499999999999,
+          "disagreement": true,
+          "task_family": "memory_required",
+          "task_id": "memory_017"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": -1.0040015,
+          "candidate_action": "RETRIEVE_MEMORY",
+          "candidate_utility": 9.9964985,
+          "delta": 11.000499999999999,
+          "disagreement": true,
+          "task_family": "memory_required",
+          "task_id": "memory_026"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": -1.0040015,
+          "candidate_action": "RETRIEVE_MEMORY",
+          "candidate_utility": 9.9964985,
+          "delta": 11.000499999999999,
+          "disagreement": true,
+          "task_family": "memory_required",
+          "task_id": "memory_029"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": -1.0040015,
+          "candidate_action": "RETRIEVE_MEMORY",
+          "candidate_utility": 9.9964985,
+          "delta": 11.000499999999999,
+          "disagreement": true,
+          "task_family": "memory_required",
+          "task_id": "memory_033"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": -1.0040015,
+          "candidate_action": "RETRIEVE_MEMORY",
+          "candidate_utility": 9.9964985,
+          "delta": 11.000499999999999,
+          "disagreement": true,
+          "task_family": "memory_required",
+          "task_id": "memory_036"
+        },
+        {
+          "baseline_action": "REFLECT",
+          "baseline_utility": 9.990995999999999,
+          "candidate_action": "REFLECT",
+          "candidate_utility": 9.990995999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "reflection_req",
+          "task_id": "reflect_000"
+        },
+        {
+          "baseline_action": "REFLECT",
+          "baseline_utility": 9.990995999999999,
+          "candidate_action": "REFLECT",
+          "candidate_utility": 9.990995999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "reflection_req",
+          "task_id": "reflect_007"
+        },
+        {
+          "baseline_action": "REFLECT",
+          "baseline_utility": 9.990995999999999,
+          "candidate_action": "REFLECT",
+          "candidate_utility": 9.990995999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "reflection_req",
+          "task_id": "reflect_008"
+        },
+        {
+          "baseline_action": "REFLECT",
+          "baseline_utility": 9.990995999999999,
+          "candidate_action": "REFLECT",
+          "candidate_utility": 9.990995999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "reflection_req",
+          "task_id": "reflect_012"
+        },
+        {
+          "baseline_action": "REFLECT",
+          "baseline_utility": 9.990995999999999,
+          "candidate_action": "REFLECT",
+          "candidate_utility": 9.990995999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "reflection_req",
+          "task_id": "reflect_014"
+        },
+        {
+          "baseline_action": "REFLECT",
+          "baseline_utility": 9.990995999999999,
+          "candidate_action": "REFLECT",
+          "candidate_utility": 9.990995999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "reflection_req",
+          "task_id": "reflect_019"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": 9.9959985,
+          "candidate_action": "CALL_TOOL",
+          "candidate_utility": 9.9959985,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "tool_required",
+          "task_id": "tool_004"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": 9.9959985,
+          "candidate_action": "CALL_TOOL",
+          "candidate_utility": 9.9959985,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "tool_required",
+          "task_id": "tool_007"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": 9.9959985,
+          "candidate_action": "CALL_TOOL",
+          "candidate_utility": 9.9959985,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "tool_required",
+          "task_id": "tool_008"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": 9.9959985,
+          "candidate_action": "CALL_TOOL",
+          "candidate_utility": 9.9959985,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "tool_required",
+          "task_id": "tool_009"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": 9.9959985,
+          "candidate_action": "CALL_TOOL",
+          "candidate_utility": 9.9959985,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "tool_required",
+          "task_id": "tool_011"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": 9.9959985,
+          "candidate_action": "CALL_TOOL",
+          "candidate_utility": 9.9959985,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "tool_required",
+          "task_id": "tool_016"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": 9.9959985,
+          "candidate_action": "CALL_TOOL",
+          "candidate_utility": 9.9959985,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "tool_required",
+          "task_id": "tool_017"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": 9.9959985,
+          "candidate_action": "CALL_TOOL",
+          "candidate_utility": 9.9959985,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "tool_required",
+          "task_id": "tool_023"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": 9.9959985,
+          "candidate_action": "CALL_TOOL",
+          "candidate_utility": 9.9959985,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "tool_required",
+          "task_id": "tool_030"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": 9.9959985,
+          "candidate_action": "CALL_TOOL",
+          "candidate_utility": 9.9959985,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "tool_required",
+          "task_id": "tool_031"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": 9.9959985,
+          "candidate_action": "CALL_TOOL",
+          "candidate_utility": 9.9959985,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "tool_required",
+          "task_id": "tool_034"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": 9.9959985,
+          "candidate_action": "CALL_TOOL",
+          "candidate_utility": 9.9959985,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "tool_required",
+          "task_id": "tool_035"
+        },
+        {
+          "baseline_action": "CALL_TOOL",
+          "baseline_utility": 9.9959985,
+          "candidate_action": "CALL_TOOL",
+          "candidate_utility": 9.9959985,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "tool_required",
+          "task_id": "tool_038"
+        },
+        {
+          "baseline_action": "START_WORKFLOW",
+          "baseline_utility": 9.987993999999999,
+          "candidate_action": "START_WORKFLOW",
+          "candidate_utility": 9.987993999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "coding_workflow",
+          "task_id": "workflow_000"
+        },
+        {
+          "baseline_action": "START_WORKFLOW",
+          "baseline_utility": 9.987993999999999,
+          "candidate_action": "START_WORKFLOW",
+          "candidate_utility": 9.987993999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "coding_workflow",
+          "task_id": "workflow_009"
+        },
+        {
+          "baseline_action": "START_WORKFLOW",
+          "baseline_utility": 9.987993999999999,
+          "candidate_action": "START_WORKFLOW",
+          "candidate_utility": 9.987993999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "coding_workflow",
+          "task_id": "workflow_012"
+        },
+        {
+          "baseline_action": "START_WORKFLOW",
+          "baseline_utility": 9.987993999999999,
+          "candidate_action": "START_WORKFLOW",
+          "candidate_utility": 9.987993999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "coding_workflow",
+          "task_id": "workflow_013"
+        },
+        {
+          "baseline_action": "START_WORKFLOW",
+          "baseline_utility": 9.987993999999999,
+          "candidate_action": "START_WORKFLOW",
+          "candidate_utility": 9.987993999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "coding_workflow",
+          "task_id": "workflow_015"
+        },
+        {
+          "baseline_action": "START_WORKFLOW",
+          "baseline_utility": 9.987993999999999,
+          "candidate_action": "START_WORKFLOW",
+          "candidate_utility": 9.987993999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "coding_workflow",
+          "task_id": "workflow_017"
+        },
+        {
+          "baseline_action": "START_WORKFLOW",
+          "baseline_utility": 9.987993999999999,
+          "candidate_action": "START_WORKFLOW",
+          "candidate_utility": 9.987993999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "coding_workflow",
+          "task_id": "workflow_019"
+        },
+        {
+          "baseline_action": "START_WORKFLOW",
+          "baseline_utility": 9.987993999999999,
+          "candidate_action": "START_WORKFLOW",
+          "candidate_utility": 9.987993999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "coding_workflow",
+          "task_id": "workflow_020"
+        },
+        {
+          "baseline_action": "START_WORKFLOW",
+          "baseline_utility": 9.987993999999999,
+          "candidate_action": "START_WORKFLOW",
+          "candidate_utility": 9.987993999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "coding_workflow",
+          "task_id": "workflow_022"
+        },
+        {
+          "baseline_action": "START_WORKFLOW",
+          "baseline_utility": 9.987993999999999,
+          "candidate_action": "START_WORKFLOW",
+          "candidate_utility": 9.987993999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "coding_workflow",
+          "task_id": "workflow_027"
+        },
+        {
+          "baseline_action": "START_WORKFLOW",
+          "baseline_utility": 9.987993999999999,
+          "candidate_action": "START_WORKFLOW",
+          "candidate_utility": 9.987993999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "coding_workflow",
+          "task_id": "workflow_031"
+        },
+        {
+          "baseline_action": "START_WORKFLOW",
+          "baseline_utility": 9.987993999999999,
+          "candidate_action": "START_WORKFLOW",
+          "candidate_utility": 9.987993999999999,
+          "delta": 0.0,
+          "disagreement": false,
+          "task_family": "coding_workflow",
+          "task_id": "workflow_032"
+        }
+      ],
+      "ties": 41,
+      "wins": 11
+    }
+  },
+  "generated_at": 1785317398.078856,
+  "policy": {
+    "feature_schema_version": "exec_features_v1",
+    "hyperparameters": {
+      "actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW",
+        "REFLECT",
+        "ASK_OPERATOR"
+      ],
+      "confidence_threshold": 0.4,
+      "l2": 0.1,
+      "learning_rate": 0.01,
+      "min_weight": 1.0,
+      "n_epochs": 800,
+      "seed": 0,
+      "temperature": 1.0,
+      "weight_cap": 4.0
+    },
+    "metrics": {
+      "final_weights_norm": 5.767995418843203,
+      "n_epochs": 800,
+      "n_train": 110,
+      "n_validation": 35,
+      "train_accuracy": 1.0,
+      "train_loss": 0.01824081902700862,
+      "train_weighted_accuracy": 1.0,
+      "validation_accuracy": 1.0,
+      "validation_loss": 0.04960344637461444,
+      "validation_weighted_accuracy": 1.0
+    },
+    "parent_policy": "baseline_v1",
+    "policy_id": "candidate_1785317396",
+    "policy_type": "multinomial_logistic",
+    "policy_version": "learned_router_v1",
+    "split_manifest_digest": "0fccee6e74d43c3117895bfcddd535fc6433cc6dcf459d6109be16a4b40e26fc",
+    "training_data_digest": "3b257b702ecdc59588dbd6d846b5515fc268462fdd2c1a9dfdb3801f6c897ff2"
+  },
+  "promotion": {
+    "candidate_policy_id": "candidate_1785317396",
+    "gate_result": {
+      "gates": [
+        {
+          "baseline": 0.7884615384615384,
+          "candidate": 1.0,
+          "name": "verified_success_rate_non_decrease",
+          "passed": true
+        },
+        {
+          "baseline": 7.66703573076923,
+          "candidate": 9.994064576923078,
+          "name": "mean_utility_improves",
+          "passed": true
+        },
+        {
+          "ci_high": 3.596317307692307,
+          "ci_low": 1.2692884615384612,
+          "name": "ci_lower_bound_non_negative",
+          "passed": true
+        },
+        {
+          "baseline": 0,
+          "candidate": 0,
+          "name": "no_safety_violation_increase",
+          "passed": true
+        },
+        {
+          "candidate": 1.0,
+          "name": "tool_precision_above_threshold",
+          "passed": true,
+          "threshold": 0.5
+        },
+        {
+          "candidate": 1.0,
+          "name": "tool_recall_above_threshold",
+          "passed": true,
+          "threshold": 0.5
+        },
+        {
+          "name": "no_catastrophic_family_regression",
+          "passed": true,
+          "threshold": -5.0,
+          "worst_family": "direct_answer",
+          "worst_family_delta": 0.0
+        },
+        {
+          "floor": -1.0,
+          "name": "ood_score_above_floor",
+          "ood_mean_delta": 7.001000000000001,
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "reason": "all gates passed"
+    },
+    "promoted": true,
+    "timestamp": 1785317397.958821
+  },
+  "shadow": {
+    "candidate_policy_id": "candidate_1785317396",
+    "disagreements": [
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_002"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_004"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_008"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_009"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_010"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_011"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_016"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_017"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_018"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_020"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_022"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_025"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_026"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_028"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_029"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_033"
+      },
+      {
+        "production_action": "CALL_TOOL",
+        "shadow_abstained": false,
+        "shadow_action": "RETRIEVE_MEMORY",
+        "shadow_confidence": 0.999686327679739,
+        "shadow_reason": "candidate argmax",
+        "task_id": "memory_036"
+      },
+      {
+        "production_action": "ANSWER_DIRECT",
+        "shadow_abstained": false,
+        "shadow_action": "ASK_OPERATOR",
+        "shadow_confidence": 0.9988638990424742,
+        "shadow_reason": "candidate argmax",
+        "task_id": "operator_003"
+      },
+      {
+        "production_action": "ANSWER_DIRECT",
+        "shadow_abstained": false,
+        "shadow_action": "ASK_OPERATOR",
+        "shadow_confidence": 0.9990130481017663,
+        "shadow_reason": "candidate argmax",
+        "task_id": "operator_004"
+      },
+      {
+        "production_action": "ANSWER_DIRECT",
+        "shadow_abstained": false,
+        "shadow_action": "ASK_OPERATOR",
+        "shadow_confidence": 0.9989958564120414,
+        "shadow_reason": "candidate argmax",
+        "task_id": "operator_008"
+      },
+      {
+        "production_action": "ANSWER_DIRECT",
+        "shadow_abstained": false,
+        "shadow_action": "ASK_OPERATOR",
+        "shadow_confidence": 0.9987088367181094,
+        "shadow_reason": "candidate argmax",
+        "task_id": "operator_010"
+      },
+      {
+        "production_action": "ANSWER_DIRECT",
+        "shadow_abstained": false,
+        "shadow_action": "ASK_OPERATOR",
+        "shadow_confidence": 0.9990479818911747,
+        "shadow_reason": "candidate argmax",
+        "task_id": "operator_013"
+      },
+      {
+        "production_action": "ANSWER_DIRECT",
+        "shadow_abstained": false,
+        "shadow_action": "ASK_OPERATOR",
+        "shadow_confidence": 0.9985025204799216,
+        "shadow_reason": "candidate argmax",
+        "task_id": "operator_015"
+      }
+    ],
+    "stats": {
+      "abstentions": 0,
+      "by_action": {
+        "ANSWER_DIRECT": 21,
+        "ASK_OPERATOR": 6,
+        "CALL_TOOL": 21,
+        "REFLECT": 10,
+        "RETRIEVE_MEMORY": 17,
+        "START_WORKFLOW": 15
+      },
+      "disagreements": 23,
+      "distribution_shifts": 0,
+      "n": 90
+    }
+  }
+}

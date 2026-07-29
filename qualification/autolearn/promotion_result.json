@@ -1,0 +1,60 @@
+{
+  "candidate_policy_id": "candidate_1785317396",
+  "gate_result": {
+    "gates": [
+      {
+        "baseline": 0.7884615384615384,
+        "candidate": 1.0,
+        "name": "verified_success_rate_non_decrease",
+        "passed": true
+      },
+      {
+        "baseline": 7.66703573076923,
+        "candidate": 9.994064576923078,
+        "name": "mean_utility_improves",
+        "passed": true
+      },
+      {
+        "ci_high": 3.596317307692307,
+        "ci_low": 1.2692884615384612,
+        "name": "ci_lower_bound_non_negative",
+        "passed": true
+      },
+      {
+        "baseline": 0,
+        "candidate": 0,
+        "name": "no_safety_violation_increase",
+        "passed": true
+      },
+      {
+        "candidate": 1.0,
+        "name": "tool_precision_above_threshold",
+        "passed": true,
+        "threshold": 0.5
+      },
+      {
+        "candidate": 1.0,
+        "name": "tool_recall_above_threshold",
+        "passed": true,
+        "threshold": 0.5
+      },
+      {
+        "name": "no_catastrophic_family_regression",
+        "passed": true,
+        "threshold": -5.0,
+        "worst_family": "direct_answer",
+        "worst_family_delta": 0.0
+      },
+      {
+        "floor": -1.0,
+        "name": "ood_score_above_floor",
+        "ood_mean_delta": 7.001000000000001,
+        "passed": true
+      }
+    ],
+    "passed": true,
+    "reason": "all gates passed"
+  },
+  "promoted": true,
+  "timestamp": 1785317397.958821
+}

@@ -1,0 +1,203 @@
+{
+  "candidate_policy_id": "candidate_1785317396",
+  "disagreements": [
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_002"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_004"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_008"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_009"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_010"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_011"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_016"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_017"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_018"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_020"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_022"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_025"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_026"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_028"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_029"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_033"
+    },
+    {
+      "production_action": "CALL_TOOL",
+      "shadow_abstained": false,
+      "shadow_action": "RETRIEVE_MEMORY",
+      "shadow_confidence": 0.999686327679739,
+      "shadow_reason": "candidate argmax",
+      "task_id": "memory_036"
+    },
+    {
+      "production_action": "ANSWER_DIRECT",
+      "shadow_abstained": false,
+      "shadow_action": "ASK_OPERATOR",
+      "shadow_confidence": 0.9988638990424742,
+      "shadow_reason": "candidate argmax",
+      "task_id": "operator_003"
+    },
+    {
+      "production_action": "ANSWER_DIRECT",
+      "shadow_abstained": false,
+      "shadow_action": "ASK_OPERATOR",
+      "shadow_confidence": 0.9990130481017663,
+      "shadow_reason": "candidate argmax",
+      "task_id": "operator_004"
+    },
+    {
+      "production_action": "ANSWER_DIRECT",
+      "shadow_abstained": false,
+      "shadow_action": "ASK_OPERATOR",
+      "shadow_confidence": 0.9989958564120414,
+      "shadow_reason": "candidate argmax",
+      "task_id": "operator_008"
+    },
+    {
+      "production_action": "ANSWER_DIRECT",
+      "shadow_abstained": false,
+      "shadow_action": "ASK_OPERATOR",
+      "shadow_confidence": 0.9987088367181094,
+      "shadow_reason": "candidate argmax",
+      "task_id": "operator_010"
+    },
+    {
+      "production_action": "ANSWER_DIRECT",
+      "shadow_abstained": false,
+      "shadow_action": "ASK_OPERATOR",
+      "shadow_confidence": 0.9990479818911747,
+      "shadow_reason": "candidate argmax",
+      "task_id": "operator_013"
+    },
+    {
+      "production_action": "ANSWER_DIRECT",
+      "shadow_abstained": false,
+      "shadow_action": "ASK_OPERATOR",
+      "shadow_confidence": 0.9985025204799216,
+      "shadow_reason": "candidate argmax",
+      "task_id": "operator_015"
+    }
+  ],
+  "stats": {
+    "abstentions": 0,
+    "by_action": {
+      "ANSWER_DIRECT": 21,
+      "ASK_OPERATOR": 6,
+      "CALL_TOOL": 21,
+      "REFLECT": 10,
+      "RETRIEVE_MEMORY": 17,
+      "START_WORKFLOW": 15
+    },
+    "disagreements": 23,
+    "distribution_shifts": 0,
+    "n": 90
+  }
+}

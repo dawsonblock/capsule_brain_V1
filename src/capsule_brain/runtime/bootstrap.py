@@ -187,6 +187,20 @@ def build_application(
     )
     app.services.register(experience_store)
 
+    # AutoLearn executive policy layer. Registered unconditionally so the
+    # ExecutiveController is available to the runtime regardless of which
+    # other services are enabled. It loads the active learned policy from the
+    # PolicyRegistry at startup and falls back to the baseline policy if no
+    # policy is active or the active policy is incompatible. AutoLearn only
+    # chooses actions; it never executes them and never modifies the safety
+    # envelope.
+    from capsule_brain.autolearn.service import AutoLearnService
+
+    autolearn_cfg = cfg.get("autolearn", {})
+    if autolearn_cfg.get("enable", True):
+        autolearn = AutoLearnService(cfg=autolearn_cfg)
+        app.services.register(autolearn, requires=["experience_store"])
+
     conversation_cfg = cfg.get("conversation", {})
     conversation = None
     # Conversation defaults to enabled when LLM is available, disabled when

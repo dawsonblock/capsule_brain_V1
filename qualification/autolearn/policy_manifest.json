@@ -1,0 +1,47 @@
+{
+  "artifact_path": "/Users/dawsonblock/Downloads/capsule_brain_v2_13_1_corrected/qualification/autolearn/policies/policies/candidate_1785317396.json",
+  "artifact_sha256": "1483fa94d921b3265ea4e82e5e990e3c011fdb54ffaa9cdc8263419b939f6ca1",
+  "feature_schema_version": "exec_features_v1",
+  "hyperparameters": {
+    "actions": [
+      "ANSWER_DIRECT",
+      "RETRIEVE_MEMORY",
+      "CALL_TOOL",
+      "START_WORKFLOW",
+      "REFLECT",
+      "ASK_OPERATOR"
+    ],
+    "confidence_threshold": 0.4,
+    "l2": 0.1,
+    "learning_rate": 0.01,
+    "min_weight": 1.0,
+    "n_epochs": 800,
+    "seed": 0,
+    "temperature": 1.0,
+    "weight_cap": 4.0
+  },
+  "manifest_path": "/Users/dawsonblock/Downloads/capsule_brain_v2_13_1_corrected/qualification/autolearn/policies/policies/candidate_1785317396.manifest.json",
+  "manifest_sha256": "48cc87978819a85c4af99ef3941915ceb56d0b6269796c70b2a784dd79893cdc",
+  "metrics": {
+    "final_weights_norm": 5.767995418843203,
+    "n_epochs": 800,
+    "n_train": 110,
+    "n_validation": 35,
+    "train_accuracy": 1.0,
+    "train_loss": 0.01824081902700862,
+    "train_weighted_accuracy": 1.0,
+    "validation_accuracy": 1.0,
+    "validation_loss": 0.04960344637461444,
+    "validation_weighted_accuracy": 1.0
+  },
+  "parent_policy": "baseline_v1",
+  "policy_id": "candidate_1785317396",
+  "policy_type": "multinomial_logistic",
+  "policy_version": "learned_router_v1",
+  "promotion_reason": "",
+  "promotion_status": "pending",
+  "promotion_timestamp": "",
+  "split_manifest_digest": "0fccee6e74d43c3117895bfcddd535fc6433cc6dcf459d6109be16a4b40e26fc",
+  "training_data_digest": "3b257b702ecdc59588dbd6d846b5515fc268462fdd2c1a9dfdb3801f6c897ff2",
+  "training_timestamp": "2026-07-29T09:29:57.436748+00:00"
+}
