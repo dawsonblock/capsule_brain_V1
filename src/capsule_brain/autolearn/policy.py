@@ -23,7 +23,7 @@ from capsule_brain.autolearn.features import (
 from capsule_brain.autolearn.schema import Action, ExecutiveState
 
 LEARNED_POLICY_TYPE = "multinomial_logistic"
-LEARNED_POLICY_VERSION_DEFAULT = "learned_router_v1"
+LEARNED_POLICY_VERSION_DEFAULT = "learned_router_v2"
 
 
 class PolicyLoadError(RuntimeError):

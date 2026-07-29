@@ -212,6 +212,14 @@ def build_application(
             )
         from capsule_brain.conversation.service import ConversationService
 
+        # Resolve the AutoLearn service if it was registered, so
+        # ConversationService can route through the ExecutiveController when
+        # autolearn_enable is true. The workflow runner is resolved lazily
+        # after it is registered (see below).
+        autolearn_svc = None
+        if autolearn_cfg.get("enable", True):
+            autolearn_svc = autolearn
+
         conversation = ConversationService(
             event_bus=bus,
             memory=memory,
@@ -219,12 +227,15 @@ def build_application(
             cfg=conversation_cfg,
             experience_store=experience_store,
             tool_registry=tool_registry,
+            autolearn_service=autolearn_svc,
         )
         conversation_requires = [
             "event_bus", "memory", "llm_gateway", "experience_store"
         ]
         if tool_registry is not None:
             conversation_requires.append("tool_registry")
+        if autolearn_svc is not None:
+            conversation_requires.append("autolearn")
         app.services.register(
             conversation,
             requires=conversation_requires,
@@ -439,6 +450,21 @@ def build_application(
             ),
         )
         workflow_runner.register_workflow(default_wf)
+
+        # Wire the workflow runner into the conversation service so the
+        # ExecutiveController can dispatch START_WORKFLOW through it.
+        if conversation is not None:
+            conversation.workflow_runner = workflow_runner
+
+    # Wire the ExecutiveController's experience sink and (optional) verifier
+    # so that real production experiences are persisted and verified. The
+    # dispatcher is already attached by ConversationService.start(); these
+    # attachments complete the runtime integration.
+    if autolearn_cfg.get("enable", True) and autolearn is not None:
+        from capsule_brain.autolearn.controller import ExperienceStoreSink
+
+        if experience_store is not None:
+            autolearn.attach_experience_sink(ExperienceStoreSink(experience_store))
 
     redis_cfg = cfg.get("redis_bridge", {})
     if redis_cfg.get("enable", False):

@@ -1,9 +1,15 @@
 """Deterministic, interpretable state feature extractor.
 
-v0.1 does not train on transformer hidden states. It uses interpretable,
+v0.2 does not train on transformer hidden states. It uses interpretable,
 deterministic features so the same state always produces the same feature
 vector. The schema is versioned; an incompatible policy is rejected at load
 time (see policy.py / service.py).
+
+v0.2 bumps the schema to ``exec_features_v2`` and adds the
+``workflow_capability_match`` strength and a dedicated
+``structured_output_requested`` flag. The feature set deliberately describes
+runtime state only — it never encodes the answer (no ``requires_tool`` or
+``correct_action`` labels).
 """
 from __future__ import annotations
 
@@ -15,7 +21,7 @@ from capsule_brain.autolearn.schema import ExecutiveState
 # Bump when the set/ordering/semantics of features change. Policies record
 # the schema version they were trained against and are rejected at load time
 # if it does not match.
-FEATURE_SCHEMA_VERSION = "exec_features_v1"
+FEATURE_SCHEMA_VERSION = "exec_features_v2"
 
 # Ordered list of feature names — the canonical column order. The vector
 # returned by FeatureExtractor.extract() always follows this order.

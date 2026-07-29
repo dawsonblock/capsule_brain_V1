@@ -1,14 +1,17 @@
 """Promotion gate: a candidate may become active only if all gates pass.
 
-Gates (initial configuration):
-1. verified success rate does not decrease
-2. mean utility improves
-3. lower 95% CI of utility delta >= 0
-4. no increase in safety violations
-5. tool precision above threshold
-6. tool recall above threshold
-7. no catastrophic regression in any task family
-8. OOD score not below configured floor
+Gates (v2 configuration — 11 gates):
+1.  verified success rate does not decrease
+2.  mean utility improves
+3.  lower 95% CI of utility delta >= 0
+4.  no increase in safety violations
+5.  tool precision above threshold
+6.  tool recall above threshold
+7.  no catastrophic regression in any task family
+8.  OOD score not below configured floor
+9.  workflow routing accuracy non-decrease (v2)
+10. over-routing rate does not increase (v2)
+11. calibration Brier score below threshold (v2)
 
 If any gate fails, the candidate is REJECTED. The online learner never
 directly modifies production behavior.
@@ -31,6 +34,13 @@ class GateConfig:
     require_success_rate_non_decrease: bool = True
     require_ci_lower_bound: bool = True
     require_no_safety_increase: bool = True
+    # v2 gates.
+    workflow_routing_accuracy_min: float = 0.8
+    require_workflow_routing_non_decrease: bool = True
+    over_routing_rate_max_increase: float = 0.1  # candidate over-routing rate must not exceed baseline by more than this
+    require_over_routing_non_increase: bool = True
+    brier_score_max: float = 0.3
+    require_calibration: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -42,6 +52,12 @@ class GateConfig:
             "require_success_rate_non_decrease": self.require_success_rate_non_decrease,
             "require_ci_lower_bound": self.require_ci_lower_bound,
             "require_no_safety_increase": self.require_no_safety_increase,
+            "workflow_routing_accuracy_min": self.workflow_routing_accuracy_min,
+            "require_workflow_routing_non_decrease": self.require_workflow_routing_non_decrease,
+            "over_routing_rate_max_increase": self.over_routing_rate_max_increase,
+            "require_over_routing_non_increase": self.require_over_routing_non_increase,
+            "brier_score_max": self.brier_score_max,
+            "require_calibration": self.require_calibration,
         }
 
 
@@ -71,6 +87,7 @@ def evaluate_promotion_gate(
     *,
     config: GateConfig | None = None,
     ood_eval: PairedEvaluation | None = None,
+    v2_metrics: "V2GateMetrics | None" = None,
 ) -> GateResult:
     config = config or GateConfig()
     gates: list[dict[str, Any]] = []
@@ -166,6 +183,55 @@ def evaluate_promotion_gate(
         "floor": config.ood_score_floor,
     })
 
+    # ------------------------------------------------------------------
+    # v2 gates (9-11). These use V2GateMetrics, which the v2 evaluation
+    # harness supplies. When v2_metrics is None, these gates are skipped
+    # (treated as passed) for backward compatibility with v0.1 callers.
+    # ------------------------------------------------------------------
+    if v2_metrics is not None:
+        # Gate 9: workflow routing accuracy non-decrease.
+        wf_b = v2_metrics.baseline_workflow_routing_accuracy
+        wf_c = v2_metrics.candidate_workflow_routing_accuracy
+        g9_pass = (
+            not config.require_workflow_routing_non_decrease
+            or wf_c >= wf_b - 1e-9
+        ) and wf_c >= config.workflow_routing_accuracy_min
+        gates.append({
+            "name": "workflow_routing_accuracy_non_decrease",
+            "passed": g9_pass,
+            "baseline": wf_b,
+            "candidate": wf_c,
+            "threshold": config.workflow_routing_accuracy_min,
+        })
+
+        # Gate 10: over-routing rate does not increase beyond threshold.
+        or_b = v2_metrics.baseline_over_routing_rate
+        or_c = v2_metrics.candidate_over_routing_rate
+        g10_pass = (
+            not config.require_over_routing_non_increase
+            or or_c <= or_b + config.over_routing_rate_max_increase + 1e-9
+        )
+        gates.append({
+            "name": "over_routing_rate_non_increase",
+            "passed": g10_pass,
+            "baseline": or_b,
+            "candidate": or_c,
+            "max_increase": config.over_routing_rate_max_increase,
+        })
+
+        # Gate 11: calibration Brier score below threshold.
+        brier = v2_metrics.candidate_brier_score
+        g11_pass = (
+            not config.require_calibration
+            or brier <= config.brier_score_max + 1e-9
+        )
+        gates.append({
+            "name": "calibration_brier_below_threshold",
+            "passed": g11_pass,
+            "candidate": brier,
+            "threshold": config.brier_score_max,
+        })
+
     failed = [g for g in gates if not g["passed"]]
     passed = not failed
     reason = (
@@ -174,3 +240,34 @@ def evaluate_promotion_gate(
         else "failed gates: " + ", ".join(g["name"] for g in failed)
     )
     return GateResult(passed=passed, gates=gates, reason=reason)
+
+
+@dataclass(slots=True)
+class V2GateMetrics:
+    """v2 metrics supplied to the promotion gate (gates 9-11)."""
+
+    baseline_workflow_routing_accuracy: float = 0.0
+    candidate_workflow_routing_accuracy: float = 0.0
+    baseline_over_routing_rate: float = 0.0
+    candidate_over_routing_rate: float = 0.0
+    candidate_brier_score: float = 0.0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "baseline_workflow_routing_accuracy": self.baseline_workflow_routing_accuracy,
+            "candidate_workflow_routing_accuracy": self.candidate_workflow_routing_accuracy,
+            "baseline_over_routing_rate": self.baseline_over_routing_rate,
+            "candidate_over_routing_rate": self.candidate_over_routing_rate,
+            "candidate_brier_score": self.candidate_brier_score,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> "V2GateMetrics":
+        data = data or {}
+        return cls(
+            baseline_workflow_routing_accuracy=float(data.get("baseline_workflow_routing_accuracy", 0.0)),
+            candidate_workflow_routing_accuracy=float(data.get("candidate_workflow_routing_accuracy", 0.0)),
+            baseline_over_routing_rate=float(data.get("baseline_over_routing_rate", 0.0)),
+            candidate_over_routing_rate=float(data.get("candidate_over_routing_rate", 0.0)),
+            candidate_brier_score=float(data.get("candidate_brier_score", 0.0)),
+        )

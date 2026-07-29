@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
+from capsule_brain.autolearn.controller import (
+    ActionDispatcher,
+    DispatcherResult,
+    ExecutiveState,
+)
 from capsule_brain.events.local_bus import LocalEventBus
 from capsule_brain.events.models import EventEnvelope
 from capsule_brain.llm.gateway import LLMGateway
@@ -12,6 +18,8 @@ from capsule_brain.runtime.service import CapsuleService, HealthStatus, ServiceS
 
 from .models import AssistantResponse, Turn, TurnRole
 from .repository import ConversationRepository
+
+log = logging.getLogger(__name__)
 
 
 class ConversationService(CapsuleService):
@@ -26,6 +34,8 @@ class ConversationService(CapsuleService):
         repository: ConversationRepository | None = None,
         experience_store=None,
         tool_registry=None,
+        autolearn_service=None,
+        workflow_runner=None,
     ) -> None:
         super().__init__(cfg)
         self.event_bus = event_bus
@@ -33,6 +43,8 @@ class ConversationService(CapsuleService):
         self.llm = llm
         self.experience_store = experience_store
         self.tool_registry = tool_registry
+        self.autolearn_service = autolearn_service
+        self.workflow_runner = workflow_runner
         # Native tool use is opt-in because not every configured model route
         # advertises the tools capability. When enabled, an empty registry
         # falls back to plain generation; tools registered later become
@@ -58,15 +70,32 @@ class ConversationService(CapsuleService):
             "system_prompt",
             "You are Capsule Brain, a precise autonomous AI assistant.",
         )
+        # AutoLearn v0.2: when autolearn.enable is true, route requests
+        # through the ExecutiveController. When false (default for backward
+        # compatibility), preserve the original direct-generation path
+        # byte-for-byte.
+        self.autolearn_enabled = bool(self.cfg.get("autolearn_enable", False))
         self._unsubscribers: list = []
         self._requests = 0
         self._failures = 0
+        # Build the action dispatcher that delegates to our internal
+        # _respond_* methods. Attached to the ExecutiveController when
+        # AutoLearn is enabled.
+        self._dispatcher = _ConversationActionDispatcher(self)
+        # Per-request context used by the dispatcher; set during
+        # _respond_via_autolearn and cleared in its finally block.
+        self._current_request: dict[str, Any] | None = None
 
     async def start(self) -> None:
         self.state = ServiceState.STARTING
         await self.repository.start()
         if self.experience_store is not None:
             await self.experience_store.start()
+        # Wire the ExecutiveController's dispatcher to this conversation
+        # service so the controller can dispatch actions through our real
+        # LLMGateway / MemoryService / ToolRegistry / WorkflowRunner paths.
+        if self.autolearn_enabled and self.autolearn_service is not None:
+            self.autolearn_service.attach_dispatcher(self._dispatcher)
         self._unsubscribers.append(
             self.event_bus.subscribe(
                 "conversation.message.create",
@@ -150,6 +179,24 @@ class ConversationService(CapsuleService):
             limit=self.history_limit,
         )
 
+        # ------------------------------------------------------------------
+        # AutoLearn v0.2 path: route through the ExecutiveController, which
+        # selects an action and dispatches it through real services via the
+        # _ConversationActionDispatcher. The dispatcher calls one of the
+        # _respond_* methods below. When AutoLearn is disabled, the original
+        # direct-generation path runs unchanged (byte-for-byte compatible).
+        # ------------------------------------------------------------------
+        if self.autolearn_enabled and self.autolearn_service is not None:
+            return await self._respond_via_autolearn(
+                conversation=conversation,
+                user_turn=user_turn,
+                text=text,
+                history=history,
+                memory_records=memory_records,
+                correlation_id=correlation_id,
+            )
+
+        # Legacy direct-generation path (preserved exactly).
         context = self._build_context(history, memory_records)
 
         llm_request = LLMRequest(
@@ -179,29 +226,316 @@ class ConversationService(CapsuleService):
                 route=self.route,
             )
 
+        return await self._finalize_response(
+            conversation=conversation,
+            user_turn=user_turn,
+            text=text,
+            result_text=result.text,
+            result=result,
+            tool_results=tool_results,
+        )
+
+    async def _respond_via_autolearn(
+        self,
+        *,
+        conversation,
+        user_turn,
+        text: str,
+        history,
+        memory_records,
+        correlation_id: str | None,
+    ) -> AssistantResponse:
+        """Route the request through the ExecutiveController.
+
+        Builds an ExecutiveState from the current runtime context, calls
+        ``autolearn_service.execute()``, which selects an action and
+        dispatches it through the ``_ConversationActionDispatcher`` to one of
+        the real ``_respond_*`` methods. The dispatcher result is then
+        finalized into an AssistantResponse.
+        """
+        # Build ExecutiveState from real runtime context. Features describe
+        # state only — never the answer.
+        memory_hit_count = len(memory_records) if memory_records else 0
+        top_similarity = 0.0
+        if memory_records:
+            for rec in memory_records:
+                sim = getattr(rec, "similarity", None)
+                if sim is not None and sim > top_similarity:
+                    top_similarity = float(sim)
+        available_tools = (
+            [spec.name for spec in self.tool_registry.specs()]
+            if self.tool_registry is not None
+            else []
+        )
+        workflow_available = self.workflow_runner is not None
+        state = ExecutiveState(
+            prompt_features={
+                "text": text,
+                "previous_attempt_failed": False,
+                "verification_failure_type": "none",
+                "estimated_difficulty": 0.5,
+                "workflow_capability_match": workflow_available,
+            },
+            conversation_features={"depth": len(history)},
+            memory_features={
+                "hit_count": memory_hit_count,
+                "top_similarity": top_similarity,
+            },
+            available_tools=available_tools,
+            workflow_available=workflow_available,
+            model_id=self.model,
+            context_length=len(text),
+        )
+
+        # Stash per-request context so the dispatcher can access it without
+        # threading it through the ActionDispatcher interface.
+        self._current_request = {
+            "conversation": conversation,
+            "user_turn": user_turn,
+            "text": text,
+            "history": history,
+            "memory_records": memory_records,
+            "correlation_id": correlation_id,
+        }
+        try:
+            action_result = await self.autolearn_service.execute(
+                state,
+                conversation_id=conversation.id,
+                task_family="production",
+            )
+        finally:
+            self._current_request = None
+
+        # Finalize the dispatched result into an AssistantResponse.
+        # Reconstruct a minimal LLMResult-like object for finalize.
+        result_text = action_result.text
+        return await self._finalize_response(
+            conversation=conversation,
+            user_turn=user_turn,
+            text=text,
+            result_text=result_text,
+            result=None,
+            tool_results=[],
+            autolearn_action=action_result.action.value,
+            autolearn_outcome=action_result.outcome,
+        )
+
+    # ------------------------------------------------------------------
+    # Internal _respond_* methods — each executes one action through real
+    # services and returns a DispatcherResult. Called by the
+    # _ConversationActionDispatcher (which the ExecutiveController uses).
+    # ------------------------------------------------------------------
+
+    def _current_llm_request(self, context_override: str | None = None) -> LLMRequest:
+        """Build an LLMRequest from the current stashed request context."""
+        ctx = self._current_request or {}
+        history = ctx.get("history", [])
+        memory_records = ctx.get("memory_records", [])
+        conversation = ctx.get("conversation")
+        user_turn = ctx.get("user_turn")
+        context = context_override or self._build_context(history, memory_records)
+        return LLMRequest(
+            prompt=context,
+            system=self.system_prompt,
+            model=self.model,
+            metadata={
+                "conversation_id": conversation.id if conversation else "",
+                "parent_turn_id": user_turn.id if user_turn else "",
+            },
+        )
+
+    async def _respond_direct(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+        """ANSWER_DIRECT: LLM generation with no tools and no memory context."""
+        import time as _time
+        started = _time.perf_counter()
+        # Direct answer uses only conversation history, no memory context.
+        ctx = self._current_request or {}
+        history = ctx.get("history", [])
+        context = self._build_context(history, [])
+        llm_request = self._current_llm_request(context_override=context)
+        result = await self.llm.generate(llm_request, route=self.route)
+        latency = (_time.perf_counter() - started) * 1000.0
+        tokens = sum(result.usage.values()) if result.usage else max(20, len(result.text) // 4)
+        return DispatcherResult(
+            text=result.text,
+            latency_ms=latency,
+            token_count=int(tokens),
+            action_completed=True,
+            metadata={"model": result.model, "provider": result.provider},
+        )
+
+    async def _respond_with_memory(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+        """RETRIEVE_MEMORY: real MemoryService retrieval + LLM generation with evidence."""
+        import time as _time
+        started = _time.perf_counter()
+        ctx = self._current_request or {}
+        text = ctx.get("text", "")
+        # Real memory retrieval through MemoryService.
+        memory_records = await self._retrieve_memories(text)
+        history = ctx.get("history", [])
+        context = self._build_context(history, memory_records)
+        llm_request = self._current_llm_request(context_override=context)
+        result = await self.llm.generate(llm_request, route=self.route)
+        latency = (_time.perf_counter() - started) * 1000.0
+        tokens = sum(result.usage.values()) if result.usage else max(30, len(result.text) // 4)
+        return DispatcherResult(
+            text=result.text,
+            latency_ms=latency,
+            token_count=int(tokens),
+            action_completed=True,
+            metadata={
+                "model": result.model,
+                "provider": result.provider,
+                "memory_records_retrieved": len(memory_records) if memory_records else 0,
+            },
+        )
+
+    async def _respond_with_tools(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+        """CALL_TOOL: real LLMGateway.generate_with_tools() through ToolRegistry."""
+        import time as _time
+        started = _time.perf_counter()
+        if self.tool_registry is None or not self.tool_registry.specs():
+            return DispatcherResult(
+                runtime_error=True,
+                action_completed=False,
+                metadata={"reason": "no tools registered"},
+            )
+        ctx = self._current_request or {}
+        history = ctx.get("history", [])
+        memory_records = ctx.get("memory_records", [])
+        context = self._build_context(history, memory_records)
+        llm_request = self._current_llm_request(context_override=context)
+        result, tool_results = await self.llm.generate_with_tools(
+            llm_request,
+            self.tool_registry,
+            route=self.route,
+            max_iterations=self.max_tool_iterations,
+        )
+        latency = (_time.perf_counter() - started) * 1000.0
+        tokens = sum(result.usage.values()) if result.usage else max(30, len(result.text) // 4)
+        tool_failures = sum(1 for item in tool_results if item.is_error)
+        tool_names = [item.name for item in tool_results]
+        # Determine if any tool result is valid (non-error).
+        tool_result_valid = any(not item.is_error for item in tool_results) if tool_results else False
+        return DispatcherResult(
+            text=result.text,
+            latency_ms=latency,
+            token_count=int(tokens),
+            tool_failures=tool_failures,
+            action_completed=True,
+            tool_name=tool_names[0] if tool_names else None,
+            tool_calls_executed=len(tool_results),
+            tool_result_valid=tool_result_valid,
+            metadata={
+                "model": result.model,
+                "provider": result.provider,
+                "tool_names": tool_names,
+            },
+        )
+
+    async def _respond_with_workflow(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+        """START_WORKFLOW: real WorkflowRunnerService.start_run()."""
+        import time as _time
+        started = _time.perf_counter()
+        if self.workflow_runner is None:
+            return DispatcherResult(
+                runtime_error=True,
+                action_completed=False,
+                metadata={"reason": "no workflow runner available"},
+            )
+        ctx = self._current_request or {}
+        text = ctx.get("text", "")
+        # Determine the workflow name. v0.2 uses the default
+        # plan_generate_test_reflect workflow.
+        workflow_name = "plan_generate_test_reflect"
+        try:
+            run = await self.workflow_runner.start_run(
+                workflow_name=workflow_name,
+                goal=text,
+                metadata={"conversation_id": conversation_id or ""},
+            )
+        except Exception as exc:
+            return DispatcherResult(
+                runtime_error=True,
+                action_completed=False,
+                metadata={"reason": f"workflow start failed: {exc}"},
+            )
+        latency = (_time.perf_counter() - started) * 1000.0
+        # Extract the workflow outcome from the run.
+        from capsule_brain.workflow.models import WorkflowStatus
+        acceptance_passed = run.status == WorkflowStatus.COMPLETED
+        acceptance_present = True
+        exit_code = 0 if acceptance_passed else 1
+        workflow_iterations = run.state.iterations if run.state else 0
+        code = run.state.code if run.state else ""
+        return DispatcherResult(
+            text=code or run.stop_reason or "",
+            latency_ms=latency,
+            token_count=max(120, len(code) // 3) if code else 200,
+            workflow_iterations=workflow_iterations,
+            action_completed=True,
+            workflow_name=workflow_name,
+            workflow_run_id=run.id,
+            acceptance_present=acceptance_present,
+            acceptance_passed=acceptance_passed,
+            exit_code=exit_code,
+            metadata={
+                "run_status": run.status.value if run.status else "unknown",
+                "stop_reason": run.stop_reason,
+            },
+        )
+
+    async def _finalize_response(
+        self,
+        *,
+        conversation,
+        user_turn,
+        text: str,
+        result_text: str,
+        result,
+        tool_results: list,
+        autolearn_action: str | None = None,
+        autolearn_outcome=None,
+    ) -> AssistantResponse:
+        """Common postamble: create assistant turn, response, experience, events."""
         assistant_turn = Turn(
             conversation_id=conversation.id,
             role=TurnRole.ASSISTANT,
-            text=result.text,
+            text=result_text,
             parent_turn_id=user_turn.id,
         )
         await self.repository.create_turn(assistant_turn)
 
-        trace = result.trace
-        model_alias = trace.model_alias if trace else self.model
-        route_name = trace.route if trace else self.route
+        if result is not None:
+            trace = result.trace
+            model_alias = trace.model_alias if trace else self.model
+            route_name = trace.route if trace else self.route
+            provider = result.provider
+            model_name = result.model
+            latency_ms = result.latency_ms
+            attempts = result.attempts
+            usage = dict(result.usage)
+        else:
+            # Autolearn path: synthesize from the outcome.
+            model_alias = self.model
+            route_name = self.route
+            provider = "autolearn"
+            model_name = self.model or "unknown"
+            latency_ms = autolearn_outcome.latency_ms if autolearn_outcome else 0.0
+            attempts = 1
+            usage = {}
 
         response = AssistantResponse(
             conversation_id=conversation.id,
             parent_turn_id=user_turn.id,
             turn_id=assistant_turn.id,
-            text=result.text,
+            text=result_text,
             model_alias=model_alias,
-            provider=result.provider,
-            model_name=result.model,
-            latency_ms=result.latency_ms,
-            attempts=result.attempts,
-            usage=dict(result.usage),
+            provider=provider,
+            model_name=model_name,
+            latency_ms=latency_ms,
+            attempts=attempts,
+            usage=usage,
             route=route_name,
         )
         await self.repository.create_response(response)
@@ -229,12 +563,13 @@ class ConversationService(CapsuleService):
                         "tool_failures": sum(
                             1 for item in tool_results if item.is_error
                         ),
+                        "autolearn_action": autolearn_action,
                     },
                 )
             )
 
         await self.memory.write(
-            result.text,
+            result_text,
             type=MemoryType.ASSISTANT,
             source="assistant",
             conversation_id=conversation.id,
@@ -268,6 +603,7 @@ class ConversationService(CapsuleService):
                     "route": response.route,
                     "tool_calls_executed": len(tool_results),
                     "tools_used": [item.name for item in tool_results],
+                    "autolearn_action": autolearn_action,
                 },
             )
         )
@@ -354,5 +690,30 @@ class ConversationService(CapsuleService):
                     else []
                 ),
                 "max_tool_iterations": self.max_tool_iterations,
+                "autolearn_enabled": self.autolearn_enabled,
             },
         )
+
+
+class _ConversationActionDispatcher(ActionDispatcher):
+    """Dispatches executive actions through the real ConversationService paths.
+
+    Each method delegates to the corresponding ``_respond_*`` internal method
+    on the owning ConversationService. This is the concrete bridge between
+    the ExecutiveController and the real Capsule Brain service stack.
+    """
+
+    def __init__(self, service: ConversationService) -> None:
+        self._service = service
+
+    async def answer_direct(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+        return await self._service._respond_direct(state, conversation_id=conversation_id)
+
+    async def retrieve_memory(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+        return await self._service._respond_with_memory(state, conversation_id=conversation_id)
+
+    async def call_tool(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+        return await self._service._respond_with_tools(state, conversation_id=conversation_id)
+
+    async def start_workflow(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+        return await self._service._respond_with_workflow(state, conversation_id=conversation_id)

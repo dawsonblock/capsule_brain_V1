@@ -1,9 +1,23 @@
-"""Canonical ExecutiveExperience schema for AutoLearn v0.1.
+"""Canonical ExecutiveExperience schema for AutoLearn v0.2.
 
 Each record captures a single (state, chosen_action, verified_outcome)
 triple plus the scalar utility derived from the outcome. The full outcome
 vector is always preserved — learning never trains from raw success labels
 alone.
+
+v0.2 adds the runtime/verification fields required to distinguish *real*
+execution from simulated evidence:
+- ``runtime_error`` / ``action_completed`` flag whether the action actually
+  ran through the Capsule Brain service stack (not a simulator).
+- Tool-specific fields (``tool_name``, ``tool_calls_executed``,
+  ``tool_result_valid``, ``final_answer_grounded``) record the real tool
+  dispatch path.
+- Workflow-specific fields (``workflow_name``, ``workflow_run_id``,
+  ``acceptance_present``, ``acceptance_passed``, ``exit_code``) record the
+  real workflow acceptance path.
+
+``verified_success`` is never inferred from LLM prose; it is set only by the
+independent verifier.
 """
 from __future__ import annotations
 
@@ -16,7 +30,7 @@ from uuid import uuid4
 # Schema version for the ExecutiveExperience record itself. Bump when the
 # on-disk shape of an ExecutiveExperience changes in a backward-incompatible
 # way. The feature schema has its own independent version (see features.py).
-SCHEMA_VERSION = "exec_experience_v1"
+SCHEMA_VERSION = "exec_experience_v2"
 
 
 def _utc_now_iso() -> str:
@@ -24,10 +38,13 @@ def _utc_now_iso() -> str:
 
 
 class Action(str, Enum):
-    """The supported executive actions for AutoLearn v0.1.
+    """The supported executive actions for AutoLearn v0.2.
 
     Deliberately small. New actions must not be added until these route
-    reliably on the counterfactual benchmark.
+    reliably on the counterfactual benchmark. v0.2 only integrates the first
+    four into the learned policy; REFLECT and ASK_OPERATOR remain available
+    for the baseline safety path but are not learned until the first four
+    route end to end.
     """
 
     ANSWER_DIRECT = "ANSWER_DIRECT"
@@ -40,6 +57,16 @@ class Action(str, Enum):
     @classmethod
     def all(cls) -> list["Action"]:
         return [a for a in Action]
+
+    @classmethod
+    def learned(cls) -> list["Action"]:
+        """The four actions v0.2 trains and dispatches through real services."""
+        return [
+            Action.ANSWER_DIRECT,
+            Action.RETRIEVE_MEMORY,
+            Action.CALL_TOOL,
+            Action.START_WORKFLOW,
+        ]
 
 
 @dataclass(slots=True)
@@ -66,7 +93,19 @@ class ActionMetadata:
 
 @dataclass(slots=True)
 class Outcome:
-    """Full verified outcome vector. Never reduce this to a single label."""
+    """Full verified outcome vector. Never reduce this to a single label.
+
+    v0.2 fields:
+    - ``runtime_error``: the action dispatch raised before completing.
+    - ``action_completed``: the action ran through real services to completion.
+    - tool-specific: ``tool_name``, ``tool_calls_executed``,
+      ``tool_result_valid``, ``final_answer_grounded``.
+    - workflow-specific: ``workflow_name``, ``workflow_run_id``,
+      ``acceptance_present``, ``acceptance_passed``, ``exit_code``.
+
+    ``verified_success`` is set ONLY by the independent verifier, never
+    inferred from LLM prose.
+    """
 
     verified_success: bool = False
     verification_status: str = "skip"  # pass | fail | error | skip
@@ -76,6 +115,25 @@ class Outcome:
     workflow_iterations: int = 0
     operator_intervention: bool = False
     safety_violation: bool = False
+    # v0.2 runtime/verification fields.
+    runtime_error: bool = False
+    action_completed: bool = False
+    # Tool-specific (populated for CALL_TOOL).
+    tool_name: str | None = None
+    tool_calls_executed: int = 0
+    tool_result_valid: bool = False
+    final_answer_grounded: bool = False
+    # Workflow-specific (populated for START_WORKFLOW).
+    workflow_name: str | None = None
+    workflow_run_id: str | None = None
+    acceptance_present: bool = False
+    acceptance_passed: bool = False
+    exit_code: int | None = None
+    # Over-routing flags (set by the verifier/harness). A tool/workflow was
+    # "unnecessary" when the action succeeded but the task archetype did not
+    # require that action. The utility function applies a penalty.
+    unnecessary_tool_use: bool = False
+    unnecessary_workflow_use: bool = False
 
 
 @dataclass(slots=True)
@@ -138,6 +196,19 @@ class ExecutiveExperience:
                 "workflow_iterations": self.outcome.workflow_iterations,
                 "operator_intervention": self.outcome.operator_intervention,
                 "safety_violation": self.outcome.safety_violation,
+                "runtime_error": self.outcome.runtime_error,
+                "action_completed": self.outcome.action_completed,
+                "tool_name": self.outcome.tool_name,
+                "tool_calls_executed": self.outcome.tool_calls_executed,
+                "tool_result_valid": self.outcome.tool_result_valid,
+                "final_answer_grounded": self.outcome.final_answer_grounded,
+                "workflow_name": self.outcome.workflow_name,
+                "workflow_run_id": self.outcome.workflow_run_id,
+                "acceptance_present": self.outcome.acceptance_present,
+                "acceptance_passed": self.outcome.acceptance_passed,
+                "exit_code": self.outcome.exit_code,
+                "unnecessary_tool_use": self.outcome.unnecessary_tool_use,
+                "unnecessary_workflow_use": self.outcome.unnecessary_workflow_use,
             },
             "utility": self.utility,
             "utility_components": dict(self.utility_components),
@@ -180,6 +251,19 @@ class ExecutiveExperience:
             workflow_iterations=int(oc.get("workflow_iterations", 0) or 0),
             operator_intervention=bool(oc.get("operator_intervention", False)),
             safety_violation=bool(oc.get("safety_violation", False)),
+            runtime_error=bool(oc.get("runtime_error", False)),
+            action_completed=bool(oc.get("action_completed", False)),
+            tool_name=oc.get("tool_name"),
+            tool_calls_executed=int(oc.get("tool_calls_executed", 0) or 0),
+            tool_result_valid=bool(oc.get("tool_result_valid", False)),
+            final_answer_grounded=bool(oc.get("final_answer_grounded", False)),
+            workflow_name=oc.get("workflow_name"),
+            workflow_run_id=oc.get("workflow_run_id"),
+            acceptance_present=bool(oc.get("acceptance_present", False)),
+            acceptance_passed=bool(oc.get("acceptance_passed", False)),
+            exit_code=oc.get("exit_code"),
+            unnecessary_tool_use=bool(oc.get("unnecessary_tool_use", False)),
+            unnecessary_workflow_use=bool(oc.get("unnecessary_workflow_use", False)),
         )
         pv = data.get("provenance", {}) or {}
         prov = Provenance(

@@ -1,11 +1,22 @@
-"""Transparent, configurable, versioned utility function.
+"""Transparent, configurable, versioned utility function (v2).
 
 U = w_success * verified_success
   - w_latency * normalized_latency
   - w_tokens  * normalized_tokens
   - w_failures * failure_count
+  - w_unnecessary_tool * unnecessary_tool_use
+  - w_unnecessary_workflow * unnecessary_workflow_use
   - w_intervention * operator_intervention
   - w_safety * safety_violation
+
+v2 adds explicit over-routing penalties so the learner is rewarded for
+efficiency, not only correctness. A trivial arithmetic question solved
+correctly by START_WORKFLOW receives lower utility than a correct direct
+answer. ``unnecessary_tool_use`` / ``unnecessary_workflow_use`` are derived
+from the outcome: a tool/workflow was "unnecessary" when the action
+succeeded but the task archetype did not require that action. The caller
+supplies these flags via the outcome's ``action_metadata`` / verifier
+context; the utility function applies the penalty when the flag is set.
 
 Rules enforced by the default weights:
 - verified correctness dominates cost (a cheap wrong answer never beats a
@@ -14,6 +25,8 @@ Rules enforced by the default weights:
 - unverified output (verification_status != "pass") does not receive the
   same reward as verified success — verified_success is only True when the
   verifier actually passed
+- over-routing (tool/workflow used when not required) is penalized even when
+  the answer is correct, teaching efficiency
 """
 from __future__ import annotations
 
@@ -22,7 +35,7 @@ from typing import Any
 
 from capsule_brain.autolearn.schema import Outcome
 
-UTILITY_CONFIG_VERSION = "utility_v1"
+UTILITY_CONFIG_VERSION = "exec_utility_v2"
 
 
 @dataclass(slots=True)
@@ -34,9 +47,11 @@ class UtilityConfig:
     """
 
     w_success: float = 10.0
-    w_latency: float = 0.05
-    w_tokens: float = 0.0002
+    w_latency: float = 0.5
+    w_tokens: float = 0.25
     w_failures: float = 1.0
+    w_unnecessary_tool: float = 2.0
+    w_unnecessary_workflow: float = 2.0
     w_intervention: float = 3.0
     w_safety: float = 50.0
     # Normalization denominators. latency_normalize_ms maps raw ms to [0,1]
@@ -52,6 +67,8 @@ class UtilityConfig:
             "w_latency": self.w_latency,
             "w_tokens": self.w_tokens,
             "w_failures": self.w_failures,
+            "w_unnecessary_tool": self.w_unnecessary_tool,
+            "w_unnecessary_workflow": self.w_unnecessary_workflow,
             "w_intervention": self.w_intervention,
             "w_safety": self.w_safety,
             "latency_normalize_ms": self.latency_normalize_ms,
@@ -64,9 +81,11 @@ class UtilityConfig:
         data = data or {}
         return cls(
             w_success=float(data.get("w_success", 10.0)),
-            w_latency=float(data.get("w_latency", 0.05)),
-            w_tokens=float(data.get("w_tokens", 0.0002)),
+            w_latency=float(data.get("w_latency", 0.5)),
+            w_tokens=float(data.get("w_tokens", 0.25)),
             w_failures=float(data.get("w_failures", 1.0)),
+            w_unnecessary_tool=float(data.get("w_unnecessary_tool", 2.0)),
+            w_unnecessary_workflow=float(data.get("w_unnecessary_workflow", 2.0)),
             w_intervention=float(data.get("w_intervention", 3.0)),
             w_safety=float(data.get("w_safety", 50.0)),
             latency_normalize_ms=float(data.get("latency_normalize_ms", 5000.0)),
@@ -98,6 +117,13 @@ class UtilityFunction:
         or failed outcome contributes zero positive reward but still incurs
         cost penalties, so a cheap wrong answer can never beat a correct
         expensive one.
+
+        Over-routing penalties (``unnecessary_tool_use`` /
+        ``unnecessary_workflow_use``) are read from the outcome's
+        ``action_metadata``-derived flags stored on the Outcome via the
+        ``tool_result_valid`` / ``acceptance_passed`` context. The caller
+        marks these flags when constructing the Outcome; the utility function
+        only applies the configured penalty.
         """
         success_term = self.config.w_success if outcome.verified_success else 0.0
         latency_term = self.config.w_latency * self._normalized_latency(
@@ -111,12 +137,26 @@ class UtilityFunction:
             self.config.w_intervention if outcome.operator_intervention else 0.0
         )
         safety_term = self.config.w_safety if outcome.safety_violation else 0.0
+        # Over-routing penalties. These are set by the verifier/harness when
+        # the action was correct but heavier than the task required.
+        unnecessary_tool_term = (
+            self.config.w_unnecessary_tool
+            if outcome.unnecessary_tool_use
+            else 0.0
+        )
+        unnecessary_workflow_term = (
+            self.config.w_unnecessary_workflow
+            if outcome.unnecessary_workflow_use
+            else 0.0
+        )
 
         utility = (
             success_term
             - latency_term
             - token_term
             - failure_term
+            - unnecessary_tool_term
+            - unnecessary_workflow_term
             - intervention_term
             - safety_term
         )
@@ -125,6 +165,8 @@ class UtilityFunction:
             "latency_penalty": latency_term,
             "token_penalty": token_term,
             "failure_penalty": failure_term,
+            "unnecessary_tool_penalty": unnecessary_tool_term,
+            "unnecessary_workflow_penalty": unnecessary_workflow_term,
             "intervention_penalty": intervention_term,
             "safety_penalty": safety_term,
             "verified_success": 1.0 if outcome.verified_success else 0.0,
