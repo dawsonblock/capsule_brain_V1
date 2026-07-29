@@ -1,0 +1,61 @@
+Capsule Brain v2.12.1 — Release Validation
+Date: 2026-07-26
+Python: 3.13.5
+
+SOURCE / TEST GATES
+-------------------
+PASS  python -m compileall -q src tests
+PASS  pytest -q
+      171 passed in 14.93s
+
+END-TO-END GATE
+---------------
+PASS  PYTHONPATH=src python demo.py
+      Offline fake-provider application booted, exercised conversation,
+      feedback, reflection, verification, goal planning, persistence, and
+      dependency-ordered shutdown successfully.
+
+PACKAGING GATES
+---------------
+PASS  python -m pip wheel . --no-deps --no-build-isolation
+      capsule_brain-2.12.1-py3-none-any.whl
+      sha256: 3bac52f52b285c37ef87b48518a4295742c4710dfab8f5cba7588ea4bba61a13
+PASS  wheel installed into an isolated target directory with --no-deps
+PASS  imported runtime bootstrap, workflow status models, and Redis bridge
+      from the built wheel
+
+HARDENING REGRESSIONS INCLUDED
+------------------------------
+- approval waits survive restart without auto-approval
+- hard-crash RUNNING state is converted to INTERRUPTED before auto-resume
+- in-progress crash attempts are retained as interrupted step history
+- immediate approval cannot race future registration
+- active workflow cancellation terminates the owned run task
+- re-entrant/self-cancellation cannot be overwritten by completion
+- false-success workflow paths fail closed
+- unknown workflow edges fail explicitly
+- real async EventBus dispatch is wired through TaskRegistry
+- tool transcripts preserve assistant tool_calls before tool results
+- malformed/type-invalid tool arguments are rejected by JSON Schema
+- final-round pending tools are not executed without a continuation turn
+- verifier failure events retain exact check details
+- concurrent execution verifiers use unique, cleaned artifacts
+- pytest reflection requires an authoritative pytest verifier PASS
+- embedding fingerprints isolate incompatible vector spaces
+- sqlite-vec optimization degrades to exact fallback safely
+- Redis serialization preserves event identity/correlation/trace context
+- Redis inbound events are not echoed back out on overlapping topics
+- OpenTelemetry instrumentation uses current spans and real parent/child traces
+- asynchronously dispatched handlers continue the publish trace
+- bounded worker shutdown handles queue_max < max_workers cleanly
+
+OPTIONAL DEPLOYMENT QUALIFICATION
+---------------------------------
+OpenTelemetry SDK/exporter were installed and exercised against a real SDK
+TracerProvider in this validation environment.
+
+The optional `redis` and `sqlite-vec` packages were not installed here. Their
+serialization, import/degradation, filtering, deduplication, and fallback paths
+are covered by regression tests, but live Redis connectivity/reconnect behavior
+and native sqlite-vec KNN execution remain environment-specific deployment
+qualification items rather than claims made by this release validation.

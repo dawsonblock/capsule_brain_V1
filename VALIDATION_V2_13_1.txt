@@ -1,0 +1,57 @@
+Capsule Brain v2.13.1 — Verification-Coverage Validation
+========================================================
+
+PRODUCTION SOURCE
+  PASS: no src/ production-code changes from v2.13.0.
+  src tree SHA-256 (both releases):
+  bcfc46a22aaa84f87de6d051bb6987b34b346fa4168a7fdd92e4abd09f4d2c6d
+
+NEW REGRESSION COVERAGE
+  1. test_acceptance_verification_rejects_path_traversal
+     - ../ traversal
+     - absolute path
+     - solution.py collision
+  2. test_failing_acceptance_script_blocks_completion_despite_clean_solution
+  3. test_acceptance_verification_fails_closed_on_execution_infrastructure_error
+     - ExecutionService/runner exception
+     - VerificationService exception
+  4. test_build_application_rejects_smoke_workflow_without_acknowledgement
+
+  Four named additions, six collected pytest cases.
+
+RELEASE GATES — EXECUTED
+  python -m compileall -q src tests
+    PASS
+
+  pytest -q
+    PASS: 182 passed in 16.78s
+
+  PYTHONPATH=src python demo.py
+    PASS: demo completed and all services stopped cleanly
+
+  python -m pip wheel . --no-deps --no-build-isolation -w dist
+    PASS: capsule_brain-2.13.1-py3-none-any.whl
+    SHA-256: 4ab889a624aec75a8d4493a488e2dce809f9c0a15f740d2ae29b9f46b4c88a55
+
+ISOLATED WHEEL CHECK
+  Fresh venv + freshly built 2.13.1 wheel: PASS for package installation.
+
+  Normal dependency resolution: BLOCKED BY ENVIRONMENT.
+  The configured package index returned no httpx candidates; explicit
+  pypi.org access failed DNS resolution. This is not recorded as PASS.
+
+  Clean venv locally provisioned with the already-qualified dependency closure:
+    httpx 0.28.1
+    PyYAML 6.0.3
+    jsonschema 4.26.0
+    plus transitive dependencies
+
+  Required wheel import surfaces: PASS
+    capsule_brain.runtime.bootstrap.build_application
+    capsule_brain.workflow.models.WorkflowStatus
+    capsule_brain.llm.tools.ToolRegistry
+
+  pip check: PASS — No broken requirements found.
+
+VERSION
+  pyproject.toml: 2.13.1

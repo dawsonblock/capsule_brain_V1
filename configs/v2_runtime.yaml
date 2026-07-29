@@ -1,0 +1,197 @@
+event_bus: {}
+
+
+# Distributed tracing. When enabled, Capsule Brain creates current OTel spans.
+# Supplying otlp_http_endpoint configures an OTLP/HTTP exporter; without an
+# endpoint the active global provider is used. Missing optional OTel packages
+# degrade to a no-op tracer.
+tracing:
+  enable: false
+  service_name: capsule-brain
+  # Optional OTLP/HTTP traces endpoint, e.g. http://localhost:4318/v1/traces
+  otlp_http_endpoint: null
+
+memory:
+  db_path: data/memory_v2.sqlite
+  # Semantic vector search. auto_index_embeddings writes an embedding for
+  # every new memory so search_semantic has data to work with. The default
+  # hash embedding provider is a zero-dependency fallback; configure a real
+  # embedding model for production-quality semantic retrieval.
+  auto_index_embeddings: true
+  embedding:
+    provider: hash
+    dimension: 128
+
+memory_consolidator:
+  enable: true
+  interval_sec: 3600
+  archive_after_days: 7
+  max_scan: 1000
+
+# ---------------------------------------------------------------------------
+# LLM Gateway
+#
+# The default shipped configuration is an OFFLINE MINIMAL RUNTIME: the LLM
+# gateway is disabled and all LLM-dependent services (conversation, feedback,
+# reflection) are also disabled. This configuration boots cleanly without any
+# API key or network access and provides: event bus, memory, memory
+# consolidation, experience store, verification, goal planning, and (if
+# enabled) execution.
+#
+# To run the full cognitive pipeline, set llm_gateway.enable: true and provide
+# OPENAI_API_KEY in the environment. Conversation, feedback, and reflection
+# will auto-enable when the LLM gateway is available.
+# ---------------------------------------------------------------------------
+tools:
+  timeout_s: 15
+  max_result_chars: 20000
+  allowed_permissions: [standard]
+  allow_side_effects: false
+
+llm_gateway:
+  enable: false
+  default_model: openai_gpt4o_mini
+  goal_model: openai_gpt4o_mini
+  timeout_s: 45
+  max_attempts: 2
+  backoff_s: 0.25
+  max_concurrency: 4
+
+  circuit_breaker:
+    failure_threshold: 3
+    recovery_timeout_s: 30
+
+  routing:
+    routes:
+      chat:
+        models: [openai_gpt4o_mini]
+      goal:
+        models: [openai_gpt4o_mini]
+      coding:
+        models: [openai_gpt4o_mini]
+      reflection:
+        models: [openai_gpt4o_mini]
+
+  models:
+    openai_gpt4o_mini:
+      provider: openai
+      api_base: https://api.openai.com/v1
+      model_name: gpt-4o-mini
+      api_key_env: OPENAI_API_KEY
+      temperature: 0.2
+      capabilities: [text, json, tools]
+      input_cost_per_million: 0.0
+      output_cost_per_million: 0.0
+
+
+# LLM-dependent services. These default to disabled in the offline runtime.
+# When llm_gateway.enable is true, they auto-enable unless explicitly set to
+# false here.
+conversation:
+  enable: false
+  db_path: data/conversations_v2.sqlite
+  route: chat
+  model: null
+  history_limit: 12
+  memory_limit: 8
+  # Semantic memory retrieval. When true, the conversation service embeds the
+  # user's message and retrieves the top-K semantically similar memories
+  # instead of the most recent K. Falls back to chronological retrieval if
+  # semantic search is unavailable.
+  semantic_memory: false
+  semantic_memory_limit: 8
+  # Native tool loop. Keep false unless the selected route/model supports the
+  # tools capability and tools have been registered with ToolRegistry.
+  use_tools: false
+  max_tool_iterations: 4
+  system_prompt: "You are Capsule Brain, a precise autonomous AI assistant."
+
+goal_planner:
+  db_path: data/goals_v2.sqlite
+
+# WorkflowService (persistent workflow graph/state-machine engine). When enabled, registers a managed
+# WorkflowRunnerService on top of the event bus and provides the default
+# plan->generate->test->reflect workflow. Interrupted runs are persisted to
+# SQLite and resumed on restart. Set require_approval to insert a
+# human-in-the-loop checkpoint before completion.
+workflow:
+  enable: false
+  db_path: data/workflows.sqlite
+  max_steps: 50
+  max_reflect_iterations: 3
+  require_approval: false
+  # Safe default: a workflow may complete only when the request supplies an
+  # external verification contract in metadata:
+  #   verification:
+  #     files: {acceptance.py: "from solution import ..."}
+  #     command: [python, acceptance.py]
+  # The generated artifact is exposed as solution.py in a per-run sandbox.
+  verification_mode: acceptance
+  # Legacy behavior (exit code 0 == success) is deliberately unsafe and must
+  # be acknowledged explicitly if verification_mode is changed to smoke.
+  allow_smoke_success: false
+  auto_resume: true
+  approval_timeout_s: 0  # 0 = wait forever for operator approval
+
+redis_bridge:
+  enable: false
+  url: redis://localhost:6379/0
+  channel_prefix: capsule
+  inbound_topics: [goal.request]
+  outbound_topics:
+    [goal.created, goal.task.updated, goal.task.edited, goal.edited]
+
+
+learning:
+  db_path: data/experience_v2.sqlite
+
+feedback:
+  enable: false
+
+
+reflection:
+  enable: false
+  db_path: data/reflections_v2.sqlite
+  route: reflection
+  model: null
+  max_iterations: 4
+  max_seed_chars: 4000
+
+verification:
+  enable: true
+  db_path: data/verification_v2.sqlite
+  # The default python:3.11-slim execution image only guarantees Python.
+  # Add pytest/ruff/mypy here only when using the verifier image below.
+  execution_verifiers: [python_compile]
+
+execution:
+  enable: false
+  allow: false
+  # Container is the safe default. Host execution requires explicit opt-in:
+  #   runner: host
+  #   unsafe_allow_host_execution: true
+  runner: container
+  db_path: data/execution_v2.sqlite
+  cwd_root: sandbox
+  timeout_s: 10
+  max_output_chars: 20000
+  allowed_commands: [python]
+
+  container_engine: docker
+  container_image: python:3.11-slim
+  container_memory: 512m
+  container_memory_swap: 512m
+  container_cpus: "1.0"
+  container_pids_limit: 128
+  container_nofile_limit: 1024
+  # When true, digest resolution MUST succeed — failure is a hard error,
+  # not a silent fallback to a mutable tag.
+  container_pin_image_digest: true
+
+  # Bounded async worker pool. Limits concurrent container/host executions
+  # to prevent Docker daemon CPU/RAM thrashing under heavy multi-task load.
+  # Set max_workers to 0 to disable the pool and use direct runner.run().
+  worker_pool:
+    max_workers: 2
+    queue_max: 0  # 0 = unbounded queue
+    drain_timeout_s: 10.0

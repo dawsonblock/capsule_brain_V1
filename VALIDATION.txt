@@ -1,0 +1,51 @@
+Capsule Brain v2.13.0 — Correction Release Validation
+Date: 2026-07-27
+
+SOURCE / TEST GATES
+-------------------
+PASS  python -m compileall -q src tests
+PASS  pytest -q
+      176 passed in 15.23s
+
+END-TO-END GATE
+---------------
+PASS  PYTHONPATH=src python demo.py
+      Offline fake-provider application booted, exercised conversation,
+      feedback, reflection, verification, goal planning, persistence, and
+      dependency-ordered shutdown successfully.
+
+PACKAGING GATES
+---------------
+PASS  python -m pip wheel . --no-deps --no-build-isolation -w dist
+      capsule_brain-2.13.0-py3-none-any.whl
+      sha256: 0c098c43c9d5d6c0ff4095a8f67eac886d7ce1dccc79813e64d48d8d8666f328
+PASS  wheel installed into an isolated target directory with --no-deps
+PASS  isolated imports:
+      capsule_brain.runtime.bootstrap.build_application
+      capsule_brain.workflow.models.WorkflowStatus
+      capsule_brain.llm.tools.ToolRegistry
+
+V2.13.0 CORRECTION REGRESSIONS
+------------------------------
+PASS  direct build_application(dict) rejects unacknowledged host execution
+PASS  smoke workflow mode requires explicit allow_smoke_success acknowledgement
+PASS  default workflow does not promote a no-op `pass` program without an
+      acceptance verification contract
+PASS  external acceptance files/command can promote a verified solution
+PASS  workflow request metadata is persisted into workflow state for resume
+PASS  normal ConversationService can execute registered native tools when
+      conversation.use_tools=true
+PASS  tool calls/names/failures are recorded in ExperienceRecord metadata
+PASS  all pre-existing v2.12.1 regression coverage remains green, with legacy
+      exit-code smoke tests converted to explicit acknowledged smoke-mode tests
+
+DEPLOYMENT QUALIFICATION NOT CLAIMED
+------------------------------------
+No Docker or Podman executable was available in this validation environment.
+The acceptance verification path was exercised through the host ExecutionRunner
+under an explicit test policy. ContainerExecutionRunner remains covered by unit
+regressions from v2.12.1, but the new v2.13.0 acceptance-contract path has not
+been executed against a live Docker/Podman daemon in this environment.
+
+Live Redis and native sqlite-vec deployment behavior also remain optional
+environment-specific qualification items.
