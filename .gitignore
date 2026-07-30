@@ -53,3 +53,6 @@ Thumbs.db
 *.cid
 downloads
 downloads.pub
+.qual_sandbox_v04/
+.cf_isolation_v04/
+qualification/autolearn_v04/artifacts/
