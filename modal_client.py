@@ -30,7 +30,7 @@ class ModalGPIClient:
 
     def __init__(
         self,
-        model_id="Qwen/Qwen2.5-3B-Instruct",
+        model_id="Qwen/Qwen2.5-7B-Instruct",
         collect_hidden_states=False,
         hidden_layer_ids=None,
     ):

@@ -24,7 +24,7 @@ from typing import Any
 
 import modal
 
-MODEL_ID_DEFAULT = "Qwen/Qwen2.5-3B-Instruct"
+MODEL_ID_DEFAULT = "Qwen/Qwen2.5-7B-Instruct"
 GPU_TYPE = "a10g"
 DTYPE_DEFAULT = "float16"
 MAX_NEW_TOKENS_DEFAULT = 512
