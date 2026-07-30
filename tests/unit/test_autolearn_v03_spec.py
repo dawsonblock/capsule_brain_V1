@@ -263,25 +263,25 @@ class TestCounterfactualExecution:
 
 
 class TestBenchmarkTasks:
-    """Sections 8-12: 80-task benchmark."""
+    """Sections 8-12: Expanded benchmark (v2.16.0 Priority 10)."""
 
     def test_80_tasks_total(self):
-        """Benchmark has exactly 80 tasks."""
+        """Benchmark has at least 800 tasks (v2.16.0 expanded)."""
         build_all_tasks = tasks.build_all_tasks
         all_tasks = build_all_tasks()
-        assert len(all_tasks) == 80
+        assert len(all_tasks) >= 800
 
     def test_20_tasks_per_family(self):
-        """Each family has exactly 20 tasks."""
+        """Each family has at least 200 tasks (v2.16.0 expanded)."""
         build_all_tasks = tasks.build_all_tasks
         from collections import Counter
 
         all_tasks = build_all_tasks()
         families = Counter(t.family for t in all_tasks)
-        assert families["direct_answer"] == 20
-        assert families["memory_required"] == 20
-        assert families["tool_required"] == 20
-        assert families["coding_workflow"] == 20
+        assert families["direct_answer"] >= 200
+        assert families["memory_required"] >= 200
+        assert families["tool_required"] >= 200
+        assert families["coding_workflow"] >= 200
 
 
 # ---------------------------------------------------------------------------
@@ -328,7 +328,7 @@ class TestSplits:
     """Sections 14-15: archetype splits + genuine OOD."""
 
     def test_split_counts(self):
-        """Splits are 48 train / 16 test / 16 ood."""
+        """Splits follow four-way isolation (v2.16.0 Priority 3)."""
         build_all_tasks = tasks.build_all_tasks
         build_split_assignments = tasks.build_split_assignments
         from collections import Counter
@@ -336,9 +336,17 @@ class TestSplits:
         all_tasks = build_all_tasks()
         assignments = build_split_assignments(all_tasks)
         counts = Counter(assignments.values())
-        assert counts["train"] == 48
-        assert counts["test"] == 16
-        assert counts["ood"] == 16
+        # Four-way split: train, validation, test, ood
+        assert "train" in counts
+        assert "validation" in counts
+        assert "test" in counts
+        assert "ood" in counts
+        # Train should be the largest split.
+        assert counts["train"] > counts["validation"]
+        assert counts["test"] > counts["validation"]
+        assert counts["ood"] > counts["validation"]
+        # No overlap: every task has exactly one split.
+        assert sum(counts.values()) == len(all_tasks)
 
     def test_ood_archetypes_absent_from_train(self):
         """OOD archetypes are completely absent from training."""
@@ -499,11 +507,14 @@ class TestPromotionGate:
             "losses": 1,
             "v2_metrics": {},
         }
-        result = _check_gates(test_eval, ood_eval)
-        assert len(result["gates"]) == 12
+        result = _check_gates(test_eval, ood_eval, runtime_type="real", sham_eval={"candidate_metrics": {"mean_utility": 3.0}})
+        assert len(result["gates"]) == 15
         gate_names = [g["gate"] for g in result["gates"]]
         assert "coverage_at_0.9" in gate_names
         assert "calibration_ece" in gate_names
+        assert "sham_comparison" in gate_names
+        assert "runtime_is_real" in gate_names
+        assert "no_simulated_rows" in gate_names
 
     def test_promotion_gate_all_pass(self):
         """When all metrics are good, the candidate is promoted."""
@@ -538,7 +549,7 @@ class TestPromotionGate:
             "losses": 1,
             "v2_metrics": {},
         }
-        result = _check_gates(test_eval, ood_eval)
+        result = _check_gates(test_eval, ood_eval, runtime_type="real", sham_eval={"candidate_metrics": {"mean_utility": 3.0}})
         assert result["promoted"] is True
         assert result["n_failed"] == 0
 

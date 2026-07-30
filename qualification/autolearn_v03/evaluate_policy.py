@@ -9,21 +9,29 @@ utility per task.
 Section 20: Calibration metrics (ECE, Brier, coverage) are computed from
 the candidate's (confidence, correct) pairs.
 
+v2.16.0 Priority 2: Supports ``--runtime simulated|real``. The official
+qualification pipeline must require ``runtime == real``. Simulation remains
+available only for unit tests.
+
 Writes evaluation.json with:
 - test: {baseline_metrics, candidate_metrics, mean_delta, wins/ties/losses, v2_metrics}
 - ood: {baseline_metrics, candidate_metrics, mean_delta, wins/ties/losses, v2_metrics}
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
+import sys
 from pathlib import Path
 
 from capsule_brain.autolearn.baseline import BaselinePolicyV2
 from capsule_brain.autolearn.calibration import compute_calibration
 from capsule_brain.autolearn.counterfactual import (
     CounterfactualRuntime,
+    RealCounterfactualRuntime,
     SimulatedCounterfactualRuntime,
+    assert_runtime_is_real,
     run_counterfactuals,
 )
 from capsule_brain.autolearn.features import FeatureExtractor
@@ -143,16 +151,18 @@ def _evaluate_split(
     mean_c = sum(candidate_utilities) / n if n else 0.0
     mean_delta = mean_c - mean_b
 
-    # Bootstrap CI (simplified — normal approximation).
-    import math
+    # v2.16.0 Priority 5: Real paired bootstrap (10,000 samples) with BCa.
+    # Replaces the fake normal-approximation interval.
+    from capsule_brain.autolearn.statistics import (
+        compute_qualification_statistics,
+    )
     deltas = [c - b for c, b in zip(candidate_utilities, baseline_utilities)]
-    if len(deltas) > 1:
-        var = sum((d - mean_delta) ** 2 for d in deltas) / (len(deltas) - 1)
-        std = math.sqrt(var)
-        ci_low = mean_delta - 1.96 * std / math.sqrt(len(deltas))
-        ci_high = mean_delta + 1.96 * std / math.sqrt(len(deltas))
-    else:
-        ci_low = ci_high = mean_delta
+    stats = compute_qualification_statistics(
+        candidate_utilities, baseline_utilities,
+        n_bootstrap=10_000, epsilon=0.0, seed=42,
+    )
+    ci_low = stats.bootstrap.ci_low
+    ci_high = stats.bootstrap.ci_high
 
     # Calibration.
     pairs = list(zip(candidate_confidences, candidate_correct))
@@ -197,6 +207,7 @@ def _evaluate_split(
         "wins": wins,
         "ties": ties,
         "losses": losses,
+        "statistics": stats.to_dict(),
         "v2_metrics": {
             "candidate_workflow_routing_accuracy": workflow_routing,
             "candidate_over_routing_rate": over_routing_rate,
@@ -209,7 +220,38 @@ def _evaluate_split(
     }
 
 
+def _build_runtime(runtime_arg: str) -> CounterfactualRuntime:
+    """Build the evaluation runtime based on the --runtime flag.
+
+    v2.16.0 Priority 2: ``--runtime real`` uses the real
+    QualificationServiceFactory. ``--runtime simulated`` uses the
+    SimulatedCounterfactualRuntime (for unit tests only).
+    """
+    if runtime_arg == "simulated":
+        print("WARNING: using simulated runtime — NOT for official qualification")
+        return SimulatedCounterfactualRuntime()
+    elif runtime_arg == "real":
+        from capsule_brain.autolearn.qualification_runtime import (
+            QualificationServiceFactory,
+        )
+        factory = QualificationServiceFactory()
+        return RealCounterfactualRuntime(service_factory=factory)
+    else:
+        print(f"ERROR: unknown runtime '{runtime_arg}'. Use 'real' or 'simulated'.")
+        sys.exit(1)
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Evaluate candidate policy (v0.3)")
+    parser.add_argument(
+        "--runtime",
+        choices=["real", "simulated"],
+        default="real",
+        help="Evaluation runtime: 'real' (default, official qualification) "
+             "or 'simulated' (unit tests only).",
+    )
+    args = parser.parse_args()
+
     out_dir = Path(__file__).resolve().parent
     candidate_id = (out_dir / "candidate_policy_id.txt").read_text().strip()
     registry = PolicyRegistry(out_dir / "policies")
@@ -224,9 +266,19 @@ def main() -> None:
 
     extractor = FeatureExtractor()
     baseline = BaselinePolicyV2()
-    runtime = SimulatedCounterfactualRuntime()
+    runtime = _build_runtime(args.runtime)
+
+    # v2.16.0 Priority 2: assert runtime is real for official qualification.
+    if args.runtime == "real":
+        try:
+            assert_runtime_is_real(runtime)
+        except RuntimeError:
+            print("ERROR: official qualification requires runtime_type='real'")
+            sys.exit(1)
+
     utility_config = UtilityConfig()
 
+    print(f"runtime_type: {runtime.runtime_type}")
     test_eval = _evaluate_split(test_tasks, baseline, candidate, extractor, runtime, utility_config)
     ood_eval = _evaluate_split(ood_tasks, baseline, candidate, extractor, runtime, utility_config)
 

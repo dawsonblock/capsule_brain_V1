@@ -1,7 +1,7 @@
 """Capsule Brain AutoLearn v0.3.
 
 A learned executive/router policy layer that sits on top of the frozen
-Capsule Brain v2.15.1 execution substrate. AutoLearn chooses which action
+Capsule Brain v2.16.0 execution substrate. AutoLearn chooses which action
 the runtime should take for a given task; the ExecutiveController dispatches
 that action through the *real* Capsule Brain services via the public
 ``ConversationService.execute_executive_action()`` API; the
@@ -70,6 +70,32 @@ from capsule_brain.autolearn.counterfactual import (
     SimulatedCounterfactualRuntime,
     assert_runtime_is_real,
 )
+from capsule_brain.autolearn.qualification_runtime import (
+    QualificationProvider,
+    QualificationServiceFactory,
+)
+from capsule_brain.autolearn.statistics import (
+    BootstrapResult,
+    QualificationStatistics,
+    SignTestResult,
+    PermutationTestResult,
+    compute_qualification_statistics,
+    paired_bootstrap,
+    paired_permutation_test,
+    sign_test,
+)
+from capsule_brain.autolearn.sham_learner import (
+    train_sham_policy,
+    shuffle_actions_within_strata,
+    shuffle_labels_globally,
+    shuffle_utilities,
+)
+from capsule_brain.autolearn.source_hash import (
+    compute_source_tree_hash,
+    compute_file_hash,
+    compute_string_hash,
+    verify_provenance,
+)
 
 __all__ = [
     "Action",
@@ -78,6 +104,7 @@ __all__ = [
     "AutoLearnService",
     "BaselinePolicy",
     "BaselinePolicyV2",
+    "BootstrapResult",
     "ControllerDecision",
     "CounterfactualResult",
     "CounterfactualRuntime",
@@ -96,17 +123,34 @@ __all__ = [
     "LearnedPolicy",
     "MemoryExperienceSink",
     "Outcome",
+    "PermutationTestResult",
     "PolicyDecision",
     "PolicyLoadError",
     "PolicyManifest",
     "PolicyRegistry",
     "Provenance",
+    "QualificationProvider",
+    "QualificationServiceFactory",
+    "QualificationStatistics",
     "ActionResult",
     "RealCounterfactualRuntime",
     "SCHEMA_VERSION",
+    "SignTestResult",
     "SimulatedCounterfactualRuntime",
     "UtilityConfig",
     "UtilityFunction",
     "VerifierFn",
     "assert_runtime_is_real",
+    "compute_file_hash",
+    "compute_qualification_statistics",
+    "compute_source_tree_hash",
+    "compute_string_hash",
+    "paired_bootstrap",
+    "paired_permutation_test",
+    "shuffle_actions_within_strata",
+    "shuffle_labels_globally",
+    "shuffle_utilities",
+    "sign_test",
+    "train_sham_policy",
+    "verify_provenance",
 ]

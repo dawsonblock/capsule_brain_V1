@@ -144,26 +144,43 @@ class RealCounterfactualRuntime:
 
     The verifier judges the outcome independently. The runtime does not
     self-report success.
+
+    v2.16.0: Supports a ``service_factory`` for per-execution isolation.
+    When a factory is provided, each execution creates a fresh
+    ConversationService with isolated MemoryService, ToolRegistry, and
+    WorkflowRunner. This ensures strict isolation: no shared memory, no
+    simulator shortcuts, no task-family lookup tables.
     """
 
     runtime_type: str = "real"
 
     def __init__(
         self,
-        conversation_service: Any,
+        conversation_service: Any = None,
         *,
+        service_factory: Any = None,
         verifier_override: Any = None,
     ) -> None:
-        """Initialize with a ConversationService that has
-        ``execute_executive_action``.
+        """Initialize with a ConversationService or a service factory.
 
         Args:
-            conversation_service: The ConversationService instance (or any
+            conversation_service: A ConversationService instance (or any
                 object with an ``execute_executive_action`` coroutine method).
+                Used when a single shared service is acceptable.
+            service_factory: A callable that takes a CounterfactualTask and
+                returns a fresh ConversationService. When provided, each
+                execution creates a fresh, isolated service. This is the
+                preferred mode for qualification (Priority 1).
             verifier_override: Optional override for the task's verifier.
                 When None, the task's own verifier is used.
         """
+        if conversation_service is None and service_factory is None:
+            raise ValueError(
+                "RealCounterfactualRuntime requires either "
+                "conversation_service or service_factory"
+            )
         self._svc = conversation_service
+        self._service_factory = service_factory
         self._verifier_override = verifier_override
         self._execution_counter = 0
 
@@ -192,10 +209,15 @@ class RealCounterfactualRuntime:
                 not_executed=True,
             )
 
+        # Build or reuse the service for this execution.
+        svc = self._svc
+        if self._service_factory is not None:
+            svc = await self._service_factory.build(task)
+
         # Dispatch the action through real services.
         started = time.perf_counter()
         try:
-            disp = await self._svc.execute_executive_action(
+            disp = await svc.execute_executive_action(
                 action=action,
                 state=task.state,
                 conversation_id=conv_id,

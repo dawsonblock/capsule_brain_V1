@@ -145,6 +145,14 @@ class ConversationService(CapsuleService):
         history = md.get("history", [])
         memory_records = md.get("memory_records", [])
 
+        # If no history is provided, include the user's text as the first
+        # turn so the LLM provider can see the prompt. Without this, the
+        # _build_context() method produces an empty context and the provider
+        # has no idea what the user asked.
+        if not history and text:
+            from .models import Turn, TurnRole
+            history = [Turn(role=TurnRole.USER, text=text)]
+
         # Set up the per-request context so _respond_* methods can access it.
         self._current_request = {
             "conversation": type("C", (), {"id": conversation_id})(),

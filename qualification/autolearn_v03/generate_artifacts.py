@@ -77,8 +77,12 @@ def main() -> None:
     print(f"wrote calibration.json (sha256={_compute_sha256(text)[:16]})")
 
     # executive_experiences.jsonl — all counterfactual experiences
+    # v2.16.0: use real runtime for official qualification.
     tasks = build_all_tasks()
-    runtime = SimulatedCounterfactualRuntime()
+    from capsule_brain.autolearn.counterfactual import RealCounterfactualRuntime
+    from capsule_brain.autolearn.qualification_runtime import QualificationServiceFactory
+    factory = QualificationServiceFactory()
+    runtime = RealCounterfactualRuntime(service_factory=factory)
     rows = run_counterfactuals(tasks, runtime, utility_config=UtilityConfig())
     lines = []
     for r in rows:

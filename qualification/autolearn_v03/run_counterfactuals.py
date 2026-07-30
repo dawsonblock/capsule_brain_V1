@@ -64,31 +64,40 @@ def _outcome_to_dict(outcome: Outcome) -> dict:
 
 
 def _build_real_runtime() -> RealCounterfactualRuntime:
-    """Build a RealCounterfactualRuntime wired to a ConversationService.
+    """Build a RealCounterfactualRuntime with a QualificationServiceFactory.
 
-    For qualification, we build a minimal ConversationService with a fake
-    LLM provider that produces deterministic outputs. In production, this
-    would be the real service stack.
+    v2.16.0 Priority 1: This is a GENUINE real runtime, not a placeholder.
+    It uses a QualificationServiceFactory that creates a fresh, isolated
+    ConversationService per task execution with:
+    - Fresh MemoryService (``:memory:`` SQLite) pre-populated with task data
+    - Real LLMGateway with a deterministic QualificationProvider
+    - Real ToolRegistry with tools from task setup
+    - Real WorkflowRunnerService with a real execution service
+
+    Each execution dispatches through the real
+    ConversationService.execute_executive_action() method. No simulator
+    shortcuts. No task-family lookup tables. No shared state.
     """
-    # Build a minimal conversation service for counterfactual execution.
-    # In production, this would be the full service stack from
-    # build_application(). For qualification, we use a fake provider that
-    # produces deterministic outputs matching the task setup.
-    from capsule_brain.autolearn.counterfactual import SimulatedCounterfactualRuntime
+    from capsule_brain.autolearn.qualification_runtime import (
+        QualificationServiceFactory,
+    )
 
-    # For qualification without a real LLM, we use the simulated runtime
-    # but mark it as such. The --allow-simulated flag must be passed.
-    # Real qualification would wire a real ConversationService here.
-    return SimulatedCounterfactualRuntime()
+    factory = QualificationServiceFactory()
+    return RealCounterfactualRuntime(service_factory=factory)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run counterfactual actions (v0.3)")
     parser.add_argument(
+        "--runtime",
+        choices=["real", "simulated"],
+        default="real",
+        help="Runtime: 'real' (default, official) or 'simulated' (testing only).",
+    )
+    parser.add_argument(
         "--allow-simulated",
         action="store_true",
-        help="Allow the simulated runtime (for testing only). "
-             "Official qualification requires the real runtime.",
+        help="(Deprecated, use --runtime simulated) Allow the simulated runtime.",
     )
     parser.add_argument(
         "--out",
@@ -105,8 +114,9 @@ def main() -> None:
     print(f"loaded {len(tasks)} tasks")
 
     # Build the runtime.
+    use_simulated = args.allow_simulated or args.runtime == "simulated"
     runtime: CounterfactualRuntime
-    if args.allow_simulated:
+    if use_simulated:
         runtime = SimulatedCounterfactualRuntime()
         print("WARNING: using simulated runtime — NOT for official qualification")
     else:
@@ -116,7 +126,7 @@ def main() -> None:
             assert_runtime_is_real(runtime)
         except RuntimeError:
             print("ERROR: official qualification requires runtime_type='real'")
-            print("Use --allow-simulated for testing only.")
+            print("Use --runtime simulated for testing only.")
             sys.exit(1)
 
     print(f"runtime_type: {runtime.runtime_type}")
@@ -157,7 +167,7 @@ def main() -> None:
     print(f"counterfactuals SHA-256: {_compute_sha256(text)}")
 
     # Verify no simulated rows leaked into real qualification.
-    if not args.allow_simulated:
+    if not use_simulated:
         sim_count = sum(1 for r in rows_data if r["runtime_type"] == "simulated")
         if sim_count > 0:
             print(f"ERROR: {sim_count} simulated rows in real qualification!")

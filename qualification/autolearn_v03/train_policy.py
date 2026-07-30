@@ -71,8 +71,10 @@ def main() -> None:
     )
 
     # Split examples into train and validation.
+    # v2.16.0 Priority 3: Use the dedicated VALIDATION split, not TEST.
+    # TEST is reserved for a single final evaluation pass.
     train_examples = [e for e in examples if e.split == "train"]
-    val_examples = [e for e in examples if e.split == "test"]
+    val_examples = [e for e in examples if e.split == "validation"]
     # If no validation examples, use a small slice of train.
     if not val_examples:
         val_examples = train_examples[:max(1, len(train_examples) // 10)]
@@ -88,14 +90,17 @@ def main() -> None:
         parent_policy="baseline_v2",
     )
 
-    # Attach provenance.
-    policy.hyperparameters = {
+    # Merge provenance into existing hyperparameters (already contains
+    # feature_means/feature_stds from learner.train()). Never overwrite —
+    # that would destroy normalization metadata and break training/inference
+    # equivalence (Priority 0 fix for v2.16.0).
+    policy.hyperparameters.update({
         "n_epochs": learner_config.n_epochs,
         "learning_rate": learner_config.learning_rate,
         "l2": learner_config.l2,
         "confidence_threshold": learner_config.confidence_threshold,
         "actions": [a.value for a in learner_config.actions],
-    }
+    })
     policy.metrics = training_metrics.to_dict() if hasattr(training_metrics, "to_dict") else {}
 
     # Register the policy.
