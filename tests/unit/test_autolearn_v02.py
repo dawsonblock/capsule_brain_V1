@@ -359,7 +359,7 @@ class _FakeDispatcher(ActionDispatcher):
         self.tool_text = "tool result"
         self.workflow_text = "workflow output"
 
-    async def answer_direct(self, state, *, conversation_id=None):
+    async def answer_direct(self, state, *, conversation_id=None, request_context=None):
         self.calls.append("answer_direct")
         return DispatcherResult(
             text=self.answer_text,
@@ -368,7 +368,7 @@ class _FakeDispatcher(ActionDispatcher):
             action_completed=True,
         )
 
-    async def retrieve_memory(self, state, *, conversation_id=None):
+    async def retrieve_memory(self, state, *, conversation_id=None, request_context=None):
         self.calls.append("retrieve_memory")
         return DispatcherResult(
             text=self.memory_text,
@@ -377,7 +377,7 @@ class _FakeDispatcher(ActionDispatcher):
             action_completed=True,
         )
 
-    async def call_tool(self, state, *, conversation_id=None):
+    async def call_tool(self, state, *, conversation_id=None, request_context=None):
         self.calls.append("call_tool")
         return DispatcherResult(
             text=self.tool_text,
@@ -389,7 +389,7 @@ class _FakeDispatcher(ActionDispatcher):
             tool_result_valid=True,
         )
 
-    async def start_workflow(self, state, *, conversation_id=None):
+    async def start_workflow(self, state, *, conversation_id=None, request_context=None):
         self.calls.append("start_workflow")
         return DispatcherResult(
             text=self.workflow_text,
@@ -510,13 +510,13 @@ class TestExecutiveController:
     @pytest.mark.asyncio
     async def test_dispatch_error_records_runtime_error(self):
         class _ErrorDispatcher(ActionDispatcher):
-            async def answer_direct(self, state, *, conversation_id=None):
+            async def answer_direct(self, state, *, conversation_id=None, request_context=None):
                 raise RuntimeError("LLM gateway down")
-            async def retrieve_memory(self, state, *, conversation_id=None):
+            async def retrieve_memory(self, state, *, conversation_id=None, request_context=None):
                 raise RuntimeError("memory error")
-            async def call_tool(self, state, *, conversation_id=None):
+            async def call_tool(self, state, *, conversation_id=None, request_context=None):
                 raise RuntimeError("tool error")
-            async def start_workflow(self, state, *, conversation_id=None):
+            async def start_workflow(self, state, *, conversation_id=None, request_context=None):
                 raise RuntimeError("workflow error")
 
         ctrl = ExecutiveController(

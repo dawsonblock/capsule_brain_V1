@@ -89,12 +89,10 @@ class ConversationService(CapsuleService):
         # _respond_* methods. Attached to the ExecutiveController when
         # AutoLearn is enabled.
         self._dispatcher = _ConversationActionDispatcher(self)
-        # Per-request context used by the dispatcher; set during
-        # _respond_via_autolearn and cleared in its finally block.
-        # v0.3.1: Now an immutable RequestContext (frozen dataclass)
-        # instead of a mutable dict, preventing concurrent request
-        # state corruption.
-        self._current_request: RequestContext | None = None
+        # v0.3.2: No mutable per-request field. RequestContext is built
+        # per call and threaded explicitly through execute_executive_action
+        # / _respond_via_autolearn into the _respond_* methods. This makes
+        # concurrent request handling safe — no shared mutable state.
 
     # ------------------------------------------------------------------
     # Public executive-action API (v0.3)
@@ -117,15 +115,20 @@ class ConversationService(CapsuleService):
         state: "ExecutiveState",
         conversation_id: str,
         metadata: dict[str, Any] | None = None,
+        request_context: RequestContext | None = None,
     ) -> "DispatcherResult":
         """Execute one executive action through real Capsule Brain services.
 
-        This is the canonical action dispatcher. It sets up the per-request
-        context from ``state`` and ``metadata``, delegates to the
-        corresponding ``_respond_*`` method, and returns a
-        ``DispatcherResult``. Both production routing (via
-        ExecutiveController) and counterfactual qualification (via
+        This is the canonical action dispatcher. It builds an immutable
+        ``RequestContext`` from ``state`` and ``metadata`` (or reuses a
+        caller-supplied one), delegates to the corresponding ``_respond_*``
+        method, and returns a ``DispatcherResult``. Both production routing
+        (via ExecutiveController) and counterfactual qualification (via
         RealCounterfactualRuntime) call this same method.
+
+        v0.3.2: The request context is passed explicitly to the
+        ``_respond_*`` methods. No mutable service-level request field is
+        used, so concurrent requests cannot observe each other's state.
 
         Args:
             action: One of ANSWER_DIRECT, RETRIEVE_MEMORY, CALL_TOOL,
@@ -136,56 +139,65 @@ class ConversationService(CapsuleService):
                 context). When ``metadata`` contains ``text``, ``history``,
                 ``memory_records``, they are used as the request context;
                 otherwise the context is built from ``state``.
+            request_context: Optional pre-built immutable context. When
+                provided, it is used directly and ``metadata`` is ignored
+                for context construction.
 
         Returns:
             DispatcherResult with the real outcome of the action.
         """
         from capsule_brain.autolearn.schema import Action as _Action
 
-        # Build per-request context from state + metadata.
-        md = metadata or {}
-        text = md.get("text") or str(state.prompt_features.get("text", ""))
-        history = md.get("history", [])
-        memory_records = md.get("memory_records", [])
+        # Build per-request context from state + metadata, or reuse a
+        # caller-supplied immutable context.
+        if request_context is None:
+            md = metadata or {}
+            text = md.get("text") or str(state.prompt_features.get("text", ""))
+            history = md.get("history", [])
+            memory_records = md.get("memory_records", [])
 
-        # If no history is provided, include the user's text as the first
-        # turn so the LLM provider can see the prompt. Without this, the
-        # _build_context() method produces an empty context and the provider
-        # has no idea what the user asked.
-        if not history and text:
-            from .models import Turn, TurnRole
-            history = [Turn(role=TurnRole.USER, text=text)]
+            # If no history is provided, include the user's text as the first
+            # turn so the LLM provider can see the prompt. Without this, the
+            # _build_context() method produces an empty context and the provider
+            # has no idea what the user asked.
+            if not history and text:
+                from .models import Turn, TurnRole
+                history = [Turn(role=TurnRole.USER, text=text)]
 
-        # Set up the per-request context so _respond_* methods can access it.
-        # v0.3.1: Use immutable RequestContext instead of mutable dict.
-        self._current_request = RequestContext(
-            request_id=md.get("request_id", f"cf_{conversation_id}"),
-            conversation_id=conversation_id,
-            prompt=text,
-            history=tuple(history),
-            memory_records=tuple(memory_records),
-            available_tools=tuple(state.available_tools),
-            correlation_id=md.get("correlation_id"),
-            user_turn_id=md.get("user_turn_id", "cf_turn"),
-            metadata=dict(md),
-        )
-        try:
-            if action == _Action.ANSWER_DIRECT:
-                return await self._respond_direct(state, conversation_id=conversation_id)
-            elif action == _Action.RETRIEVE_MEMORY:
-                return await self._respond_with_memory(state, conversation_id=conversation_id)
-            elif action == _Action.CALL_TOOL:
-                return await self._respond_with_tools(state, conversation_id=conversation_id)
-            elif action == _Action.START_WORKFLOW:
-                return await self._respond_with_workflow(state, conversation_id=conversation_id)
-            else:
-                return DispatcherResult(
-                    runtime_error=True,
-                    action_completed=False,
-                    metadata={"reason": f"unsupported action for execute_executive_action: {action}"},
-                )
-        finally:
-            self._current_request = None
+            request_context = RequestContext(
+                request_id=md.get("request_id", f"cf_{conversation_id}"),
+                conversation_id=conversation_id,
+                prompt=text,
+                history=tuple(history),
+                memory_records=tuple(memory_records),
+                available_tools=tuple(state.available_tools),
+                correlation_id=md.get("correlation_id"),
+                user_turn_id=md.get("user_turn_id", "cf_turn"),
+                metadata=dict(md),
+            )
+
+        if action == _Action.ANSWER_DIRECT:
+            return await self._respond_direct(
+                state, conversation_id=conversation_id, request_context=request_context
+            )
+        elif action == _Action.RETRIEVE_MEMORY:
+            return await self._respond_with_memory(
+                state, conversation_id=conversation_id, request_context=request_context
+            )
+        elif action == _Action.CALL_TOOL:
+            return await self._respond_with_tools(
+                state, conversation_id=conversation_id, request_context=request_context
+            )
+        elif action == _Action.START_WORKFLOW:
+            return await self._respond_with_workflow(
+                state, conversation_id=conversation_id, request_context=request_context
+            )
+        else:
+            return DispatcherResult(
+                runtime_error=True,
+                action_completed=False,
+                metadata={"reason": f"unsupported action for execute_executive_action: {action}"},
+            )
 
     async def start(self) -> None:
         self.state = ServiceState.STARTING
@@ -388,10 +400,10 @@ class ConversationService(CapsuleService):
             context_length=len(text),
         )
 
-        # Stash per-request context so the dispatcher can access it without
-        # threading it through the ActionDispatcher interface.
-        # v0.3.1: Use immutable RequestContext instead of mutable dict.
-        self._current_request = RequestContext(
+        # v0.3.2: Build an immutable RequestContext and thread it explicitly
+        # through autolearn_service.execute -> controller -> dispatcher ->
+        # _respond_*. No mutable service-level field is used.
+        request_context = RequestContext(
             request_id=f"prod_{conversation.id}_{user_turn.id}",
             conversation_id=conversation.id,
             prompt=text,
@@ -401,14 +413,12 @@ class ConversationService(CapsuleService):
             correlation_id=correlation_id,
             user_turn_id=user_turn.id,
         )
-        try:
-            action_result = await self.autolearn_service.execute(
-                state,
-                conversation_id=conversation.id,
-                task_family="production",
-            )
-        finally:
-            self._current_request = None
+        action_result = await self.autolearn_service.execute(
+            state,
+            conversation_id=conversation.id,
+            task_family="production",
+            request_context=request_context,
+        )
 
         # Finalize the dispatched result into an AssistantResponse.
         # Reconstruct a minimal LLMResult-like object for finalize.
@@ -430,9 +440,18 @@ class ConversationService(CapsuleService):
     # _ConversationActionDispatcher (which the ExecutiveController uses).
     # ------------------------------------------------------------------
 
-    def _current_llm_request(self, context_override: str | None = None) -> LLMRequest:
-        """Build an LLMRequest from the current stashed request context."""
-        ctx = self._current_request
+    def _current_llm_request(
+        self,
+        context_override: str | None = None,
+        *,
+        request_context: RequestContext | None = None,
+    ) -> LLMRequest:
+        """Build an LLMRequest from an explicit request context.
+
+        v0.3.2: Reads from the passed-in immutable ``request_context`` rather
+        than a mutable service-level field.
+        """
+        ctx = request_context
         history = list(ctx.history) if ctx else []
         memory_records = list(ctx.memory_records) if ctx else []
         conversation_id = ctx.conversation_id if ctx else ""
@@ -448,15 +467,23 @@ class ConversationService(CapsuleService):
             },
         )
 
-    async def _respond_direct(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+    async def _respond_direct(
+        self,
+        state: ExecutiveState,
+        *,
+        conversation_id: str | None = None,
+        request_context: RequestContext | None = None,
+    ) -> DispatcherResult:
         """ANSWER_DIRECT: LLM generation with no tools and no memory context."""
         import time as _time
         started = _time.perf_counter()
         # Direct answer uses only conversation history, no memory context.
-        ctx = self._current_request
+        ctx = request_context
         history = list(ctx.history) if ctx else []
         context = self._build_context(history, [])
-        llm_request = self._current_llm_request(context_override=context)
+        llm_request = self._current_llm_request(
+            context_override=context, request_context=request_context
+        )
         result = await self.llm.generate(llm_request, route=self.route)
         latency = (_time.perf_counter() - started) * 1000.0
         tokens = sum(result.usage.values()) if result.usage else max(20, len(result.text) // 4)
@@ -468,17 +495,25 @@ class ConversationService(CapsuleService):
             metadata={"model": result.model, "provider": result.provider},
         )
 
-    async def _respond_with_memory(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+    async def _respond_with_memory(
+        self,
+        state: ExecutiveState,
+        *,
+        conversation_id: str | None = None,
+        request_context: RequestContext | None = None,
+    ) -> DispatcherResult:
         """RETRIEVE_MEMORY: real MemoryService retrieval + LLM generation with evidence."""
         import time as _time
         started = _time.perf_counter()
-        ctx = self._current_request
+        ctx = request_context
         text = ctx.prompt if ctx else ""
         # Real memory retrieval through MemoryService.
         memory_records = await self._retrieve_memories(text)
         history = list(ctx.history) if ctx else []
         context = self._build_context(history, memory_records)
-        llm_request = self._current_llm_request(context_override=context)
+        llm_request = self._current_llm_request(
+            context_override=context, request_context=request_context
+        )
         result = await self.llm.generate(llm_request, route=self.route)
         latency = (_time.perf_counter() - started) * 1000.0
         tokens = sum(result.usage.values()) if result.usage else max(30, len(result.text) // 4)
@@ -494,7 +529,13 @@ class ConversationService(CapsuleService):
             },
         )
 
-    async def _respond_with_tools(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+    async def _respond_with_tools(
+        self,
+        state: ExecutiveState,
+        *,
+        conversation_id: str | None = None,
+        request_context: RequestContext | None = None,
+    ) -> DispatcherResult:
         """CALL_TOOL: real LLMGateway.generate_with_tools() through ToolRegistry."""
         import time as _time
         started = _time.perf_counter()
@@ -504,11 +545,13 @@ class ConversationService(CapsuleService):
                 action_completed=False,
                 metadata={"reason": "no tools registered"},
             )
-        ctx = self._current_request
+        ctx = request_context
         history = list(ctx.history) if ctx else []
         memory_records = list(ctx.memory_records) if ctx else []
         context = self._build_context(history, memory_records)
-        llm_request = self._current_llm_request(context_override=context)
+        llm_request = self._current_llm_request(
+            context_override=context, request_context=request_context
+        )
         result, tool_results = await self.llm.generate_with_tools(
             llm_request,
             self.tool_registry,
@@ -537,7 +580,13 @@ class ConversationService(CapsuleService):
             },
         )
 
-    async def _respond_with_workflow(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+    async def _respond_with_workflow(
+        self,
+        state: ExecutiveState,
+        *,
+        conversation_id: str | None = None,
+        request_context: RequestContext | None = None,
+    ) -> DispatcherResult:
         """START_WORKFLOW: real WorkflowRunnerService.start_run()."""
         import time as _time
         started = _time.perf_counter()
@@ -547,16 +596,30 @@ class ConversationService(CapsuleService):
                 action_completed=False,
                 metadata={"reason": "no workflow runner available"},
             )
-        ctx = self._current_request
+        ctx = request_context
         text = ctx.prompt if ctx else ""
         # Determine the workflow name. v0.2 uses the default
         # plan_generate_test_reflect workflow.
         workflow_name = "plan_generate_test_reflect"
+        # v0.3.2: Pass an acceptance verification contract through to the
+        # workflow when the request context carries one (qualification tasks).
+        # The contract supplies the acceptance test file + command so the
+        # workflow's acceptance verification is real, not inferred from
+        # run.status == COMPLETED alone.
+        run_metadata: dict[str, Any] = {"conversation_id": conversation_id or ""}
+        if ctx is not None:
+            md = ctx.metadata or {}
+            acceptance_code = md.get("acceptance_code")
+            if acceptance_code:
+                run_metadata["verification"] = {
+                    "files": {"acceptance_test.py": acceptance_code},
+                    "command": ["python", "acceptance_test.py"],
+                }
         try:
             run = await self.workflow_runner.start_run(
                 workflow_name=workflow_name,
                 goal=text,
-                metadata={"conversation_id": conversation_id or ""},
+                metadata=run_metadata,
             )
         except Exception as exc:
             return DispatcherResult(
@@ -565,11 +628,18 @@ class ConversationService(CapsuleService):
                 metadata={"reason": f"workflow start failed: {exc}"},
             )
         latency = (_time.perf_counter() - started) * 1000.0
-        # Extract the workflow outcome from the run.
+        # Extract the workflow outcome from the run. v0.3.2: derive
+        # acceptance_passed from the actual acceptance test result stored on
+        # the run state, not from run.status alone.
         from capsule_brain.workflow.models import WorkflowStatus
-        acceptance_passed = run.status == WorkflowStatus.COMPLETED
-        acceptance_present = True
-        exit_code = 0 if acceptance_passed else 1
+        state_extra = run.state.extra if run.state else {}
+        acceptance_present = bool(state_extra.get("verification_contract_present", False)) or (
+            run.status == WorkflowStatus.COMPLETED
+        )
+        acceptance_passed = bool(state_extra.get("test_passed", False))
+        exit_code = state_extra.get("exit_code")
+        if exit_code is None:
+            exit_code = 0 if acceptance_passed else 1
         workflow_iterations = run.state.iterations if run.state else 0
         code = run.state.code if run.state else ""
         return DispatcherResult(
@@ -586,6 +656,27 @@ class ConversationService(CapsuleService):
             metadata={
                 "run_status": run.status.value if run.status else "unknown",
                 "stop_reason": run.stop_reason,
+                "verification_kind": state_extra.get("verification_kind", ""),
+                "acceptance_contract_present": acceptance_present,
+                "test_passed": acceptance_passed,
+                "exit_code": exit_code,
+                "stdout_digest": "",
+                "stderr_digest": "",
+                "artifact_paths": [],
+                "required_artifact_exists": acceptance_passed,
+                "reflection_count": workflow_iterations,
+                "execution_attempts": workflow_iterations,
+                "workflow_evidence": {
+                    "workflow_run_id": run.id,
+                    "workflow_status": run.status.value if run.status else "unknown",
+                    "verification_kind": state_extra.get("verification_kind", ""),
+                    "acceptance_contract_present": acceptance_present,
+                    "test_passed": acceptance_passed,
+                    "exit_code": exit_code,
+                    "required_artifact_exists": acceptance_passed,
+                    "reflection_count": workflow_iterations,
+                    "execution_attempts": workflow_iterations,
+                },
             },
         )
 
@@ -810,14 +901,46 @@ class _ConversationActionDispatcher(ActionDispatcher):
     def __init__(self, service: ConversationService) -> None:
         self._service = service
 
-    async def answer_direct(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
-        return await self._service._respond_direct(state, conversation_id=conversation_id)
+    async def answer_direct(
+        self,
+        state: ExecutiveState,
+        *,
+        conversation_id: str | None = None,
+        request_context: Any = None,
+    ) -> DispatcherResult:
+        return await self._service._respond_direct(
+            state, conversation_id=conversation_id, request_context=request_context
+        )
 
-    async def retrieve_memory(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
-        return await self._service._respond_with_memory(state, conversation_id=conversation_id)
+    async def retrieve_memory(
+        self,
+        state: ExecutiveState,
+        *,
+        conversation_id: str | None = None,
+        request_context: Any = None,
+    ) -> DispatcherResult:
+        return await self._service._respond_with_memory(
+            state, conversation_id=conversation_id, request_context=request_context
+        )
 
-    async def call_tool(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
-        return await self._service._respond_with_tools(state, conversation_id=conversation_id)
+    async def call_tool(
+        self,
+        state: ExecutiveState,
+        *,
+        conversation_id: str | None = None,
+        request_context: Any = None,
+    ) -> DispatcherResult:
+        return await self._service._respond_with_tools(
+            state, conversation_id=conversation_id, request_context=request_context
+        )
 
-    async def start_workflow(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
-        return await self._service._respond_with_workflow(state, conversation_id=conversation_id)
+    async def start_workflow(
+        self,
+        state: ExecutiveState,
+        *,
+        conversation_id: str | None = None,
+        request_context: Any = None,
+    ) -> DispatcherResult:
+        return await self._service._respond_with_workflow(
+            state, conversation_id=conversation_id, request_context=request_context
+        )

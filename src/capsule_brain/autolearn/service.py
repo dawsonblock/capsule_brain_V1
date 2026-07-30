@@ -184,6 +184,7 @@ class AutoLearnService(CapsuleService):
         allowed_actions: list[Action] | None = None,
         task_id: str = "",
         task_family: str = "production",
+        request_context: Any = None,
     ) -> ActionResult:
         """Execute a request through the real dispatch path."""
         return await self.controller.execute(
@@ -192,6 +193,7 @@ class AutoLearnService(CapsuleService):
             allowed_actions=allowed_actions,
             task_id=task_id,
             task_family=task_family,
+            request_context=request_context,
         )
 
     @property

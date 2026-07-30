@@ -1,7 +1,7 @@
-"""Capsule Brain AutoLearn v0.3.1.
+"""Capsule Brain AutoLearn v0.3.2.
 
 A learned executive/router policy layer that sits on top of the frozen
-Capsule Brain v2.15.2 execution substrate. AutoLearn chooses which action
+Capsule Brain v2.15.3 execution substrate. AutoLearn chooses which action
 the runtime should take for a given task; the ExecutiveController dispatches
 that action through the *real* Capsule Brain services via the public
 ``ConversationService.execute_executive_action()`` API; the
@@ -9,6 +9,20 @@ VerificationService judges the outcome; the resulting ExecutiveExperience is
 persisted. Promoting a new policy requires passing a statistical promotion
 gate on held-out, independently verified tasks whose counterfactual outcomes
 come from real service execution, not a simulator.
+
+v0.3.2 key changes (2.15.3):
+- Removed the mutable shared request field from ConversationService;
+  RequestContext is now threaded explicitly through every dispatch path
+  (execute_executive_action, _respond_*, ActionDispatcher, controller),
+  making concurrent request handling concurrency-safe.
+- qualification/autolearn_v032/ is the official executable qualification
+  package: real benchmark generator (420 tasks, strict split isolation,
+  >=25% crossover), real runtime, per-action isolated service factory,
+  real counterfactual execution, dataset build, candidate + sham training,
+  baseline/candidate/sham/oracle evaluation, paired bootstrap, 25-gate
+  promotion, fresh-process post-promotion behavioral proof, provenance,
+  report.
+- Old qualification/autolearn_v031/ retained as historical scaffold only.
 
 v0.3.1 key changes (2.15.2):
 - Typed FeatureTransform for policy preprocessing persistence.

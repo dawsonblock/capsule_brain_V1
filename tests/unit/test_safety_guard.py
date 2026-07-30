@@ -81,19 +81,19 @@ class _NoopDispatcher(ActionDispatcher):
     def __init__(self) -> None:
         self.dispatched: list[Action] = []
 
-    async def answer_direct(self, state, *, conversation_id=None):
+    async def answer_direct(self, state, *, conversation_id=None, request_context=None):
         self.dispatched.append(Action.ANSWER_DIRECT)
         return DispatcherResult(text="answer", action_completed=True)
 
-    async def retrieve_memory(self, state, *, conversation_id=None):
+    async def retrieve_memory(self, state, *, conversation_id=None, request_context=None):
         self.dispatched.append(Action.RETRIEVE_MEMORY)
         return DispatcherResult(text="memory", action_completed=True)
 
-    async def call_tool(self, state, *, conversation_id=None):
+    async def call_tool(self, state, *, conversation_id=None, request_context=None):
         self.dispatched.append(Action.CALL_TOOL)
         return DispatcherResult(text="tool", action_completed=True)
 
-    async def start_workflow(self, state, *, conversation_id=None):
+    async def start_workflow(self, state, *, conversation_id=None, request_context=None):
         self.dispatched.append(Action.START_WORKFLOW)
         return DispatcherResult(text="workflow", action_completed=True)
 

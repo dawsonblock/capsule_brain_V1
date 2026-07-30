@@ -53,19 +53,19 @@ class _RecordingDispatcher(ActionDispatcher):
     def __init__(self) -> None:
         self.dispatched_actions: list[Action] = []
 
-    async def answer_direct(self, state, *, conversation_id=None):
+    async def answer_direct(self, state, *, conversation_id=None, request_context=None):
         self.dispatched_actions.append(Action.ANSWER_DIRECT)
         return DispatcherResult(text="direct", latency_ms=100, token_count=10, action_completed=True)
 
-    async def retrieve_memory(self, state, *, conversation_id=None):
+    async def retrieve_memory(self, state, *, conversation_id=None, request_context=None):
         self.dispatched_actions.append(Action.RETRIEVE_MEMORY)
         return DispatcherResult(text="memory", latency_ms=300, token_count=20, action_completed=True)
 
-    async def call_tool(self, state, *, conversation_id=None):
+    async def call_tool(self, state, *, conversation_id=None, request_context=None):
         self.dispatched_actions.append(Action.CALL_TOOL)
         return DispatcherResult(text="tool result", latency_ms=400, token_count=30, action_completed=True, tool_name="test_tool", tool_calls_executed=1, tool_result_valid=True)
 
-    async def start_workflow(self, state, *, conversation_id=None):
+    async def start_workflow(self, state, *, conversation_id=None, request_context=None):
         self.dispatched_actions.append(Action.START_WORKFLOW)
         return DispatcherResult(text="workflow output", latency_ms=1200, token_count=100, action_completed=True, workflow_name="test_wf", acceptance_present=True, acceptance_passed=True, exit_code=0)
 

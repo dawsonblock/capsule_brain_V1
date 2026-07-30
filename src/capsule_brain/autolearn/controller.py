@@ -167,18 +167,46 @@ class ActionDispatcher:
     The concrete implementation lives in the runtime (ConversationService
     provides this). The controller calls these methods; they execute through
     the actual LLMGateway / MemoryService / ToolRegistry / WorkflowRunner.
+
+    v0.3.2: Each method receives an explicit, immutable ``request_context``
+    (a ``RequestContext``) so that no per-request data is read from a mutable
+    service-level field. This makes concurrent request handling safe.
     """
 
-    async def answer_direct(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+    async def answer_direct(
+        self,
+        state: ExecutiveState,
+        *,
+        conversation_id: str | None = None,
+        request_context: Any = None,
+    ) -> DispatcherResult:
         raise NotImplementedError
 
-    async def retrieve_memory(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+    async def retrieve_memory(
+        self,
+        state: ExecutiveState,
+        *,
+        conversation_id: str | None = None,
+        request_context: Any = None,
+    ) -> DispatcherResult:
         raise NotImplementedError
 
-    async def call_tool(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+    async def call_tool(
+        self,
+        state: ExecutiveState,
+        *,
+        conversation_id: str | None = None,
+        request_context: Any = None,
+    ) -> DispatcherResult:
         raise NotImplementedError
 
-    async def start_workflow(self, state: ExecutiveState, *, conversation_id: str | None = None) -> DispatcherResult:
+    async def start_workflow(
+        self,
+        state: ExecutiveState,
+        *,
+        conversation_id: str | None = None,
+        request_context: Any = None,
+    ) -> DispatcherResult:
         raise NotImplementedError
 
 
@@ -442,6 +470,7 @@ class ExecutiveController:
         task_id: str = "",
         task_family: str = "production",
         shadow_execute_baseline: bool = False,
+        request_context: Any = None,
     ) -> ActionResult:
         """Select an action, dispatch it through real services, verify, persist.
 
@@ -449,6 +478,10 @@ class ExecutiveController:
         true and ``shadow_execute_baseline`` is true, the baseline action is
         executed in production and the candidate action is recorded but NOT
         executed (unless this is a controlled benchmark).
+
+        v0.3.2: ``request_context`` is an immutable ``RequestContext`` threaded
+        explicitly through the dispatch path so no mutable service-level
+        request state is used.
         """
         if self.dispatcher is None:
             raise RuntimeError("ExecutiveController has no ActionDispatcher")
@@ -467,7 +500,12 @@ class ExecutiveController:
         # Dispatch the chosen action through real services.
         started = time.perf_counter()
         try:
-            disp = await self._dispatch(execute_action, state, conversation_id=conversation_id)
+            disp = await self._dispatch(
+                execute_action,
+                state,
+                conversation_id=conversation_id,
+                request_context=request_context,
+            )
         except Exception as exc:
             log.warning("action dispatch error for %s: %s", execute_action.value, exc)
             disp = DispatcherResult(
@@ -561,16 +599,25 @@ class ExecutiveController:
         state: ExecutiveState,
         *,
         conversation_id: str | None,
+        request_context: Any = None,
     ) -> DispatcherResult:
         """Dispatch one action through the real ActionDispatcher."""
         if action == Action.ANSWER_DIRECT:
-            return await self.dispatcher.answer_direct(state, conversation_id=conversation_id)
+            return await self.dispatcher.answer_direct(
+                state, conversation_id=conversation_id, request_context=request_context
+            )
         if action == Action.RETRIEVE_MEMORY:
-            return await self.dispatcher.retrieve_memory(state, conversation_id=conversation_id)
+            return await self.dispatcher.retrieve_memory(
+                state, conversation_id=conversation_id, request_context=request_context
+            )
         if action == Action.CALL_TOOL:
-            return await self.dispatcher.call_tool(state, conversation_id=conversation_id)
+            return await self.dispatcher.call_tool(
+                state, conversation_id=conversation_id, request_context=request_context
+            )
         if action == Action.START_WORKFLOW:
-            return await self.dispatcher.start_workflow(state, conversation_id=conversation_id)
+            return await self.dispatcher.start_workflow(
+                state, conversation_id=conversation_id, request_context=request_context
+            )
         if action == Action.REFLECT:
             # v0.2 does not dispatch REFLECT through the learned policy.
             # The baseline safety path handles it; here we return a no-op

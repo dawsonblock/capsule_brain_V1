@@ -19,9 +19,9 @@ class TurnRole(str, Enum):
 
 @dataclass(frozen=True, slots=True)
 class RequestContext:
-    """Immutable per-request context (v0.3.1 / 2.15.2 Section 4).
+    """Immutable per-request context (v0.3.2 / 2.15.3 Section 1).
 
-    Replaces the mutable ``self._current_request`` dict on
+    Replaces the former mutable ``self._current_request`` field on
     ConversationService. Each concurrent request gets its own immutable
     context that cannot be overwritten by another request.
 
