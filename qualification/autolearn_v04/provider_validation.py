@@ -74,14 +74,13 @@ def validate_provider(config: QualificationConfig) -> dict[str, Any]:
         from .local_transformers_provider import LocalTransformersProvider
         provider = LocalTransformersProvider(
             model_id=config.model_id or config.model,
-            tokenizer_id=config.tokenizer_id or config.model_id or config.model,
             device=config.device,
             dtype=config.dtype,
         )
         checks["model_loaded"] = provider.model is not None
         checks["tokenizer_loaded"] = provider.tokenizer is not None
         checks["model_id"] = config.model_id or config.model
-        checks["tokenizer_id"] = config.tokenizer_id or config.model_id or config.model
+        checks["tokenizer_id"] = config.model_id or config.model
 
         # Check model revision.
         try:

@@ -272,7 +272,7 @@ def _smoke_blocked_result(config: QualificationConfig) -> dict[str, Any]:
         ("build_dataset", "dataset_manifest.json"),
         ("train_candidate", "candidate_policy.json"),
         ("train_sham", "sham_policy.json"),
-        ("run_post_promotion", "post_promotion_result.json"),
+        # v0.4.1: post_promotion runs AFTER promotion, so don't check for it here.
     ]:
         if fname is None:
             stages[stage] = "ok"

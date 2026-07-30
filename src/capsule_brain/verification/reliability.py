@@ -74,6 +74,8 @@ _register("tool_grounding", VerifierClass.DETERMINISTIC, 1.0)
 _register("tool_output", VerifierClass.DETERMINISTIC, 1.0)
 _register("workflow_acceptance", VerifierClass.DETERMINISTIC, 1.0)
 _register("safety_preemption", VerifierClass.DETERMINISTIC, 1.0)
+_register("safety_preempt", VerifierClass.DETERMINISTIC, 1.0)  # alias used by verifiers.py
+_register("runtime_error", VerifierClass.DETERMINISTIC, 1.0)  # runtime error verification
 _register("json_schema", VerifierClass.DETERMINISTIC, 1.0)
 _register("symbolic", VerifierClass.DETERMINISTIC, 1.0)
 _register("compiler", VerifierClass.DETERMINISTIC, 1.0)

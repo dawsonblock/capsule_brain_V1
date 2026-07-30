@@ -157,11 +157,14 @@ PIPELINE_STAGES: tuple[StageDeclaration, ...] = (
         is_mandatory=False,
     ),
     # v0.4.1 fix: promotion BEFORE post-promotion.
+    # Promotion depends on train_candidate only (not evaluate_gate_a)
+    # because promotion must run even when Gate A is blocked (infrastructure
+    # mode) to produce its own BLOCKED verdict.
     StageDeclaration(
         stage_name="run_promotion",
         required_inputs=("candidate_policy.json",),
         produced_outputs=("promotion_result.json",),
-        dependencies=("train_candidate", "evaluate_gate_a"),
+        dependencies=("train_candidate",),
     ),
     # v0.4.1 fix: post-promotion requires promotion PASS.
     StageDeclaration(

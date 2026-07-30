@@ -135,6 +135,18 @@ class QualificationConfig:
             raise ValueError(f"mode must be 'smoke', 'infrastructure', 'scientific', or 'scientific-mini', got {self.mode!r}")
         if self.runtime not in ("real", "simulated"):
             raise ValueError(f"runtime must be 'real' or 'simulated', got {self.runtime!r}")
+        # v0.4.1: scientific-mini uses smaller task counts for fast validation.
+        if self.mode == "scientific-mini":
+            if self.n_experience == 240:  # default value, override
+                object.__setattr__(self, "n_experience", 20)
+            if self.n_validation == 100:
+                object.__setattr__(self, "n_validation", 10)
+            if self.n_test == 200:
+                object.__setattr__(self, "n_test", 15)
+            if self.n_ood == 120:
+                object.__setattr__(self, "n_ood", 10)
+            if self.n_safety == 80:
+                object.__setattr__(self, "n_safety", 5)
 
     # ----- derived properties ------------------------------------------------
 

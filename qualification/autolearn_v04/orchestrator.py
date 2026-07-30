@@ -73,12 +73,14 @@ class ModalExecutionBackend:
         self._client = modal_client
 
     async def run_counterfactuals(self, config: QualificationConfig) -> dict[str, Any]:
-        from .modal_scientific_executor import run_modal_counterfactuals
-        return await run_modal_counterfactuals(config, self._client)
+        from .modal_scientific_executor import run_scientific_counterfactuals
+        return run_scientific_counterfactuals(config, client=self._client)
 
     async def collect_activations(self, config: QualificationConfig) -> dict[str, Any]:
-        from .modal_scientific_executor import collect_modal_activations
-        return await collect_modal_activations(config, self._client)
+        # Modal activation collection uses the same counterfactual path
+        # with hidden-state collection enabled.
+        from .modal_scientific_executor import run_scientific_counterfactuals
+        return run_scientific_counterfactuals(config, client=self._client, collect_hidden_states=True)
 
 
 @dataclass
