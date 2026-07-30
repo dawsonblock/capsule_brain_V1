@@ -38,7 +38,7 @@ def run_scientific_pipeline(
     crossover_fraction: float = 0.25,
     task_seed: int = 42,
     model_id: str = "Qwen/Qwen2.5-3B-Instruct",
-    max_new_tokens: int = 256,
+    max_new_tokens: int = 512,
     collect_hidden_states: bool = True,
     hidden_layer_ids: list[int] | None = None,
 ) -> dict:
@@ -230,7 +230,7 @@ def main() -> int:
     parser.add_argument("--crossover-fraction", type=float, default=0.25)
     parser.add_argument("--task-seed", type=int, default=42)
     parser.add_argument("--model", default="Qwen/Qwen2.5-3B-Instruct")
-    parser.add_argument("--max-new-tokens", type=int, default=256)
+    parser.add_argument("--max-new-tokens", type=int, default=512)
     parser.add_argument("--no-hidden-states", action="store_true")
     parser.add_argument("--hidden-layers", type=str, default="0,12,24,35",
                         help="Comma-separated layer indices for Gate B")
