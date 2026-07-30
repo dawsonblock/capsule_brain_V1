@@ -1491,7 +1491,7 @@ CODING_ARCHETYPES_TRAIN_TEST: list[dict[str, Any]] = [
     {
         "name": "kaprekar_number",
         "prompt": "Write a Python function `kaprekar_number(n)` that returns True if n is a Kaprekar number.",
-        "fn_name": "kaprekar",
+        "fn_name": "kaprekar_number",
         "impl": "def kaprekar_number(n):\n    if n < 1: return False\n    sq = n * n\n    s = str(sq)\n    for i in range(1, len(s)):\n        a, b = int(s[:i]), int(s[i:])\n        if b and a + b == n: return True\n    return n == 1\n",
         "test": "assert kaprekar_number(9)==True; assert kaprekar_number(45)==True; assert kaprekar_number(10)==False",
     },
@@ -2063,7 +2063,10 @@ def _build_coding_tasks() -> list[CounterfactualTask]:
     Split: 50% train, 10% validation, 20% test, 20% ood.
     """
     tasks: list[CounterfactualTask] = []
-    # Use all train/test archetypes with four-way split.
+    # Use train/test archetypes for train/validation/test splits only.
+    # OOD archetypes are reserved exclusively for the OOD split.
+    # Archetypes beyond test_end are assigned to "test" (the largest
+    # held-out split) — never to "ood", since they are not truly OOD.
     n_tt = len(CODING_ARCHETYPES_TRAIN_TEST)
     train_end = n_tt // 2
     val_end = train_end + max(2, n_tt // 10)
@@ -2074,11 +2077,10 @@ def _build_coding_tasks() -> list[CounterfactualTask]:
             split = "train"
         elif i < val_end:
             split = "validation"
-        elif i < test_end:
-            split = "test"
         else:
-            # Remaining train/test archetypes go to OOD if beyond test_end.
-            split = "ood"
+            # All remaining train_test archetypes go to "test".
+            # OOD is reserved for CODING_ARCHETYPES_OOD only.
+            split = "test"
         state = _make_state(
             arch["prompt"],
             available_tools=["calculator"],

@@ -24,6 +24,7 @@ from capsule_brain.autolearn.learner import (
     LearnerConfig,
     SupervisedRouterLearner,
     TrainingExample,
+    utility_margin_weight,
 )
 from capsule_brain.autolearn.policy import LearnedPolicy
 
@@ -32,6 +33,7 @@ def shuffle_utilities(
     examples: list[TrainingExample],
     *,
     seed: int = 42,
+    config: LearnerConfig | None = None,
 ) -> list[TrainingExample]:
     """Shuffle utility margins across tasks.
 
@@ -39,6 +41,7 @@ def shuffle_utilities(
     The best action and features remain unchanged, but the utility margin
     (which determines the training weight) is randomly reassigned.
     """
+    cfg = config or LearnerConfig()
     rng = random.Random(seed)
     margins = [e.utility_margin for e in examples]
     rng.shuffle(margins)
@@ -50,7 +53,7 @@ def shuffle_utilities(
             split=e.split,
             best_action=e.best_action,
             utility_margin=margins[i],
-            weight=1.0 + min(5.0, max(0.0, margins[i])),
+            weight=utility_margin_weight(margins[i], cfg),
             features=e.features,
         ))
     return shuffled

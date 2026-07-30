@@ -172,6 +172,9 @@ class QualificationProvider(LLMProvider):
                 continue
             if in_memory and line.startswith("- "):
                 memory_lines.append(line[2:])
+            elif in_memory and line.strip() == "":
+                # Skip empty lines but stay in memory section.
+                continue
             elif in_memory and not line.startswith("- "):
                 in_memory = False
 

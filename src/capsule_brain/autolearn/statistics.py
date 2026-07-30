@@ -153,7 +153,7 @@ def paired_bootstrap(
     jack_mean = sum(jackknife_means) / n
     denom = sum((jm - jack_mean) ** 3 for jm in jackknife_means)
     numer = sum((jm - jack_mean) ** 2 for jm in jackknife_means) ** 1.5
-    a = denom / (6 * numer ** 2) if numer > 0 else 0.0
+    a = denom / (6 * numer) if numer > 0 else 0.0
 
     # Bias correction factor (z0).
     count_below = sum(1 for bm in boot_means if bm < observed_mean)
@@ -203,7 +203,7 @@ def _bca_adjust(z0: float, a: float, z: float) -> float:
     denom = 1.0 - a * (z0 + z)
     if abs(denom) < 1e-10:
         return 0.5
-    adjusted = _norm_cdf(z0 + z / denom)
+    adjusted = _norm_cdf(z0 + (z0 + z) / denom)
     return max(0.0, min(1.0, adjusted))
 
 
@@ -225,7 +225,7 @@ def _inv_norm_cdf(p: float) -> float:
          -1.556989798598866e+02, 6.680131188771972e+01,
          -1.328068155288572e+01]
     c = [-7.784894002430293e-03, -3.223964580411365e-01,
-         -2.400758277161838e+00, -2.549726517465059e+00,
+         -2.400758277161838e+00, -2.549732539343734e+00,
          4.374664141464968e+00, 2.938163982698783e+00]
     d = [7.784695709041462e-03, 3.224671290700398e-01,
          2.445134137142996e+00, 3.754408661907416e+00]
@@ -321,10 +321,11 @@ def sign_test(deltas: list[float]) -> SignTestResult:
     if n_nonzero == 0:
         p_value = 1.0
     else:
-        # p-value = 2 * min(P(X >= k), P(X <= k)) where X ~ Bin(n, 0.5)
+        # p-value = 2 * min(P(X <= k), P(X >= k)) where X ~ Bin(n, 0.5)
         k = max(n_positive, n_negative)
-        p_one_side = _binomial_cdf(k, n_nonzero, 0.5)
-        p_value = min(1.0, 2.0 * (1.0 - p_one_side + _binomial_pmf(k, n_nonzero, 0.5)))
+        p_left = _binomial_cdf(k, n_nonzero, 0.5)
+        p_right = 1.0 - _binomial_cdf(k - 1, n_nonzero, 0.5) if k > 0 else 1.0
+        p_value = min(1.0, 2.0 * min(p_left, p_right))
 
     return SignTestResult(
         n_positive=n_positive,

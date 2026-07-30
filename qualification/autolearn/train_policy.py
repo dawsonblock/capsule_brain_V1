@@ -79,7 +79,7 @@ def main() -> None:
         policy,
         training_data_digest=dataset_digest,
         split_manifest_digest=split_manifest.digest,
-        hyperparameters=learner_config.to_dict(),
+        hyperparameters=policy.hyperparameters,
         metrics=metrics.to_dict(),
         parent_policy="baseline_v1",
     )

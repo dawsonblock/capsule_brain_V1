@@ -175,13 +175,15 @@ def _check_gates(
     )
 
     # Gate 15: no simulated rows (Priority 7)
-    # Check if the evaluation contains any simulated rows.
-    # This is derived from the runtime_type — if runtime is real,
-    # there should be no simulated rows.
+    # Check that the evaluation contains zero simulated rows.
+    # This is distinct from Gate 14: a real runtime_type should guarantee
+    # zero simulated rows, but we verify the actual count from eval data
+    # to catch any leakage.
+    simulated_rows = test_eval.get("simulated_rows", 0 if runtime_type == "real" else 999)
     _gate(
         "no_simulated_rows",
-        runtime_type == "real",
-        f"runtime_type={runtime_type} (simulated rows impossible with real runtime)",
+        simulated_rows == 0,
+        f"simulated_rows={simulated_rows}",
     )
 
     all_passed = all(g["passed"] for g in gates)
