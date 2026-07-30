@@ -1,4 +1,4 @@
-"""Dependency-aware stage execution for v0.4.0 (Section 6).
+"""Dependency-aware stage execution for v0.4.1 (Section 6).
 
 Every qualification stage declares:
     stage_name
@@ -6,6 +6,7 @@ Every qualification stage declares:
     produced_outputs
     eligible_provider_classes
     dependencies
+    allowed_modes
 
 Before executing a stage:
     - verify all dependencies passed;
@@ -13,10 +14,13 @@ Before executing a stage:
     - verify parent hashes match;
     - verify provider class is eligible.
 
-If candidate training fails, run_post_promotion must return BLOCKED,
-not raise a missing-file exception. run_all must stop expensive dependent
-work when a mandatory upstream stage fails, but still generate provenance
-and an honest report where possible.
+v0.4.1 fixes:
+    - Promotion runs BEFORE post-promotion (not after).
+    - Post-promotion requires promotion PASS.
+    - Preflight and source_provenance stages added at the top.
+    - Provider validation stage added before counterfactuals.
+    - Evaluation stages (validation, ood, safety, oracle) made explicit.
+    - Single-shot stage execution (no double build_benchmark).
 """
 from __future__ import annotations
 
@@ -41,6 +45,7 @@ class StageDeclaration:
     dependencies: tuple[str, ...]
     eligible_provider_classes: tuple[str, ...] = ()
     is_mandatory: bool = True
+    allowed_modes: tuple[str, ...] = ()  # empty = all modes
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -50,16 +55,53 @@ class StageDeclaration:
             "dependencies": list(self.dependencies),
             "eligible_provider_classes": list(self.eligible_provider_classes),
             "is_mandatory": self.is_mandatory,
+            "allowed_modes": list(self.allowed_modes),
         }
 
 
 # All pipeline stages in execution order.
+# v0.4.1 correct ordering:
+#   1. preflight
+#   2. source_provenance
+#   3. provider_validation
+#   4. build_benchmark
+#   5. run_counterfactuals
+#   6. diagnose_runtime_completion
+#   7. build_dataset
+#   8. train_candidate
+#   9. train_sham
+#  10. evaluate_gate_a
+#  11. collect_activations
+#  12. evaluate_gate_b
+#  13. run_promotion
+#  14. run_post_promotion
+#  15. provenance
+#  16. report
 PIPELINE_STAGES: tuple[StageDeclaration, ...] = (
     StageDeclaration(
-        stage_name="build_benchmark",
+        stage_name="preflight",
         required_inputs=(),
-        produced_outputs=("benchmark_manifest.json", "split_manifest.json"),
+        produced_outputs=("preflight.json",),
         dependencies=(),
+    ),
+    StageDeclaration(
+        stage_name="source_provenance",
+        required_inputs=("preflight.json",),
+        produced_outputs=("source_provenance.json",),
+        dependencies=("preflight",),
+    ),
+    StageDeclaration(
+        stage_name="provider_validation",
+        required_inputs=("preflight.json",),
+        produced_outputs=("provider_validation.json",),
+        dependencies=("preflight",),
+        allowed_modes=("scientific", "scientific-mini", "infrastructure"),
+    ),
+    StageDeclaration(
+        stage_name="build_benchmark",
+        required_inputs=("preflight.json",),
+        produced_outputs=("benchmark_manifest.json", "split_manifest.json"),
+        dependencies=("preflight",),
     ),
     StageDeclaration(
         stage_name="run_counterfactuals",
@@ -114,17 +156,19 @@ PIPELINE_STAGES: tuple[StageDeclaration, ...] = (
         eligible_provider_classes=("real_model",),
         is_mandatory=False,
     ),
-    StageDeclaration(
-        stage_name="run_post_promotion",
-        required_inputs=("candidate_policy.json", "counterfactual_outcomes.json", "benchmark_manifest.json"),
-        produced_outputs=("post_promotion_result.json",),
-        dependencies=("train_candidate",),
-    ),
+    # v0.4.1 fix: promotion BEFORE post-promotion.
     StageDeclaration(
         stage_name="run_promotion",
-        required_inputs=(),  # runs even when gates are blocked; produces BLOCKED result
+        required_inputs=("candidate_policy.json",),
         produced_outputs=("promotion_result.json",),
-        dependencies=(),  # always runs to produce its own verdict
+        dependencies=("train_candidate", "evaluate_gate_a"),
+    ),
+    # v0.4.1 fix: post-promotion requires promotion PASS.
+    StageDeclaration(
+        stage_name="run_post_promotion",
+        required_inputs=("promotion_result.json", "candidate_policy.json", "counterfactual_outcomes.json"),
+        produced_outputs=("post_promotion_result.json",),
+        dependencies=("run_promotion",),
     ),
     StageDeclaration(
         stage_name="provenance",
@@ -153,7 +197,12 @@ def check_stage_dependencies(
     stage: StageDeclaration,
     stage_results: dict[str, StageStatus],
 ) -> list[str]:
-    """Check if all dependencies passed. Returns list of error messages."""
+    """Check if all dependencies passed. Returns list of error messages.
+
+    For run_post_promotion, the dependency on run_promotion must be PASS
+    (not just non-fail) — post-promotion must never execute against an
+    unpromoted candidate.
+    """
     errors: list[str] = []
     for dep in stage.dependencies:
         dep_status = stage_results.get(dep)
@@ -165,6 +214,13 @@ def check_stage_dependencies(
             errors.append(f"dependency '{dep}' is blocked")
         elif dep_status is StageStatus.NOT_RUN:
             errors.append(f"dependency '{dep}' was not run")
+        # v0.4.1: post-promotion requires promotion PASS specifically.
+        if stage.stage_name == "run_post_promotion" and dep == "run_promotion":
+            if dep_status is not StageStatus.PASS:
+                errors.append(
+                    f"run_post_promotion requires run_promotion PASS, "
+                    f"got {dep_status.value if dep_status else 'None'}"
+                )
     return errors
 
 
@@ -216,3 +272,26 @@ def should_block_downstream(
 
 def stage_status_to_dict(status: StageStatus) -> str:
     return status.value
+
+
+# ---------------------------------------------------------------------------
+# v0.4.1: Single-shot stage execution result
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class StageExecution:
+    """Result of executing a single stage (single-shot, no reruns)."""
+    name: str
+    status: StageStatus
+    result: Any | None = None
+    error: str | None = None
+    produced_artifacts: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "status": self.status.value,
+            "error": self.error,
+            "produced_artifacts": list(self.produced_artifacts),
+        }

@@ -76,18 +76,28 @@ class GroundedQualificationProvider(LLMProvider):
         latency = (time.perf_counter() - started) * 1000.0
         tool_calls: list[ToolCall] = []
         finish_reason = "stop"
+        # v0.4.1: Only generate tool calls when the prompt does NOT contain
+        # a direct answer token. This prevents CALL_TOOL from becoming the
+        # "best action" for direct tasks where ANSWER_DIRECT is optimal.
         if request.tools and not request.tool_results:
-            spec = request.tools[0]
-            tool_calls = [
-                ToolCall(
-                    id="call_0",
-                    name=spec.name,
-                    arguments={},
-                    raw_arguments="{}",
-                )
-            ]
-            finish_reason = "tool_calls"
-            text = text or ""
+            # Check if the prompt already contains a direct answer.
+            visible = request.prompt or ""
+            for msg in request.messages:
+                if msg.get("role") == "user":
+                    visible += "\n" + str(msg.get("content", ""))
+            if not _DIRECT_RE.search(visible):
+                # No direct answer in prompt — generate tool call.
+                spec = request.tools[0]
+                tool_calls = [
+                    ToolCall(
+                        id="call_0",
+                        name=spec.name,
+                        arguments={},
+                        raw_arguments="{}",
+                    )
+                ]
+                finish_reason = "tool_calls"
+                text = text or ""
         return LLMResult(
             text=text,
             model="qual-grounded-v04",

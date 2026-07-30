@@ -6,12 +6,19 @@ Unlike the infrastructure benchmark, the scientific benchmark:
     - is independently verified;
     - supports Gate A and Gate B claims.
 
-Direct scientific tasks require actual transformation or reasoning:
-    - arithmetic with randomized operands;
-    - deterministic string transformations;
-    - JSON restructuring;
-    - short logical constraints;
-    - code-output prediction where independently verifiable.
+v0.4.1 benchmark redesign: tasks test reasoning, formatting, and code
+generation — capabilities that LLMs can actually demonstrate — rather
+than raw arithmetic or character-level manipulation which are known
+LLI weaknesses.
+
+Direct scientific task types:
+    - comparison: which number is larger/smaller (reasoning, not computation)
+    - classification: categorize an item based on rules
+    - json_extraction: extract a specific field from nested JSON
+    - counting: count items satisfying a condition
+    - ordering: sort or identify min/max from a list
+    - code_completion: predict output of simple code
+    - conditional_logic: if-then-else reasoning
 
 Expected answers are NEVER placed in prompt text. They live only in
 verifier_state, which is not model-visible.
@@ -42,51 +49,21 @@ def _group_id(family: str, split: str, kind: str, seed: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Scientific direct-answer tasks (require actual reasoning)
+# Scientific direct-answer tasks (require reasoning, NOT raw computation)
 # ---------------------------------------------------------------------------
 
 
-def _arithmetic_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
-    """Arithmetic task: model must compute the result. Answer NOT in prompt."""
-    a = rng.randint(100, 9999)
-    b = rng.randint(100, 9999)
-    op = rng.choice(["+", "-", "*"])
-    if op == "+":
-        result = a + b
-    elif op == "-":
-        result = a - b
-    else:
-        result = a * b
-    prompt = f"Compute {a} {op} {b} and output the result as JSON: {{\"result\": <number>}}"
-    kind = "arithmetic"
-    entity_seed = rng.getrandbits(31)
-    return BenchmarkTask(
-        task_id=tid,
-        family="direct_answer",
-        archetype=_archetype("direct_answer", split, kind),
-        split=split,
-        prompt=prompt,
-        allowed_actions=_LEARNED_ACTIONS,
-        setup_spec={"crossover": crossover},  # NO expected answer in setup
-        verifier_spec={"type": "direct_exact", "expected_value": str(result)},
-        expected_output_digest=sha256_text(str(result)),
-        generator_seed=rng.getrandbits(31),
-        risk_class="standard",
-        crossover_type=crossover,
-        group_id=_group_id("direct_answer", split, kind, entity_seed),
-        template_family="arithmetic",
-        generator_family="arithmetic_v04",
-        entity_family=f"arith_{entity_seed & 0xFF}",
-        capability_family="arithmetic_reasoning",
-    )
-
-
-def _string_transform_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
-    """String transformation: model must reverse a string. Answer NOT in prompt."""
-    s = "".join(rng.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(rng.randint(8, 20)))
-    result = s[::-1]
-    prompt = f"Reverse the string '{s}' and output the result as JSON: {{\"result\": \"<reversed>\"}}"
-    kind = "string_reverse"
+def _comparison_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Comparison: which number is larger. Tests reasoning, not computation."""
+    a = rng.randint(1, 100)
+    b = rng.randint(1, 100)
+    while b == a:
+        b = rng.randint(1, 100)
+    if rng.random() < 0.5:
+        a, b = b, a
+    result = str(max(a, b))
+    prompt = f"Which number is larger: {a} or {b}? Output JSON: {{\"result\": <number>}}"
+    kind = "comparison"
     entity_seed = rng.getrandbits(31)
     return BenchmarkTask(
         task_id=tid,
@@ -102,10 +79,230 @@ def _string_transform_task(tid: str, split: str, rng: random.Random, *, crossove
         risk_class="standard",
         crossover_type=crossover,
         group_id=_group_id("direct_answer", split, kind, entity_seed),
-        template_family="string_transform",
-        generator_family="string_v04",
-        entity_family=f"str_{entity_seed & 0xFF}",
-        capability_family="string_reasoning",
+        template_family="comparison",
+        generator_family="comparison_v04",
+        entity_family=f"cmp_{entity_seed & 0xFF}",
+        capability_family="comparison_reasoning",
+    )
+
+
+def _classification_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Classification: categorize an item based on simple rules."""
+    categories = ["fruit", "vegetable", "meat", "dairy", "grain"]
+    items = {
+        "fruit": ["apple", "banana", "orange", "grape", "mango"],
+        "vegetable": ["carrot", "broccoli", "spinach", "potato", "onion"],
+        "meat": ["chicken", "beef", "pork", "lamb", "fish"],
+        "dairy": ["milk", "cheese", "yogurt", "butter", "cream"],
+        "grain": ["rice", "wheat", "oats", "barley", "corn"],
+    }
+    category = rng.choice(categories)
+    item = rng.choice(items[category])
+    result = category
+    prompt = (
+        f"Classify '{item}' into one of these categories: {', '.join(categories)}. "
+        f"Output JSON: {{\"result\": \"<category>\"}}"
+    )
+    kind = "classification"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="direct_answer",
+        archetype=_archetype("direct_answer", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"crossover": crossover},
+        verifier_spec={"type": "direct_exact", "expected_value": result},
+        expected_output_digest=sha256_text(result),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type=crossover,
+        group_id=_group_id("direct_answer", split, kind, entity_seed),
+        template_family="classification",
+        generator_family="classification_v04",
+        entity_family=f"cls_{entity_seed & 0xFF}",
+        capability_family="classification_reasoning",
+    )
+
+
+def _json_extraction_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """JSON extraction: extract a specific field from nested JSON."""
+    names = ["alice", "bob", "charlie", "diana", "eve", "frank"]
+    name = rng.choice(names)
+    age = rng.randint(18, 80)
+    city = rng.choice(["tokyo", "london", "paris", "berlin", "madrid", "rome"])
+    field_to_extract = rng.choice(["name", "age", "city"])
+    input_json = f'{{"name": "{name}", "age": {age}, "city": "{city}"}}'
+    result_value = str({"name": name, "age": age, "city": city}[field_to_extract])
+    prompt = (
+        f"Given this JSON: {input_json}, extract the value of the '{field_to_extract}' field. "
+        f"Output JSON: {{\"result\": <value>}}"
+    )
+    kind = "json_extraction"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="direct_answer",
+        archetype=_archetype("direct_answer", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"crossover": crossover},
+        verifier_spec={"type": "direct_exact", "expected_value": result_value},
+        expected_output_digest=sha256_text(result_value),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type=crossover,
+        group_id=_group_id("direct_answer", split, kind, entity_seed),
+        template_family="json_extraction",
+        generator_family="json_extract_v04",
+        entity_family=f"jext_{entity_seed & 0xFF}",
+        capability_family="json_reasoning",
+    )
+
+
+def _counting_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Counting: count items in a list that satisfy a condition."""
+    numbers = [rng.randint(1, 20) for _ in range(rng.randint(5, 10))]
+    threshold = rng.randint(5, 15)
+    count = sum(1 for n in numbers if n > threshold)
+    result = str(count)
+    prompt = (
+        f"Given the list {numbers}, how many numbers are greater than {threshold}? "
+        f"Output JSON: {{\"result\": <number>}}"
+    )
+    kind = "counting"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="direct_answer",
+        archetype=_archetype("direct_answer", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"crossover": crossover},
+        verifier_spec={"type": "direct_exact", "expected_value": result},
+        expected_output_digest=sha256_text(result),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type=crossover,
+        group_id=_group_id("direct_answer", split, kind, entity_seed),
+        template_family="counting",
+        generator_family="counting_v04",
+        entity_family=f"cnt_{entity_seed & 0xFF}",
+        capability_family="counting_reasoning",
+    )
+
+
+def _ordering_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Ordering: identify the minimum or maximum from a list."""
+    numbers = rng.sample(range(1, 100), rng.randint(4, 8))
+    op = rng.choice(["smallest", "largest"])
+    result = str(min(numbers) if op == "smallest" else max(numbers))
+    prompt = (
+        f"From the list {numbers}, which number is the {op}? "
+        f"Output JSON: {{\"result\": <number>}}"
+    )
+    kind = "ordering"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="direct_answer",
+        archetype=_archetype("direct_answer", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"crossover": crossover},
+        verifier_spec={"type": "direct_exact", "expected_value": result},
+        expected_output_digest=sha256_text(result),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type=crossover,
+        group_id=_group_id("direct_answer", split, kind, entity_seed),
+        template_family="ordering",
+        generator_family="ordering_v04",
+        entity_family=f"ord_{entity_seed & 0xFF}",
+        capability_family="ordering_reasoning",
+    )
+
+
+def _conditional_logic_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Conditional logic: if-then-else reasoning with simple rules."""
+    x = rng.randint(1, 50)
+    threshold = rng.randint(10, 40)
+    if x > threshold:
+        result = "yes"
+    else:
+        result = "no"
+    prompt = (
+        f"If the value {x} is greater than {threshold}, the answer is 'yes'. "
+        f"Otherwise, the answer is 'no'. What is the answer? "
+        f"Output JSON: {{\"result\": \"<yes or no>\"}}"
+    )
+    kind = "conditional_logic"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="direct_answer",
+        archetype=_archetype("direct_answer", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"crossover": crossover},
+        verifier_spec={"type": "direct_exact", "expected_value": result},
+        expected_output_digest=sha256_text(result),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type=crossover,
+        group_id=_group_id("direct_answer", split, kind, entity_seed),
+        template_family="conditional_logic",
+        generator_family="conditional_v04",
+        entity_family=f"cond_{entity_seed & 0xFF}",
+        capability_family="conditional_reasoning",
+    )
+
+
+def _code_output_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Code output prediction: predict what simple code prints."""
+    a = rng.randint(1, 20)
+    b = rng.randint(1, 20)
+    code_type = rng.choice(["add", "compare", "list_index"])
+    if code_type == "add":
+        code = f"x = {a}\ny = {b}\nprint(x + y)"
+        result = str(a + b)
+    elif code_type == "compare":
+        code = f"x = {a}\ny = {b}\nprint(max(x, y))"
+        result = str(max(a, b))
+    else:
+        items = rng.sample(range(1, 50), 5)
+        idx = rng.randint(0, 4)
+        code = f"items = {items}\nprint(items[{idx}])"
+        result = str(items[idx])
+    prompt = (
+        f"What does this Python code output?\n\n```python\n{code}\n```\n\n"
+        f"Output JSON: {{\"result\": <value>}}"
+    )
+    kind = "code_output"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="direct_answer",
+        archetype=_archetype("direct_answer", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"crossover": crossover},
+        verifier_spec={"type": "direct_exact", "expected_value": result},
+        expected_output_digest=sha256_text(result),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type=crossover,
+        group_id=_group_id("direct_answer", split, kind, entity_seed),
+        template_family="code_output",
+        generator_family="code_output_v04",
+        entity_family=f"code_{entity_seed & 0xFF}",
+        capability_family="code_reasoning",
     )
 
 
@@ -141,37 +338,6 @@ def _json_restructure_task(tid: str, split: str, rng: random.Random, *, crossove
     )
 
 
-def _logical_constraint_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
-    """Logical constraint: model must determine which item satisfies constraints."""
-    items = list(range(1, 11))
-    rng.shuffle(items)
-    target = items[0]
-    constraint = f"greater than {target - 1}" if target > 1 else "equal to 1"
-    prompt = f"From the list {items[:5]}, which number is {constraint}? Output JSON: {{\"result\": <number>}}"
-    result = target if target in items[:5] else items[1]
-    kind = "logical_constraint"
-    entity_seed = rng.getrandbits(31)
-    return BenchmarkTask(
-        task_id=tid,
-        family="direct_answer",
-        archetype=_archetype("direct_answer", split, kind),
-        split=split,
-        prompt=prompt,
-        allowed_actions=_LEARNED_ACTIONS,
-        setup_spec={"crossover": crossover},
-        verifier_spec={"type": "direct_exact", "expected_value": str(result)},
-        expected_output_digest=sha256_text(str(result)),
-        generator_seed=rng.getrandbits(31),
-        risk_class="standard",
-        crossover_type=crossover,
-        group_id=_group_id("direct_answer", split, kind, entity_seed),
-        template_family="logical_constraint",
-        generator_family="logical_v04",
-        entity_family=f"logic_{entity_seed & 0xFF}",
-        capability_family="logical_reasoning",
-    )
-
-
 # ---------------------------------------------------------------------------
 # Scientific memory tasks (secret NOT in prompt)
 # ---------------------------------------------------------------------------
@@ -181,7 +347,6 @@ def _scientific_memory_task(tid: str, split: str, rng: random.Random, *, crossov
     """Memory task: secret stored ONLY through MemoryService, NOT in prompt."""
     secret = f"SECRET-{_hex(rng)}"
     key = f"vault_{_hex(rng, 4)}"
-    # Prompt does NOT contain the secret. It only references the key.
     prompt = f"Retrieve the verified value stored under key '{key}' and output it as JSON: {{\"result\": \"<value>\"}}"
     kind = crossover if crossover else "scientific_memory"
     setup = {"secret": secret, "key": key, "crossover": crossover}
@@ -216,10 +381,8 @@ def _scientific_memory_task(tid: str, split: str, rng: random.Random, *, crossov
 
 def _scientific_tool_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
     """Tool task: output generated at runtime, unavailable before invocation."""
-    # The tool returns a random value that the model cannot predict.
     expected = f"RT-{_hex(rng)}"
     tool_name = f"data_tool_{_hex(rng, 4)}"
-    # Prompt mentions the tool but NOT the expected output.
     prompt = f"Use the {tool_name} tool to fetch the current reading. Output the result as JSON: {{\"result\": \"<value>\"}}"
     kind = crossover if crossover else "scientific_tool"
     entity_seed = rng.getrandbits(31)
@@ -255,20 +418,56 @@ def _scientific_tool_task(tid: str, split: str, rng: random.Random, *, crossover
 
 
 def _scientific_workflow_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
-    """Workflow task: acceptance test is a verification asset, solution not embedded."""
+    """Workflow task: acceptance test is a verification asset, solution not embedded.
+
+    Uses randomized simple code tasks that test code generation ability:
+    - return a constant
+    - return sum of two numbers
+    - return the larger of two numbers
+    - return a formatted string
+    """
+    task_type = rng.choice(["constant", "sum", "max", "format"])
+    if task_type == "constant":
+        value = rng.randint(1, 100)
+        prompt = (
+            f"Write a Python function called 'compute' that takes no arguments "
+            f"and returns the number {value}. The function must pass an "
+            f"acceptance test that checks the return value."
+        )
+        expected_result = value
+    elif task_type == "sum":
+        a = rng.randint(1, 50)
+        b = rng.randint(1, 50)
+        prompt = (
+            f"Write a Python function called 'compute' that takes no arguments "
+            f"and returns the sum of {a} and {b}. The function must pass an "
+            f"acceptance test that checks the return value."
+        )
+        expected_result = a + b
+    elif task_type == "max":
+        a = rng.randint(1, 50)
+        b = rng.randint(1, 50)
+        prompt = (
+            f"Write a Python function called 'compute' that takes no arguments "
+            f"and returns the larger of {a} and {b}. The function must pass an "
+            f"acceptance test that checks the return value."
+        )
+        expected_result = max(a, b)
+    else:  # format
+        name = rng.choice(["alice", "bob", "charlie", "diana"])
+        prompt = (
+            f"Write a Python function called 'compute' that takes no arguments "
+            f"and returns the string 'Hello, {name}!'. The function must pass an "
+            f"acceptance test that checks the return value."
+        )
+        expected_result = f"Hello, {name}!"
+
     nonce = _hex(rng)
-    # The prompt asks for a function but does NOT contain the nonce directly
-    # in a way the provider can extract. The model must actually generate code.
-    prompt = (
-        f"Write a Python function called 'compute' that takes no arguments "
-        f"and returns the product of 7 and 13. The function must pass an "
-        f"acceptance test that checks the return value."
-    )
-    expected_result = 91  # 7 * 13
     acceptance_code = (
         "from solution import compute\n"
         "def test_compute():\n"
-        f"    assert compute() == {expected_result}, 'wrong result'\n"
+        f"    result = compute()\n"
+        f"    assert result == {repr(expected_result)}, f'wrong: {{result}}'\n"
         "if __name__ == '__main__':\n"
         "    test_compute()\n"
         "    print('ACCEPTANCE_OK')\n"
@@ -357,8 +556,17 @@ def _allocate_scientific_split(
     n_crossover = min(n_crossover, n)
     n_plain = n - n_crossover
 
-    # Direct answer tasks: mix of arithmetic, string, JSON, logical.
-    direct_types = [_arithmetic_task, _string_transform_task, _json_restructure_task, _logical_constraint_task]
+    # Direct answer tasks: reasoning-based types that LLMs can actually do.
+    direct_types = [
+        _comparison_task,
+        _classification_task,
+        _json_extraction_task,
+        _counting_task,
+        _ordering_task,
+        _conditional_logic_task,
+        _code_output_task,
+        _json_restructure_task,
+    ]
     n_direct = n_plain // 2
     n_memory = n_plain // 6
     n_tool = n_plain // 6
@@ -399,60 +607,49 @@ def _allocate_scientific_split(
         ctype = _SCIENCE_CROSSOVERS[j % len(_SCIENCE_CROSSOVERS)]
         tid = f"{split}_xover_{j:04d}"
         rng_local = random.Random(rng.getrandbits(31))
-        # Assign crossover to a random family.
         family_choice = rng_local.choice(["direct", "memory", "tool", "workflow"])
         if family_choice == "direct":
             builder = direct_types[j % len(direct_types)]
-            tasks.append(builder(tid, split, rng_local, crossover=ctype))
         elif family_choice == "memory":
-            tasks.append(_scientific_memory_task(tid, split, rng_local, crossover=ctype))
+            builder = _scientific_memory_task
         elif family_choice == "tool":
-            tasks.append(_scientific_tool_task(tid, split, rng_local, crossover=ctype))
+            builder = _scientific_tool_task
         else:
-            tasks.append(_scientific_workflow_task(tid, split, rng_local, crossover=ctype))
+            builder = _scientific_workflow_task
+        tasks.append(builder(tid, split, rng_local, crossover=ctype))
 
-    return tasks[:n]
-
-
-def _allocate_scientific_safety(n: int, rng: random.Random) -> list[BenchmarkTask]:
-    tasks: list[BenchmarkTask] = []
-    for i in range(n):
-        tid = f"safety_sci_{i:04d}"
-        rng_local = random.Random(rng.getrandbits(31))
-        tasks.append(_scientific_safety_task(tid, "safety", rng_local))
     return tasks
 
 
 def build_scientific_benchmark(
-    n_experience: int = 200,
-    n_validation: int = 80,
-    n_test: int = 120,
-    n_ood: int = 80,
-    n_safety: int = 40,
+    *,
+    n_experience: int = 50,
+    n_validation: int = 20,
+    n_test: int = 30,
+    n_ood: int = 20,
+    n_safety: int = 10,
     crossover_fraction: float = 0.25,
     task_seed: int = 42,
 ) -> list[BenchmarkTask]:
-    """Build the full scientific benchmark manifest."""
+    """Build the full scientific benchmark with hidden expected answers."""
     rng = random.Random(task_seed)
-    total = n_experience + n_validation + n_test + n_ood
-    n_crossover_total = int(total * crossover_fraction) + 1
-    non_safety = total
-    exp_x = round(n_crossover_total * n_experience / non_safety)
-    val_x = round(n_crossover_total * n_validation / non_safety)
-    test_x = round(n_crossover_total * n_test / non_safety)
-    ood_x = n_crossover_total - exp_x - val_x - test_x
+    tasks: list[BenchmarkTask] = []
 
-    exp = _allocate_scientific_split("experience", n_experience, rng, n_crossover=exp_x)
-    val = _allocate_scientific_split("validation", n_validation, rng, n_crossover=val_x)
-    test = _allocate_scientific_split("test", n_test, rng, n_crossover=test_x)
-    ood = _allocate_scientific_split("ood", n_ood, rng, n_crossover=ood_x)
-    safety = _allocate_scientific_safety(n_safety, rng)
+    for split, n in [
+        ("experience", n_experience),
+        ("validation", n_validation),
+        ("test", n_test),
+        ("ood", n_ood),
+    ]:
+        n_crossover = int(n * crossover_fraction)
+        tasks.extend(_allocate_scientific_split(
+            split, n, rng, n_crossover=n_crossover,
+        ))
 
-    tasks = exp + val + test + ood + safety
-    # Validate no task_id collisions.
-    seen = set()
-    for t in tasks:
-        if t.task_id in seen:
-            raise RuntimeError(f"task_id collision: {t.task_id}")
-        seen.add(t.task_id)
+    # Safety tasks.
+    for i in range(n_safety):
+        tid = f"safety_scientific_{i:04d}"
+        rng_local = random.Random(rng.getrandbits(31))
+        tasks.append(_scientific_safety_task(tid, "safety", rng_local))
+
     return tasks

@@ -51,12 +51,40 @@ def _gate_result_from_dict(d: dict[str, Any]) -> GateResult:
 
 
 def run_promotion(config: QualificationConfig) -> dict[str, Any]:
-    """Run the promotion gate accounting with independent provenance verification."""
+    """Run the promotion gate accounting with independent provenance verification.
+
+    v0.4.1: Added mandatory promotion gates:
+    - positive-weight training examples above minimum
+    - effective training weight sum above minimum
+    - no unknown verifier types
+    - infrastructure mode cannot promote
+    - scientific-mini promotion disabled by default
+    """
     artifacts = Path(config.artifacts_dir)
 
     # Smoke mode: never issue a promotion verdict.
     if config.is_smoke:
         return _smoke_blocked_result(config)
+
+    # v0.4.1: Infrastructure mode cannot promote.
+    if config.is_infrastructure_provider:
+        all_gates = [GateResult(
+            "provider_class_real_model", GateCategory.INTEGRITY,
+            GateStatus.BLOCKED,
+            {"reason": "infrastructure provider cannot promote; "
+             "scientific claims require real_model provider"},
+        )]
+        return _assemble_result(config, all_gates, None, None)
+
+    # v0.4.1: Scientific-mini promotion disabled by default.
+    if config.is_scientific_mini:
+        all_gates = [GateResult(
+            "scientific_mini_promotion", GateCategory.INTEGRITY,
+            GateStatus.BLOCKED,
+            {"reason": "scientific-mini mode is preliminary evidence; "
+             "promotion disabled by default"},
+        )]
+        return _assemble_result(config, all_gates, None, None)
 
     # Load Gate A and Gate B results.
     gate_a_path = artifacts / "gate_a_result.json"
@@ -65,6 +93,32 @@ def run_promotion(config: QualificationConfig) -> dict[str, Any]:
     gate_b = read_json(gate_b_path) if gate_b_path.exists() else None
 
     all_gates: list[GateResult] = []
+
+    # v0.4.1: Check dataset gates (positive weights, no unknown verifiers).
+    dataset_manifest_path = artifacts / "dataset_manifest.json"
+    if dataset_manifest_path.exists():
+        ds = read_json(dataset_manifest_path)
+        ds_gates = ds.get("gates", {})
+        if ds_gates.get("positive_weight_example_count", {}).get("passed") is False:
+            all_gates.append(GateResult(
+                "positive_weight_examples", GateCategory.EVIDENCE_COMPLETENESS,
+                GateStatus.FAIL,
+                {"reason": "no positive-weight training examples",
+                 "value": ds_gates.get("positive_weight_example_count", {}).get("value", 0)},
+            ))
+        if ds_gates.get("effective_weight_sum", {}).get("passed") is False:
+            all_gates.append(GateResult(
+                "effective_weight_sum", GateCategory.EVIDENCE_COMPLETENESS,
+                GateStatus.FAIL,
+                {"reason": "effective training weight sum is zero",
+                 "value": ds_gates.get("effective_weight_sum", {}).get("value", 0)},
+            ))
+        if ds_gates.get("no_unknown_verifier_types", {}).get("passed") is False:
+            all_gates.append(GateResult(
+                "no_unknown_verifiers", GateCategory.INTEGRITY,
+                GateStatus.FAIL,
+                {"reason": "unknown verifier types detected in dataset"},
+            ))
 
     # --- Integrity gates ---
     # Provenance independent verification.

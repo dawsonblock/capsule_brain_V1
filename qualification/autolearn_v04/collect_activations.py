@@ -146,6 +146,12 @@ async def collect_activations(config: QualificationConfig) -> dict[str, Any]:
             "token_ids": token_ids,
             "logprobs": logprobs,
             "prompt_length": len(prompt),
+            # v0.4.1: Pre-verification boundary enforcement.
+            "capture_phase": "pre_verification",
+            "verifier_feedback_present": False,
+            "generation_length": len(token_ids) if token_ids else 0,
+            "latency_ms": float(getattr(result, "latency_ms", 0.0)),
+            "action": o["action_id"],
         })
 
         if split == "experience":

@@ -24,24 +24,35 @@ from pathlib import Path
 from typing import Any
 
 
+def _strip_code_fences(text: str) -> str:
+    """Strip markdown code fences (```json ... ``` or ```python ... ```)."""
+    # Remove ```json ... ``` or ``` ... ``` fences.
+    fence_match = re.search(r'```(?:json)?\s*\n?(.*?)```', text, re.DOTALL)
+    if fence_match:
+        return fence_match.group(1).strip()
+    return text
+
+
 def _extract_json_result(text: str) -> str | None:
     """Extract the 'result' field from a JSON response."""
+    # Strip code fences first — models often wrap JSON in ```json blocks.
+    cleaned = _strip_code_fences(text)
     # Try parsing as JSON directly first (most reliable).
     try:
-        json_match = re.search(r'\{[^}]+\}', text)
+        json_match = re.search(r'\{[^}]+\}', cleaned)
         if json_match:
             data = json.loads(json_match.group())
             if "result" in data:
                 return str(data["result"])
     except (json.JSONDecodeError, ValueError):
         pass
-    # Fallback: simple patterns.
+    # Fallback: simple patterns on cleaned text.
     for pattern in [
         r'"result"\s*:\s*"([^"]+)"',       # "result": "value"
         r'"result"\s*:\s*(\d+)',            # "result": 123
         r'"result"\s*:\s*(-?\d+\.?\d*)',    # "result": -1.5
     ]:
-        match = re.search(pattern, text)
+        match = re.search(pattern, cleaned)
         if match:
             return match.group(1).strip()
     return None
@@ -117,34 +128,40 @@ def _verify_tool_task(model_text: str, expected_output: str) -> tuple[bool, str]
 
 
 def _verify_workflow_task(model_text: str, acceptance_code: str) -> tuple[bool, str]:
-    """Verify a workflow task by checking if the generated code is correct."""
+    """Verify a workflow task by executing the generated code against the acceptance test."""
     func_code = _extract_code_function(model_text, "compute")
     if func_code is None:
         return False, ""
-    # Check if the code returns the right value by looking for the pattern.
-    # For "product of 7 and 13" the code should compute 91.
-    # We do a simple static check: does the code contain "7" and "13" and "*"
-    if "7" in func_code and "13" in func_code and "*" in func_code:
-        return True, func_code
-    # Try to actually execute it in a sandbox.
+    # Execute the generated code + acceptance test in a sandbox.
     try:
         import tempfile
         import os
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-            f.write(func_code)
-            f.write("\nresult = compute()\n")
-            f.write(f"print(result)\n")
-            f.flush()
-            import subprocess
-            result = subprocess.run(
-                ["python", f.name], capture_output=True, text=True, timeout=5,
+        import subprocess
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, dir="/tmp") as solution_f:
+            solution_f.write(func_code)
+            solution_f.write("\n")
+            solution_f.flush()
+            solution_path = solution_f.name
+        # Write acceptance test that imports from the solution file.
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, dir="/tmp") as test_f:
+            # Rewrite 'from solution import compute' to import from the solution file.
+            test_code = acceptance_code.replace(
+                "from solution import compute",
+                f"import sys; sys.path.insert(0, '/tmp'); "
+                f"import importlib.util; spec = importlib.util.spec_from_file_location('solution', '{solution_path}'); "
+                f"mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod); "
+                f"compute = mod.compute"
             )
-            os.unlink(f.name)
-            if result.returncode == 0:
-                output = result.stdout.strip()
-                # Check if output matches expected marker or value.
-                if "91" in output:  # 7 * 13 = 91
-                    return True, func_code
+            test_f.write(test_code)
+            test_f.flush()
+            test_path = test_f.name
+        result = subprocess.run(
+            ["python", test_path], capture_output=True, text=True, timeout=10,
+        )
+        os.unlink(solution_path)
+        os.unlink(test_path)
+        if result.returncode == 0 and "ACCEPTANCE_OK" in result.stdout:
+            return True, func_code
     except Exception:
         pass
     return False, func_code or ""

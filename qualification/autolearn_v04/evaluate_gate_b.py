@@ -164,6 +164,7 @@ def score_all(
 
 # ---------------------------------------------------------------------------
 # Non-latent confidence baselines (Section 12.10)
+# v0.4.1: Strengthened with required proxy baselines.
 # ---------------------------------------------------------------------------
 
 
@@ -196,6 +197,154 @@ def prompt_length_baseline(prompt_lengths: list[int]) -> np.ndarray:
 def action_identity_baseline(action_ids: list[str], success_action_freq: dict[str, float]) -> np.ndarray:
     """Action-identity confidence: P(success | action) from training."""
     return np.array([success_action_freq.get(a, 0.5) for a in action_ids])
+
+
+# v0.4.1: Strong proxy baselines required by spec.
+
+
+def sequence_mean_logprob_baseline(logprobs: list[float]) -> float:
+    """Mean log-probability of the generated sequence."""
+    if not logprobs:
+        return 0.0
+    return float(np.mean(logprobs))
+
+
+def sequence_min_logprob_baseline(logprobs: list[float]) -> float:
+    """Minimum log-probability in the generated sequence."""
+    if not logprobs:
+        return 0.0
+    return float(np.min(logprobs))
+
+
+def mean_token_entropy_baseline(logprobs: list[float]) -> float:
+    """Mean generated-token entropy (higher = less confident)."""
+    if not logprobs:
+        return 0.0
+    arr = np.array(logprobs)
+    # Entropy = -sum(p * log(p)) ≈ -mean(logprob) for normalized probs
+    return float(-np.mean(arr))
+
+
+def max_token_entropy_baseline(logprobs: list[float]) -> float:
+    """Maximum generated-token entropy."""
+    if not logprobs:
+        return 0.0
+    arr = np.array(logprobs)
+    return float(-np.min(arr))
+
+
+def final_token_entropy_baseline(logprobs: list[float]) -> float:
+    """Entropy of the final generated token."""
+    if not logprobs:
+        return 0.0
+    return float(-logprobs[-1])
+
+
+def mean_top1_prob_baseline(top_probs: list[float]) -> float:
+    """Mean top-1 token probability."""
+    if not top_probs:
+        return 0.5
+    return float(np.mean(top_probs))
+
+
+def min_top1_prob_baseline(top_probs: list[float]) -> float:
+    """Minimum top-1 token probability."""
+    if not top_probs:
+        return 0.5
+    return float(np.min(top_probs))
+
+
+def generation_length_baseline(gen_lengths: list[int]) -> np.ndarray:
+    """Generation length as a confidence proxy."""
+    if not gen_lengths:
+        return np.array([])
+    arr = np.array(gen_lengths, dtype=float)
+    return (arr - arr.min()) / (arr.max() - arr.min() + 1e-9)
+
+
+def latency_baseline(latencies: list[float]) -> np.ndarray:
+    """Latency as a confidence proxy."""
+    if not latencies:
+        return np.array([])
+    arr = np.array(latencies, dtype=float)
+    return (arr - arr.min()) / (arr.max() - arr.min() + 1e-9)
+
+
+def compute_all_proxy_baselines(
+    trajectories: list[dict[str, Any]],
+) -> dict[str, np.ndarray]:
+    """Compute all non-latent proxy baselines from trajectory metadata.
+
+    All proxies are computed from pre-verification features only.
+    """
+    proxies: dict[str, np.ndarray] = {}
+
+    # Collect per-trajectory features.
+    all_logprobs = [t.get("logprobs", []) for t in trajectories]
+    all_top_probs = [t.get("top_probs", []) for t in trajectories]
+    all_gen_lengths = [t.get("generation_length", 0) for t in trajectories]
+    all_latencies = [t.get("latency_ms", 0.0) for t in trajectories]
+    all_prompt_lengths = [t.get("prompt_length", 0) for t in trajectories]
+    all_actions = [t.get("action", "UNKNOWN") for t in trajectories]
+
+    # Sequence-level log-prob baselines.
+    proxies["mean_logprob"] = np.array([
+        sequence_mean_logprob_baseline(lp) for lp in all_logprobs
+    ])
+    proxies["min_logprob"] = np.array([
+        sequence_min_logprob_baseline(lp) for lp in all_logprobs
+    ])
+
+    # Entropy baselines.
+    proxies["mean_token_entropy"] = np.array([
+        mean_token_entropy_baseline(lp) for lp in all_logprobs
+    ])
+    proxies["max_token_entropy"] = np.array([
+        max_token_entropy_baseline(lp) for lp in all_logprobs
+    ])
+    proxies["final_token_entropy"] = np.array([
+        final_token_entropy_baseline(lp) for lp in all_logprobs
+    ])
+
+    # Top-1 probability baselines.
+    proxies["mean_top1_prob"] = np.array([
+        mean_top1_prob_baseline(tp) for tp in all_top_probs
+    ])
+    proxies["min_top1_prob"] = np.array([
+        min_top1_prob_baseline(tp) for tp in all_top_probs
+    ])
+
+    # Generation metadata baselines.
+    proxies["generation_length"] = generation_length_baseline(all_gen_lengths)
+    proxies["latency"] = latency_baseline(all_latencies)
+    proxies["prompt_length"] = prompt_length_baseline(all_prompt_lengths)
+
+    return proxies
+
+
+def select_best_proxy_on_validation(
+    proxies: dict[str, np.ndarray],
+    val_labels: np.ndarray,
+) -> str:
+    """Select the strongest proxy model on validation only.
+
+    Returns the name of the proxy with the highest validation AUROC.
+    """
+    from sklearn.metrics import roc_auc_score
+
+    best_name = ""
+    best_auroc = -1.0
+    for name, scores in proxies.items():
+        if len(scores) != len(val_labels) or len(scores) == 0:
+            continue
+        try:
+            auroc = roc_auc_score(val_labels, scores)
+            if auroc > best_auroc:
+                best_auroc = auroc
+                best_name = name
+        except Exception:
+            continue
+    return best_name if best_name else "mean_logprob"
 
 
 # ---------------------------------------------------------------------------

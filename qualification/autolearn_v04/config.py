@@ -113,7 +113,8 @@ class QualificationConfig:
     offline: bool = True
 
     # Artifact directory (repository-relative).
-    artifacts_dir: str = "artifacts_v04"
+    # v0.4.1: Infrastructure and scientific modes use separate roots.
+    artifacts_dir: str = "qualification/autolearn_v04/artifacts/infrastructure"
     # Random seed for task generation.
     task_seed: int = 42
     # Isolation base directory for per-action environments.
@@ -130,8 +131,8 @@ class QualificationConfig:
     strict: bool = False
 
     def __post_init__(self) -> None:
-        if self.mode not in ("smoke", "infrastructure", "scientific"):
-            raise ValueError(f"mode must be 'smoke', 'infrastructure', or 'scientific', got {self.mode!r}")
+        if self.mode not in ("smoke", "infrastructure", "scientific", "scientific-mini"):
+            raise ValueError(f"mode must be 'smoke', 'infrastructure', 'scientific', or 'scientific-mini', got {self.mode!r}")
         if self.runtime not in ("real", "simulated"):
             raise ValueError(f"runtime must be 'real' or 'simulated', got {self.runtime!r}")
 
@@ -147,11 +148,15 @@ class QualificationConfig:
 
     @property
     def is_scientific(self) -> bool:
-        return self.mode == "scientific"
+        return self.mode in ("scientific", "scientific-mini")
+
+    @property
+    def is_scientific_mini(self) -> bool:
+        return self.mode == "scientific-mini"
 
     @property
     def is_qualification(self) -> bool:
-        return self.mode in ("scientific", "qualification")
+        return self.mode in ("scientific", "scientific-mini", "qualification")
 
     @property
     def is_real(self) -> bool:
@@ -185,6 +190,16 @@ class QualificationConfig:
             "It MUST NOT be used for a causal-learning claim (Gate A).\n"
             "Gate A scientific qualification is BLOCKED under this provider."
         )
+
+    @property
+    def can_promote(self) -> bool:
+        """v0.4.1: Only scientific mode with real_model provider can promote."""
+        return self.is_scientific and self.is_real_model_provider and not self.is_smoke
+
+    @property
+    def scientific_claim_eligible(self) -> bool:
+        """v0.4.1: Only scientific mode with real_model is claim-eligible."""
+        return self.is_scientific and self.is_real_model_provider
 
     def to_dict(self) -> dict[str, Any]:
         return {

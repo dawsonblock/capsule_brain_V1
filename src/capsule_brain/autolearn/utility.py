@@ -236,6 +236,7 @@ class ExperienceQuality:
     execution_integrity: float
     counterfactual_completeness: float
     isolation_integrity: float
+    provenance_integrity: float = 1.0
 
     @property
     def quality_score(self) -> float:
@@ -244,6 +245,7 @@ class ExperienceQuality:
             * self.execution_integrity
             * self.counterfactual_completeness
             * self.isolation_integrity
+            * self.provenance_integrity
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -252,6 +254,7 @@ class ExperienceQuality:
             "execution_integrity": self.execution_integrity,
             "counterfactual_completeness": self.counterfactual_completeness,
             "isolation_integrity": self.isolation_integrity,
+            "provenance_integrity": self.provenance_integrity,
             "quality_score": self.quality_score,
         }
 
@@ -262,29 +265,41 @@ def compute_experience_quality(
     verifier_type: str = "deterministic",
     action_set_complete: bool = True,
     isolation_enforced: bool = True,
+    provenance_valid: bool = True,
+    allow_unknown_verifier: bool = False,
 ) -> ExperienceQuality:
     """Compute the experience-quality score for a counterfactual execution.
 
-    Simulated execution gets a low, non-qualifying quality score.
-    Real execution with a deterministic verifier and full action set
-    gets a quality score close to 1.0.
+    Q_i = q_verifier * q_execution * q_counterfactual * q_isolation * q_provenance
+
+    Each term is in [0, 1].
+
+    - Real completed execution: q_execution = 1.0
+    - Simulated or missing execution: q_execution = 0.0
+    - Deterministic verifier: q_verifier = 1.0
+    - Unknown verifier: raises UnknownVerifierTypeError unless allow_unknown_verifier
+    - Full action set measured: q_counterfactual = 1.0
+    - Isolation enforced: q_isolation = 1.0
+    - Provenance valid: q_provenance = 1.0
     """
-    # Execution integrity: real=1.0, simulated=0.1
-    execution_integrity = 1.0 if runtime_type == "real" else 0.1
-    # Verifier reliability: deterministic=1.0, llm_judge=0.5, none=0.0
-    if verifier_type == "deterministic":
-        verifier_reliability = 1.0
-    elif verifier_type == "llm_judge":
-        verifier_reliability = 0.5
-    else:
-        verifier_reliability = 0.0
+    from capsule_brain.verification.reliability import get_verifier_reliability
+
+    # Execution integrity: real=1.0, simulated=0.0
+    execution_integrity = 1.0 if runtime_type == "real" else 0.0
+    # Verifier reliability: from typed registry.
+    verifier_reliability = get_verifier_reliability(
+        verifier_type, allow_experimental_fallback=allow_unknown_verifier,
+    )
     # Counterfactual completeness: all eligible actions executed
     counterfactual_completeness = 1.0 if action_set_complete else 0.5
     # Isolation integrity: each action from clean state
-    isolation_integrity = 1.0 if isolation_enforced else 0.1
+    isolation_integrity = 1.0 if isolation_enforced else 0.0
+    # Provenance integrity: parent hashes and runtime identity valid
+    provenance_integrity = 1.0 if provenance_valid else 0.0
     return ExperienceQuality(
         verifier_reliability=verifier_reliability,
         execution_integrity=execution_integrity,
         counterfactual_completeness=counterfactual_completeness,
         isolation_integrity=isolation_integrity,
+        provenance_integrity=provenance_integrity,
     )

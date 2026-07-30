@@ -69,26 +69,23 @@ SKIP_EXTENSIONS: frozenset[str] = frozenset({
     ".egg-info",
 })
 
-# Directories to skip (generated artifacts, caches, venvs).
-SKIP_DIRS: frozenset[str] = frozenset({
+# Simple directory names to skip — matched against any path component.
+# These are generic cache/build/venv names that should never appear in
+# source trees.  Do NOT include generic names like "data" here — that
+# would skip every file when the repo lives under /mnt/data/...
+SIMPLE_SKIP_DIR_NAMES: frozenset[str] = frozenset({
     "__pycache__", ".pytest_cache", ".git",
     "node_modules", ".mypy_cache", ".ruff_cache",
-    "data",  # runtime data, not source
-    "artifacts", "artifacts_v04", "artifacts_v032",
+    ".venv", "venv", "dist", "build",
+})
+
+# Repository-relative path prefixes to skip.  These are checked against
+# the path relative to the repository root, never against absolute paths.
+SKIP_RELATIVE_PREFIXES: frozenset[str] = frozenset({
     "qualification/archive",
-    "qualification/autolearn",
-    "qualification/autolearn_v02",
-    "qualification/autolearn_v03",
-    "qualification/autolearn_v031",
-    "qualification/autolearn_v032",
-    "qualification_runs",
-    ".cf_isolation_v04", ".qual_sandbox_v04",
-    ".cf_isolation_v032", ".qual_sandbox_v032",
-    ".qual_sandbox",
-    "dist", "build",
-    "src/capsule_brain.egg-info",
     "qualification/autolearn_v04/artifacts",
     "qualification/autolearn_v04/activations",
+    "src/capsule_brain.egg-info",
 })
 
 # File names to skip.
@@ -103,15 +100,51 @@ TEXT_EXTENSIONS: frozenset[str] = frozenset({
 })
 
 
-def _should_skip(path: Path) -> bool:
+def should_skip(path: Path, root: Path) -> bool:
+    """Determine whether a file should be excluded from source hashing.
+
+    All include/exclude decisions operate on repository-relative paths,
+    never on absolute path components.  This ensures that a parent
+    directory named ``data`` or ``build`` does not cause every source
+    file to be skipped.
+    """
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return True  # path is outside the root — skip it
+
+    relative_parts = relative.parts
+    relative_posix = relative.as_posix()
+
+    # Check simple dir names against relative parts only.
+    if any(part in SIMPLE_SKIP_DIR_NAMES for part in relative_parts):
+        return True
+
+    # Check relative prefix exclusions.
+    if any(
+        relative_posix == prefix
+        or relative_posix.startswith(prefix + "/")
+        for prefix in SKIP_RELATIVE_PREFIXES
+    ):
+        return True
+
+    # Check extensions and filenames.
     if path.suffix in SKIP_EXTENSIONS:
         return True
     if path.name in SKIP_FILENAMES:
         return True
-    if any(part in SKIP_DIRS for part in path.parts):
+
+    return False
+
+
+# Backward-compatible alias (deprecated — use should_skip with root).
+def _should_skip(path: Path) -> bool:
+    """Legacy skip check — only use when root is not available."""
+    if path.suffix in SKIP_EXTENSIONS:
         return True
-    # Skip generated qualification run outputs.
-    if "qualification_runs" in path.parts:
+    if path.name in SKIP_FILENAMES:
+        return True
+    if any(part in SIMPLE_SKIP_DIR_NAMES for part in path.parts):
         return True
     return False
 
@@ -132,16 +165,17 @@ def _collect_files(root: Path) -> list[Path]:
             continue
         import os
         for dirpath, dirnames, filenames in os.walk(dir_path):
+            # Prune simple skip dirs during walk for efficiency.
             dirnames[:] = sorted(
-                d for d in dirnames if d not in SKIP_DIRS
+                d for d in dirnames if d not in SIMPLE_SKIP_DIR_NAMES
             )
             for filename in sorted(filenames):
                 filepath = Path(dirpath) / filename
-                if not _should_skip(filepath):
+                if not should_skip(filepath, root):
                     files.append(filepath)
     for src_file in SOURCE_FILES:
         filepath = root / src_file
-        if filepath.exists() and not _should_skip(filepath):
+        if filepath.exists() and not should_skip(filepath, root):
             files.append(filepath)
     files.sort(key=lambda p: str(p.relative_to(root)))
     return files
@@ -154,7 +188,7 @@ class SourceTreeHashResult:
     source_file_count: int
     source_byte_count: int
     included_roots: list[str]
-    excluded_patterns: list[str]
+    excluded_relative_prefixes: list[str]
     source_tree_sha256: str
 
     def to_dict(self) -> dict[str, Any]:
@@ -163,7 +197,7 @@ class SourceTreeHashResult:
             "source_file_count": self.source_file_count,
             "source_byte_count": self.source_byte_count,
             "included_roots": list(self.included_roots),
-            "excluded_patterns": list(self.excluded_patterns),
+            "excluded_relative_prefixes": list(self.excluded_relative_prefixes),
             "source_tree_sha256": self.source_tree_sha256,
         }
 
@@ -217,7 +251,7 @@ def compute_source_tree_hash_detailed(root: str | Path) -> SourceTreeHashResult:
         source_file_count=len(files),
         source_byte_count=total_bytes,
         included_roots=list(SOURCE_PATHS),
-        excluded_patterns=sorted(SKIP_DIRS | SKIP_EXTENSIONS),
+        excluded_relative_prefixes=sorted(SKIP_RELATIVE_PREFIXES),
         source_tree_sha256=digest,
     )
 
@@ -524,6 +558,30 @@ def build_pipeline_provenance(config: QualificationConfig) -> dict[str, Any]:
     }
     path = artifacts / "provenance.json"
     write_json(path, provenance)
+    return provenance
+
+
+def compute_and_write_source_provenance(config: QualificationConfig) -> dict[str, Any]:
+    """Compute source-tree provenance and write to artifacts/source_provenance.json.
+
+    This is the early-stage provenance that runs before benchmark building
+    and counterfactual execution. It records the source tree hash, file count,
+    and byte count.
+    """
+    artifacts = Path(config.artifacts_dir)
+    artifacts.mkdir(parents=True, exist_ok=True)
+    project_root = find_project_root()
+    result = compute_source_tree_hash_detailed(project_root)
+
+    provenance = {
+        "schema_version": "source-provenance/1",
+        "protocol_version": PROTOCOL_VERSION,
+        "package_version": PACKAGE_VERSION,
+        "autolearn_version": AUTOLEARN_VERSION,
+        "autolearn_qualification_version": AUTOLEARN_QUALIFICATION_VERSION,
+        **result.to_dict(),
+    }
+    write_json(artifacts / "source_provenance.json", provenance)
     return provenance
 
 
