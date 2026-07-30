@@ -1,0 +1,7 @@
+# AutoLearn v0.3.1 generated artifacts (not committed).
+artifacts/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.cf_isolation/
+__pycache__/

@@ -1,7 +1,7 @@
-"""Capsule Brain AutoLearn v0.3.
+"""Capsule Brain AutoLearn v0.3.1.
 
 A learned executive/router policy layer that sits on top of the frozen
-Capsule Brain v2.16.0 execution substrate. AutoLearn chooses which action
+Capsule Brain v2.15.2 execution substrate. AutoLearn chooses which action
 the runtime should take for a given task; the ExecutiveController dispatches
 that action through the *real* Capsule Brain services via the public
 ``ConversationService.execute_executive_action()`` API; the
@@ -9,6 +9,20 @@ VerificationService judges the outcome; the resulting ExecutiveExperience is
 persisted. Promoting a new policy requires passing a statistical promotion
 gate on held-out, independently verified tasks whose counterfactual outcomes
 come from real service execution, not a simulator.
+
+v0.3.1 key changes (2.15.2):
+- Typed FeatureTransform for policy preprocessing persistence.
+- Immutable ExecutiveSafetyGuard before learned routing.
+- Immutable RequestContext replacing shared mutable request state.
+- CounterfactualIsolationFactory for strong per-action isolation.
+- TaskProvisioners for real task state provisioning.
+- Utility v3.1 with OutcomeUtility and ExperienceQuality.
+- Frozen BaselinePolicyV3 with broader safety coverage.
+- 24-gate promotion gate v3.1 (GateStatus: PASS/FAIL/BLOCKED/NOT_RUN).
+- Exact verifiers (no substring matching).
+- Correct provenance (source-tree SHA-256, not git hash).
+- Report integrity (PASS/FAIL/BLOCKED/NOT_RUN from artifacts).
+- qualification/autolearn_v031/ directory with full pipeline.
 
 v0.3 key changes:
 - Single public action API (``execute_executive_action``) used by both
@@ -92,6 +106,11 @@ from capsule_brain.autolearn.counterfactual import (
     assert_runtime_is_real,
     get_provisioner,
 )
+from capsule_brain.safety.executive_guard import (
+    ExecutiveSafetyGuard,
+    SafetyDecision,
+    SafetyDisposition,
+)
 from capsule_brain.autolearn.qualification_runtime import (
     QualificationProvider,
     QualificationServiceFactory,
@@ -141,6 +160,7 @@ __all__ = [
     "ExperienceSink",
     "ExperienceStoreSink",
     "ExperienceQuality",
+    "ExecutiveSafetyGuard",
     "GateConfigV31",
     "GateResultV31",
     "GateStatus",
@@ -170,6 +190,8 @@ __all__ = [
     "QualificationStatistics",
     "ActionResult",
     "RealCounterfactualRuntime",
+    "SafetyDecision",
+    "SafetyDisposition",
     "SCHEMA_VERSION",
     "SafetyTaskProvisioner",
     "SignTestResult",
