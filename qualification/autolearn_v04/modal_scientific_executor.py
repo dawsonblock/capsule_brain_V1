@@ -26,20 +26,8 @@ from typing import Any
 
 def _extract_json_result(text: str) -> str | None:
     """Extract the 'result' field from a JSON response."""
-    # Try to find JSON in the response.
-    # Look for {"result": ...} pattern.
-    patterns = [
-        r'\{"result":\s*"?([^"}]+)"?\s*\}',  # {"result": value}
-        r'\{"result":\s*"([^"]+)"\s*\}',      # {"result": "value"}
-        r'"result":\s*"?([^",}\]+)"?',         # "result": value (loose)
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, text)
-        if match:
-            return match.group(1).strip()
-    # Try parsing as JSON directly.
+    # Try parsing as JSON directly first (most reliable).
     try:
-        # Find the first JSON object in the text.
         json_match = re.search(r'\{[^}]+\}', text)
         if json_match:
             data = json.loads(json_match.group())
@@ -47,6 +35,15 @@ def _extract_json_result(text: str) -> str | None:
                 return str(data["result"])
     except (json.JSONDecodeError, ValueError):
         pass
+    # Fallback: simple patterns.
+    for pattern in [
+        r'"result"\s*:\s*"([^"]+)"',       # "result": "value"
+        r'"result"\s*:\s*(\d+)',            # "result": 123
+        r'"result"\s*:\s*(-?\d+\.?\d*)',    # "result": -1.5
+    ]:
+        match = re.search(pattern, text)
+        if match:
+            return match.group(1).strip()
     return None
 
 
@@ -324,7 +321,11 @@ def run_scientific_counterfactuals(
             collect_hidden_states=collect_hidden_states,
             hidden_layer_ids=hidden_layer_ids,
         )
-        # Use batch_generate for warm-container sequential (fastest for <100 prompts).
+        # Always use batch_generate (sequential on warm container).
+        # The deployed container stays warm and processes prompts at ~0.2s each.
+        # parallel_generate via .map() spins up cold containers (~50s each) which
+        # is much slower for any reasonable batch size.
+        print(f"  Using warm container (sequential, ~0.2s/prompt)...")
         all_results = client.batch_generate(prompts, max_new_tokens=max_new_tokens)
     except Exception as e:
         print(f"  Deployed client unavailable ({e}), falling back to ephemeral...")

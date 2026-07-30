@@ -150,7 +150,7 @@ def run_scientific_pipeline(
     print("\n[6/9] Training sham policy...")
     from .train_sham import train_sham
     try:
-        sham_policy, sham_training = train_sham(config)
+        sham_policy, sham_training, sham_metrics = train_sham(config)
         print(f"  Sham trained: {sham_policy.policy_id}")
     except Exception as e:
         print(f"  WARNING: Sham training issue: {e}")
