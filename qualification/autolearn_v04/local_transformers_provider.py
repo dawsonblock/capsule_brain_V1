@@ -158,11 +158,12 @@ class LocalTransformersProvider(LLMProvider):
         if hasattr(self._tokenizer, "apply_chat_template") and self._tokenizer.chat_template:
             messages = [{"role": "user", "content": prompt}]
             try:
-                input_ids = self._tokenizer.apply_chat_template(
-                    messages, add_generation_prompt=True, return_tensors="pt"
+                chat_text = self._tokenizer.apply_chat_template(
+                    messages, add_generation_prompt=True, tokenize=False
+                )
+                inputs = self._tokenizer(
+                    chat_text, return_tensors="pt", padding=True
                 ).to(self.device)
-                attention_mask = torch.ones_like(input_ids)
-                inputs = {"input_ids": input_ids, "attention_mask": attention_mask}
             except Exception:
                 inputs = self._tokenizer(prompt, return_tensors="pt", padding=True).to(self.device)
         else:
