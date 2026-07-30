@@ -55,6 +55,11 @@ from capsule_brain.autolearn.schema import (
 )
 from capsule_brain.autolearn.shadow import DistributionShiftGuard
 from capsule_brain.autolearn.utility import UtilityConfig, UtilityFunction
+from capsule_brain.safety.executive_guard import (
+    ExecutiveSafetyGuard,
+    SafetyDecision,
+    SafetyDisposition,
+)
 
 log = logging.getLogger(__name__)
 
@@ -233,6 +238,9 @@ class ExecutiveController:
         self._fallbacks = 0
         self._decisions = 0
         self._experiences_persisted = 0
+        # v0.3.1: Immutable safety guard runs BEFORE the learned policy.
+        # The learned policy can never override safety decisions.
+        self.safety_guard = ExecutiveSafetyGuard()
 
     @property
     def has_learned_policy(self) -> bool:
@@ -312,6 +320,36 @@ class ExecutiveController:
         allowed = allowed_actions or self._default_allowed
         fv = self.extractor.extract(state)
         fv_list = fv.as_list()
+
+        # v0.3.1: Immutable safety guard runs BEFORE the learned policy.
+        # The learned policy can never override ASK_OPERATOR or SAFE_REFUSAL.
+        safety = self.safety_guard.evaluate(state)
+        if safety.disposition == SafetyDisposition.REQUIRE_OPERATOR:
+            return ExecutiveDecision(
+                action=safety.required_action or Action.ASK_OPERATOR,
+                reason=f"immutable safety: {safety.reason_code}",
+                policy_version="immutable_safety",
+                policy_type="immutable_safety",
+                confidence=1.0,
+                scores={},
+                policy_fallback=False,
+                policy_error="",
+                feature_vector=fv_list,
+                state=state,
+            )
+        if safety.disposition == SafetyDisposition.REFUSE:
+            return ExecutiveDecision(
+                action=safety.required_action or Action.SAFE_REFUSAL,
+                reason=f"immutable safety: {safety.reason_code}",
+                policy_version="immutable_safety",
+                policy_type="immutable_safety",
+                confidence=1.0,
+                scores={},
+                policy_fallback=False,
+                policy_error="",
+                feature_vector=fv_list,
+                state=state,
+            )
 
         # Distribution-shift guard.
         shift_detected = False

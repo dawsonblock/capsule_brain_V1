@@ -38,13 +38,12 @@ def _utc_now_iso() -> str:
 
 
 class Action(str, Enum):
-    """The supported executive actions for AutoLearn v0.2.
+    """The supported executive actions for AutoLearn v0.3.1.
 
     Deliberately small. New actions must not be added until these route
-    reliably on the counterfactual benchmark. v0.2 only integrates the first
-    four into the learned policy; REFLECT and ASK_OPERATOR remain available
-    for the baseline safety path but are not learned until the first four
-    route end to end.
+    reliably on the counterfactual benchmark. v0.3.1 only integrates the first
+    four into the learned policy; REFLECT, ASK_OPERATOR, and SAFE_REFUSAL
+    remain runtime-controlled (immutable safety) and are never learned.
     """
 
     ANSWER_DIRECT = "ANSWER_DIRECT"
@@ -53,6 +52,7 @@ class Action(str, Enum):
     START_WORKFLOW = "START_WORKFLOW"
     REFLECT = "REFLECT"
     ASK_OPERATOR = "ASK_OPERATOR"
+    SAFE_REFUSAL = "SAFE_REFUSAL"
 
     @classmethod
     def all(cls) -> list["Action"]:
@@ -60,12 +60,21 @@ class Action(str, Enum):
 
     @classmethod
     def learned(cls) -> list["Action"]:
-        """The four actions v0.2 trains and dispatches through real services."""
+        """The four actions v0.3.1 trains and dispatches through real services."""
         return [
             Action.ANSWER_DIRECT,
             Action.RETRIEVE_MEMORY,
             Action.CALL_TOOL,
             Action.START_WORKFLOW,
+        ]
+
+    @classmethod
+    def runtime_controlled(cls) -> list["Action"]:
+        """Actions controlled by the immutable safety layer, never learned."""
+        return [
+            Action.REFLECT,
+            Action.ASK_OPERATOR,
+            Action.SAFE_REFUSAL,
         ]
 
 

@@ -262,29 +262,32 @@ class TestPolicySerializationEquivalence:
         # Original prediction.
         d_orig = policy.select_action(state, extractor=extractor)
 
-        # Simulate the bug: overwrite hyperparameters, losing feature_means/stds.
+        # v0.3.1: The FeatureTransform is now a typed field, not in
+        # hyperparameters. Overwriting hyperparameters should NOT break
+        # predictions because the transform is stored separately.
         policy.hyperparameters = {
             "n_epochs": 200,
             "learning_rate": 0.05,
         }
 
-        d_buggy = policy.select_action(state, extractor=extractor)
+        d_after_overwrite = policy.select_action(state, extractor=extractor)
+        assert d_after_overwrite.action == d_orig.action, (
+            "overwriting hyperparameters should not change predictions "
+            "when FeatureTransform is stored as a typed field"
+        )
 
-        # The predictions should differ (either action or probability).
-        # If they don't differ, the standardization wasn't doing anything.
-        # Note: in edge cases the argmax might not change, but probabilities
-        # should differ.
+        # But removing the FeatureTransform SHOULD break predictions
+        # (simulating the old bug where preprocessing stats were lost).
         fv = extractor.extract(state)
-        # Restore original policy for comparison.
-        policy2 = _train_policy()
-        p_orig = policy2.predict_proba(fv)
-        p_buggy = policy.predict_proba(fv)
+        p_orig = policy.predict_proba(fv)
+        policy.feature_transform = None
+        p_no_transform = policy.predict_proba(fv)
 
         probs_differ = any(
-            abs(p_orig[k] - p_buggy[k]) > 1e-9 for k in p_orig
+            abs(p_orig[k] - p_no_transform[k]) > 1e-9 for k in p_orig
         )
         assert probs_differ, (
-            "overwriting hyperparameters did not change predictions — "
+            "removing FeatureTransform did not change predictions — "
             "standardization is not being applied or test data is trivial"
         )
 

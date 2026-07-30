@@ -17,7 +17,7 @@ from capsule_brain.memory.models import MemoryType
 from capsule_brain.memory.service import MemoryService
 from capsule_brain.runtime.service import CapsuleService, HealthStatus, ServiceState
 
-from .models import AssistantResponse, Turn, TurnRole
+from .models import AssistantResponse, RequestContext, Turn, TurnRole
 from .repository import ConversationRepository
 
 log = logging.getLogger(__name__)
@@ -91,7 +91,10 @@ class ConversationService(CapsuleService):
         self._dispatcher = _ConversationActionDispatcher(self)
         # Per-request context used by the dispatcher; set during
         # _respond_via_autolearn and cleared in its finally block.
-        self._current_request: dict[str, Any] | None = None
+        # v0.3.1: Now an immutable RequestContext (frozen dataclass)
+        # instead of a mutable dict, preventing concurrent request
+        # state corruption.
+        self._current_request: RequestContext | None = None
 
     # ------------------------------------------------------------------
     # Public executive-action API (v0.3)
@@ -154,14 +157,18 @@ class ConversationService(CapsuleService):
             history = [Turn(role=TurnRole.USER, text=text)]
 
         # Set up the per-request context so _respond_* methods can access it.
-        self._current_request = {
-            "conversation": type("C", (), {"id": conversation_id})(),
-            "user_turn": type("T", (), {"id": md.get("user_turn_id", "cf_turn")})(),
-            "text": text,
-            "history": history,
-            "memory_records": memory_records,
-            "correlation_id": md.get("correlation_id"),
-        }
+        # v0.3.1: Use immutable RequestContext instead of mutable dict.
+        self._current_request = RequestContext(
+            request_id=md.get("request_id", f"cf_{conversation_id}"),
+            conversation_id=conversation_id,
+            prompt=text,
+            history=tuple(history),
+            memory_records=tuple(memory_records),
+            available_tools=tuple(state.available_tools),
+            correlation_id=md.get("correlation_id"),
+            user_turn_id=md.get("user_turn_id", "cf_turn"),
+            metadata=dict(md),
+        )
         try:
             if action == _Action.ANSWER_DIRECT:
                 return await self._respond_direct(state, conversation_id=conversation_id)
@@ -383,14 +390,17 @@ class ConversationService(CapsuleService):
 
         # Stash per-request context so the dispatcher can access it without
         # threading it through the ActionDispatcher interface.
-        self._current_request = {
-            "conversation": conversation,
-            "user_turn": user_turn,
-            "text": text,
-            "history": history,
-            "memory_records": memory_records,
-            "correlation_id": correlation_id,
-        }
+        # v0.3.1: Use immutable RequestContext instead of mutable dict.
+        self._current_request = RequestContext(
+            request_id=f"prod_{conversation.id}_{user_turn.id}",
+            conversation_id=conversation.id,
+            prompt=text,
+            history=tuple(history),
+            memory_records=tuple(memory_records),
+            available_tools=tuple(available_tools),
+            correlation_id=correlation_id,
+            user_turn_id=user_turn.id,
+        )
         try:
             action_result = await self.autolearn_service.execute(
                 state,
@@ -422,19 +432,19 @@ class ConversationService(CapsuleService):
 
     def _current_llm_request(self, context_override: str | None = None) -> LLMRequest:
         """Build an LLMRequest from the current stashed request context."""
-        ctx = self._current_request or {}
-        history = ctx.get("history", [])
-        memory_records = ctx.get("memory_records", [])
-        conversation = ctx.get("conversation")
-        user_turn = ctx.get("user_turn")
+        ctx = self._current_request
+        history = list(ctx.history) if ctx else []
+        memory_records = list(ctx.memory_records) if ctx else []
+        conversation_id = ctx.conversation_id if ctx else ""
+        user_turn_id = ctx.user_turn_id if ctx else ""
         context = context_override or self._build_context(history, memory_records)
         return LLMRequest(
             prompt=context,
             system=self.system_prompt,
             model=self.model,
             metadata={
-                "conversation_id": conversation.id if conversation else "",
-                "parent_turn_id": user_turn.id if user_turn else "",
+                "conversation_id": conversation_id,
+                "parent_turn_id": user_turn_id,
             },
         )
 
@@ -443,8 +453,8 @@ class ConversationService(CapsuleService):
         import time as _time
         started = _time.perf_counter()
         # Direct answer uses only conversation history, no memory context.
-        ctx = self._current_request or {}
-        history = ctx.get("history", [])
+        ctx = self._current_request
+        history = list(ctx.history) if ctx else []
         context = self._build_context(history, [])
         llm_request = self._current_llm_request(context_override=context)
         result = await self.llm.generate(llm_request, route=self.route)
@@ -462,11 +472,11 @@ class ConversationService(CapsuleService):
         """RETRIEVE_MEMORY: real MemoryService retrieval + LLM generation with evidence."""
         import time as _time
         started = _time.perf_counter()
-        ctx = self._current_request or {}
-        text = ctx.get("text", "")
+        ctx = self._current_request
+        text = ctx.prompt if ctx else ""
         # Real memory retrieval through MemoryService.
         memory_records = await self._retrieve_memories(text)
-        history = ctx.get("history", [])
+        history = list(ctx.history) if ctx else []
         context = self._build_context(history, memory_records)
         llm_request = self._current_llm_request(context_override=context)
         result = await self.llm.generate(llm_request, route=self.route)
@@ -494,9 +504,9 @@ class ConversationService(CapsuleService):
                 action_completed=False,
                 metadata={"reason": "no tools registered"},
             )
-        ctx = self._current_request or {}
-        history = ctx.get("history", [])
-        memory_records = ctx.get("memory_records", [])
+        ctx = self._current_request
+        history = list(ctx.history) if ctx else []
+        memory_records = list(ctx.memory_records) if ctx else []
         context = self._build_context(history, memory_records)
         llm_request = self._current_llm_request(context_override=context)
         result, tool_results = await self.llm.generate_with_tools(
@@ -537,8 +547,8 @@ class ConversationService(CapsuleService):
                 action_completed=False,
                 metadata={"reason": "no workflow runner available"},
             )
-        ctx = self._current_request or {}
-        text = ctx.get("text", "")
+        ctx = self._current_request
+        text = ctx.prompt if ctx else ""
         # Determine the workflow name. v0.2 uses the default
         # plan_generate_test_reflect workflow.
         workflow_name = "plan_generate_test_reflect"

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Mapping
 from uuid import uuid4
 
 
@@ -15,6 +15,29 @@ class TurnRole(str, Enum):
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
+
+
+@dataclass(frozen=True, slots=True)
+class RequestContext:
+    """Immutable per-request context (v0.3.1 / 2.15.2 Section 4).
+
+    Replaces the mutable ``self._current_request`` dict on
+    ConversationService. Each concurrent request gets its own immutable
+    context that cannot be overwritten by another request.
+
+    The context is passed explicitly through the action dispatch path
+    so that no shared mutable state is used.
+    """
+
+    request_id: str
+    conversation_id: str
+    prompt: str
+    history: tuple[Any, ...] = ()
+    memory_records: tuple[Any, ...] = ()
+    available_tools: tuple[str, ...] = ()
+    correlation_id: str | None = None
+    user_turn_id: str = ""
+    metadata: Mapping[str, Any] = field(default_factory=dict)
 
 
 @dataclass(slots=True)

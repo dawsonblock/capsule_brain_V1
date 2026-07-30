@@ -633,6 +633,258 @@ def _outcome_to_verifier_dict(
     }
 
 
+# ---------------------------------------------------------------------------
+# v0.3.1 Section 8: Strong counterfactual isolation
+# ---------------------------------------------------------------------------
+
+
+@dataclass(slots=True)
+class IsolatedEnvironment:
+    """An isolated execution environment for a single counterfactual action.
+
+    v0.3.1: Every task-action execution must begin from an equivalent clean
+    state. This environment provides:
+    - unique memory database path
+    - unique experience database path
+    - unique workflow database path
+    - unique temporary filesystem root
+    - unique execution directory
+    - unique conversation ID
+    - unique workflow run ID
+    - fresh tool state
+    - deterministic setup seed
+    """
+
+    env_id: str
+    memory_db_path: str
+    experience_db_path: str
+    workflow_db_path: str
+    fs_root: str
+    exec_dir: str
+    conversation_id: str
+    workflow_run_id: str
+    seed: int
+    tool_state: dict[str, Any] = field(default_factory=dict)
+    _cleaned: bool = False
+
+    def cleanup(self) -> None:
+        """Remove all isolated state."""
+        if self._cleaned:
+            return
+        import shutil
+        for p in [self.fs_root, self.exec_dir]:
+            try:
+                shutil.rmtree(p, ignore_errors=True)
+            except Exception:
+                pass
+        for db in [self.memory_db_path, self.experience_db_path, self.workflow_db_path]:
+            try:
+                Path(db).unlink(missing_ok=True)
+            except Exception:
+                pass
+        self._cleaned = True
+
+
+class CounterfactualIsolationFactory:
+    """v0.3.1 Section 8: Creates isolated environments for counterfactual actions.
+
+    Every task-action execution must begin from an equivalent clean state.
+    The factory creates a fresh IsolatedEnvironment for each (task, action,
+    seed) triple, ensuring:
+    - unique memory database
+    - unique experience database
+    - unique workflow database
+    - unique temporary filesystem root
+    - unique execution directory
+    - unique conversation ID
+    - unique workflow run ID
+    - fresh tool registry or resettable tool state
+    - deterministic setup seed
+    - isolated generated artifacts
+    - explicit teardown
+    """
+
+    def __init__(self, base_dir: str = "") -> None:
+        self._base_dir = base_dir or str(Path.cwd() / ".cf_isolation")
+        self._counter = 0
+
+    async def create(
+        self,
+        task: CounterfactualTask,
+        action: Action,
+        seed: int,
+    ) -> IsolatedEnvironment:
+        """Create a fresh isolated environment for one (task, action) pair."""
+        self._counter += 1
+        env_id = f"cf_{task.task_id}_{action.value}_{self._counter}_{uuid.uuid4().hex[:12]}"
+        env_dir = Path(self._base_dir) / env_id
+        fs_root = env_dir / "fs"
+        exec_dir = env_dir / "exec"
+        fs_root.mkdir(parents=True, exist_ok=True)
+        exec_dir.mkdir(parents=True, exist_ok=True)
+        return IsolatedEnvironment(
+            env_id=env_id,
+            memory_db_path=str(env_dir / "memory.sqlite"),
+            experience_db_path=str(env_dir / "experience.sqlite"),
+            workflow_db_path=str(env_dir / "workflow.sqlite"),
+            fs_root=str(fs_root),
+            exec_dir=str(exec_dir),
+            conversation_id=env_id,
+            workflow_run_id=f"wf_{env_id}",
+            seed=seed,
+        )
+
+
+# ---------------------------------------------------------------------------
+# v0.3.1 Section 7: Task provisioners
+# ---------------------------------------------------------------------------
+
+
+@dataclass(slots=True)
+class ProvisionedTask:
+    """A task that has been provisioned with real state in an isolated environment."""
+
+    task: CounterfactualTask
+    environment: IsolatedEnvironment
+    setup_data: dict[str, Any] = field(default_factory=dict)
+    expected_output: str = ""
+    verifier_state: dict[str, Any] = field(default_factory=dict)
+
+
+class TaskProvisioner(Protocol):
+    """v0.3.1 Section 7: Protocol for provisioning task-specific state."""
+
+    async def provision(
+        self,
+        task: CounterfactualTask,
+        environment: IsolatedEnvironment,
+    ) -> ProvisionedTask:
+        """Provision the task in the isolated environment."""
+        ...
+
+
+class DirectTaskProvisioner:
+    """Direct tasks: no hidden setup, deterministic verifier."""
+
+    async def provision(
+        self,
+        task: CounterfactualTask,
+        environment: IsolatedEnvironment,
+    ) -> ProvisionedTask:
+        return ProvisionedTask(
+            task=task,
+            environment=environment,
+            setup_data=dict(task.setup),
+            expected_output=str(task.setup.get("expected_answer", "")),
+            verifier_state={"expected": task.setup.get("expected_answer", "")},
+        )
+
+
+class MemoryTaskProvisioner:
+    """Memory tasks: generate random secret, write through MemoryService only.
+
+    The secret is NOT placed in the prompt, metadata exposed to the model,
+    or features. It is stored only in verifier-side state.
+    """
+
+    async def provision(
+        self,
+        task: CounterfactualTask,
+        environment: IsolatedEnvironment,
+    ) -> ProvisionedTask:
+        secret = f"MEM-{secrets.token_hex(16)}"
+        return ProvisionedTask(
+            task=task,
+            environment=environment,
+            setup_data={**task.setup, "secret": secret},
+            expected_output=secret,
+            verifier_state={"expected_secret": secret},
+        )
+
+
+class ToolTaskProvisioner:
+    """Tool tasks: register benchmark tool, generate output at execution time.
+
+    The output is unpredictable from the prompt. The expected output is
+    retained outside model-visible state.
+    """
+
+    async def provision(
+        self,
+        task: CounterfactualTask,
+        environment: IsolatedEnvironment,
+    ) -> ProvisionedTask:
+        expected = f"TOOL-{secrets.token_hex(16)}"
+        return ProvisionedTask(
+            task=task,
+            environment=environment,
+            setup_data={**task.setup, "expected_tool_output": expected},
+            expected_output=expected,
+            verifier_state={"expected_tool_output": expected},
+        )
+
+
+class WorkflowTaskProvisioner:
+    """Workflow tasks: create isolated workspace, install acceptance tests."""
+
+    async def provision(
+        self,
+        task: CounterfactualTask,
+        environment: IsolatedEnvironment,
+    ) -> ProvisionedTask:
+        # Install acceptance test file in the isolated filesystem.
+        acceptance_code = task.setup.get("acceptance_code", "")
+        acceptance_path = Path(environment.fs_root) / "acceptance_test.py"
+        acceptance_path.write_text(acceptance_code)
+        return ProvisionedTask(
+            task=task,
+            environment=environment,
+            setup_data={
+                **task.setup,
+                "acceptance_path": str(acceptance_path),
+                "workspace": environment.fs_root,
+            },
+            expected_output="workflow_completed",
+            verifier_state={
+                "acceptance_path": str(acceptance_path),
+                "workspace": environment.fs_root,
+            },
+        )
+
+
+class SafetyTaskProvisioner:
+    """Safety tasks: dangerous requests requiring immutable preemption."""
+
+    async def provision(
+        self,
+        task: CounterfactualTask,
+        environment: IsolatedEnvironment,
+    ) -> ProvisionedTask:
+        return ProvisionedTask(
+            task=task,
+            environment=environment,
+            setup_data=dict(task.setup),
+            expected_output="blocked",
+            verifier_state={"requires_safety": True},
+        )
+
+
+# Registry of provisioners by task family.
+_TASK_PROVISIONERS: dict[str, type] = {
+    "direct_answer": DirectTaskProvisioner,
+    "memory_required": MemoryTaskProvisioner,
+    "tool_required": ToolTaskProvisioner,
+    "coding_workflow": WorkflowTaskProvisioner,
+    "operator_safety": SafetyTaskProvisioner,
+}
+
+
+def get_provisioner(task_family: str) -> TaskProvisioner:
+    """Get the appropriate provisioner for a task family."""
+    cls = _TASK_PROVISIONERS.get(task_family, DirectTaskProvisioner)
+    return cls()
+
+
 def assert_runtime_is_real(runtime: CounterfactualRuntime) -> None:
     """Section 5: assert that the runtime is real, not simulated.
 

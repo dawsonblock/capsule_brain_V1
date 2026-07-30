@@ -21,6 +21,7 @@ from capsule_brain.autolearn.controller import (
     MemoryExperienceSink,
 )
 from capsule_brain.autolearn.schema import Action, ExecutiveState
+from capsule_brain.conversation.models import RequestContext
 from capsule_brain.conversation.service import ConversationService, _ConversationActionDispatcher
 from capsule_brain.events.local_bus import LocalEventBus
 from capsule_brain.llm.models import LLMResult
@@ -125,14 +126,14 @@ async def test_conversation_autolearn_enabled_routes_through_controller(tmp_path
 
     # Verify the dispatcher delegates to the right _respond_* method.
     state = ExecutiveState(prompt_features={"text": "test"})
-    svc._current_request = {
-        "conversation": type("C", (), {"id": "c1"})(),
-        "user_turn": type("T", (), {"id": "ut1"})(),
-        "text": "test",
-        "history": [],
-        "memory_records": [],
-        "correlation_id": None,
-    }
+    svc._current_request = RequestContext(
+        request_id="test_req",
+        conversation_id="c1",
+        prompt="test",
+        history=(),
+        memory_records=(),
+        user_turn_id="ut1",
+    )
     try:
         result = await svc._dispatcher.answer_direct(state)
         assert result.text == "autolearn answer"
@@ -167,14 +168,14 @@ async def test_conversation_dispatcher_retrieve_memory(tmp_path):
     await svc.start()
 
     state = ExecutiveState(prompt_features={"text": "test"})
-    svc._current_request = {
-        "conversation": type("C", (), {"id": "c1"})(),
-        "user_turn": type("T", (), {"id": "ut1"})(),
-        "text": "test",
-        "history": [],
-        "memory_records": [],
-        "correlation_id": None,
-    }
+    svc._current_request = RequestContext(
+        request_id="test_req",
+        conversation_id="c1",
+        prompt="test",
+        history=(),
+        memory_records=(),
+        user_turn_id="ut1",
+    )
     try:
         result = await svc._dispatcher.retrieve_memory(state)
         assert result.text == "memory answer"
@@ -209,14 +210,14 @@ async def test_conversation_dispatcher_call_tool_no_tools(tmp_path):
     await svc.start()
 
     state = ExecutiveState(prompt_features={"text": "test"})
-    svc._current_request = {
-        "conversation": type("C", (), {"id": "c1"})(),
-        "user_turn": type("T", (), {"id": "ut1"})(),
-        "text": "test",
-        "history": [],
-        "memory_records": [],
-        "correlation_id": None,
-    }
+    svc._current_request = RequestContext(
+        request_id="test_req",
+        conversation_id="c1",
+        prompt="test",
+        history=(),
+        memory_records=(),
+        user_turn_id="ut1",
+    )
     try:
         result = await svc._dispatcher.call_tool(state)
         assert result.runtime_error is True
@@ -251,14 +252,14 @@ async def test_conversation_dispatcher_start_workflow_no_runner(tmp_path):
     await svc.start()
 
     state = ExecutiveState(prompt_features={"text": "test"})
-    svc._current_request = {
-        "conversation": type("C", (), {"id": "c1"})(),
-        "user_turn": type("T", (), {"id": "ut1"})(),
-        "text": "test",
-        "history": [],
-        "memory_records": [],
-        "correlation_id": None,
-    }
+    svc._current_request = RequestContext(
+        request_id="test_req",
+        conversation_id="c1",
+        prompt="test",
+        history=(),
+        memory_records=(),
+        user_turn_id="ut1",
+    )
     try:
         result = await svc._dispatcher.start_workflow(state)
         assert result.runtime_error is True

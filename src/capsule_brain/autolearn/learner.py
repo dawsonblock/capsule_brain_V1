@@ -30,6 +30,7 @@ from capsule_brain.autolearn.features import (
 from capsule_brain.autolearn.policy import (
     LEARNED_POLICY_TYPE,
     LEARNED_POLICY_VERSION_DEFAULT,
+    FeatureTransform,
     LearnedPolicy,
 )
 from capsule_brain.autolearn.schema import Action
@@ -258,12 +259,25 @@ class SupervisedRouterLearner:
             training_data_digest=training_data_digest,
             split_manifest_digest=split_manifest_digest,
             parent_policy=parent_policy,
+            feature_transform=FeatureTransform(
+                feature_names=FEATURE_NAMES,
+                means=tuple(feature_means),
+                stds=tuple(feature_stds),
+            ),
             hyperparameters=self.cfg.to_dict(),
             metrics=metrics.to_dict(),
             trained_at=_utc_now_iso(),
         )
-        # Store standardization parameters in hyperparameters so the policy
-        # can apply the same transformation at inference time.
+        # v0.3.1: Use .update() instead of replacing the dict, so the
+        # FeatureTransform and other typed fields are never lost.
+        # Also store in hyperparameters for backward compatibility.
+        policy.hyperparameters.update({
+            "n_epochs": self.cfg.n_epochs,
+            "learning_rate": self.cfg.learning_rate,
+            "l2": self.cfg.l2,
+            "confidence_threshold": self.cfg.confidence_threshold,
+            "actions": [a.value for a in self.cfg.actions],
+        })
         policy.hyperparameters["feature_means"] = list(feature_means)
         policy.hyperparameters["feature_stds"] = list(feature_stds)
         return policy, metrics
