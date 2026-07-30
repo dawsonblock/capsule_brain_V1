@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -49,7 +50,7 @@ from .schemas import (
 # to the PROJECT ROOT, not the package directory.
 SOURCE_PATHS: tuple[str, ...] = (
     "src",
-    "qualification",
+    "qualification/autolearn_v04",
     "tests",
     "configs",
 )
@@ -61,7 +62,7 @@ SOURCE_FILES: tuple[str, ...] = (
 # File extensions to skip (binary, cache, artifacts).
 SKIP_EXTENSIONS: frozenset[str] = frozenset({
     ".pyc", ".pyo", ".so", ".dylib", ".dll",
-    ".sqlite", ".db",
+    ".sqlite", ".db", ".sqlite-wal", ".sqlite-shm", ".wal", ".shm",
     ".png", ".jpg", ".jpeg", ".gif", ".svg",
     ".zip", ".tar", ".gz",
     ".safetensors", ".npz", ".npy",
@@ -74,17 +75,31 @@ SKIP_DIRS: frozenset[str] = frozenset({
     "node_modules", ".mypy_cache", ".ruff_cache",
     "data",  # runtime data, not source
     "artifacts", "artifacts_v04", "artifacts_v032",
+    "qualification/archive",
+    "qualification/autolearn",
+    "qualification/autolearn_v02",
+    "qualification/autolearn_v03",
+    "qualification/autolearn_v031",
+    "qualification/autolearn_v032",
     "qualification_runs",
     ".cf_isolation_v04", ".qual_sandbox_v04",
     ".cf_isolation_v032", ".qual_sandbox_v032",
     ".qual_sandbox",
     "dist", "build",
     "src/capsule_brain.egg-info",
+    "qualification/autolearn_v04/artifacts",
+    "qualification/autolearn_v04/activations",
 })
 
 # File names to skip.
 SKIP_FILENAMES: frozenset[str] = frozenset({
     ".gitignore", ".DS_Store",
+})
+
+# Text file extensions for line-ending normalization.
+TEXT_EXTENSIONS: frozenset[str] = frozenset({
+    ".py", ".toml", ".yaml", ".yml", ".json", ".md", ".txt", ".rst",
+    ".cfg", ".ini", ".sh", ".bash",
 })
 
 
@@ -99,6 +114,13 @@ def _should_skip(path: Path) -> bool:
     if "qualification_runs" in path.parts:
         return True
     return False
+
+
+def _normalize_line_endings(data: bytes, is_text: bool) -> bytes:
+    """Normalize CRLF to LF for text files (Section 5.3)."""
+    if not is_text:
+        return data
+    return data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
 
 
 def _collect_files(root: Path) -> list[Path]:
@@ -125,36 +147,107 @@ def _collect_files(root: Path) -> list[Path]:
     return files
 
 
-def compute_source_tree_hash(root: str | Path) -> str:
-    """Compute a deterministic SHA-256 over the source tree from the PROJECT ROOT.
+@dataclass(frozen=True)
+class SourceTreeHashResult:
+    """Result of source-tree hashing with metadata for provenance."""
+    repository_root: str
+    source_file_count: int
+    source_byte_count: int
+    included_roots: list[str]
+    excluded_patterns: list[str]
+    source_tree_sha256: str
 
-    Section 7.3: hash only relevant source and configuration files. Exclude
-    .git, __pycache__, generated artifacts, test outputs, qualification run
-    outputs, virtual environments, model caches, and logs.
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "repository_root": self.repository_root,
+            "source_file_count": self.source_file_count,
+            "source_byte_count": self.source_byte_count,
+            "included_roots": list(self.included_roots),
+            "excluded_patterns": list(self.excluded_patterns),
+            "source_tree_sha256": self.source_tree_sha256,
+        }
 
-    Includes file path AND file content (Section 7.3):
-        digest.update(relative_path)
-        digest.update(b"\\0")
-        digest.update(file_bytes)
-        digest.update(b"\\0")
+
+class SourceHashError(RuntimeError):
+    """Raised when source hashing fails (empty set, no files, etc.)."""
+
+
+def compute_source_tree_hash_detailed(root: str | Path) -> SourceTreeHashResult:
+    """Compute a deterministic SHA-256 over the source tree with full metadata.
+
+    Hash algorithm (Section 5.3):
+        1. collect matching files;
+        2. sort repository-relative paths lexicographically;
+        3. normalize line endings for text files;
+        4. hash path length, path bytes, file length and file bytes;
+        5. produce SHA-256.
+
+    Hard fail if:
+        source_file_count == 0
+        source_byte_count == 0
+        source_tree_sha256 == SHA256_EMPTY
     """
     root_path = Path(root).resolve()
     files = _collect_files(root_path)
+
     h = hashlib.sha256()
+    total_bytes = 0
     for filepath in files:
         rel = str(filepath.relative_to(root_path))
-        h.update(rel.encode("utf-8"))
-        h.update(b"\x00")
+        rel_bytes = rel.encode("utf-8")
+        is_text = filepath.suffix in TEXT_EXTENSIONS
         try:
             file_bytes = filepath.read_bytes()
-            h.update(file_bytes)
         except Exception:
-            h.update(b"ERROR")
-        h.update(b"\x00")
+            file_bytes = b"ERROR"
+        file_bytes = _normalize_line_endings(file_bytes, is_text)
+        file_len = len(file_bytes)
+        total_bytes += file_len
+
+        # Hash: path_length, path_bytes, file_length, file_bytes
+        h.update(len(rel_bytes).to_bytes(4, "little"))
+        h.update(rel_bytes)
+        h.update(file_len.to_bytes(8, "little"))
+        h.update(file_bytes)
+
     digest = h.hexdigest()
-    # Hard guard: if no files were hashed, the root is wrong. Return the
-    # empty digest so validate_digest rejects it downstream.
-    return digest
+
+    result = SourceTreeHashResult(
+        repository_root=str(root_path),
+        source_file_count=len(files),
+        source_byte_count=total_bytes,
+        included_roots=list(SOURCE_PATHS),
+        excluded_patterns=sorted(SKIP_DIRS | SKIP_EXTENSIONS),
+        source_tree_sha256=digest,
+    )
+
+    # Hard fail on empty source set.
+    if result.source_file_count == 0:
+        raise SourceHashError(
+            f"Source hashing found 0 files under {root_path}. "
+            f"Repository root discovery is broken."
+        )
+    if result.source_byte_count == 0:
+        raise SourceHashError(
+            f"Source hashing found 0 bytes under {root_path}. "
+            f"All files are empty or unreadable."
+        )
+    if digest == EMPTY_SHA256:
+        raise SourceHashError(
+            f"Source hash is SHA-256 of empty input. "
+            f"No file content was hashed."
+        )
+
+    return result
+
+
+def compute_source_tree_hash(root: str | Path) -> str:
+    """Compute a deterministic SHA-256 over the source tree from the PROJECT ROOT.
+
+    Wrapper around compute_source_tree_hash_detailed that returns only the
+    digest string. Raises SourceHashError on empty/invalid source sets.
+    """
+    return compute_source_tree_hash_detailed(root).source_tree_sha256
 
 
 def find_project_root(start: str | Path | None = None) -> Path:

@@ -58,7 +58,9 @@ If any required stage is missing, incomplete, or run on the infrastructure-
 only provider for a causal claim, the report must say BLOCKED / NOT RUN,
 never PASS.
 """
-AUTOLEARN_QUALIFICATION_VERSION = "0.4.0"
-AUTOLEARN_VERSION = "0.3.3"
-PACKAGE_VERSION = "2.15.4"
-PROTOCOL_VERSION = "0.4.0"
+from capsule_brain.version import (
+    AUTOLEARN_QUALIFICATION_VERSION,
+    AUTOLEARN_VERSION,
+    PACKAGE_VERSION,
+    PROTOCOL_VERSION,
+)

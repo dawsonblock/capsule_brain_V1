@@ -30,8 +30,9 @@ INFRASTRUCTURE_ONLY_PROVIDERS = frozenset({PROVIDER_INFRASTRUCTURE})
 class QualificationConfig:
     """Configuration for the v0.4.0 qualification pipeline."""
 
-    # Mode: "smoke" for pipeline-integrity wiring check, "qualification"
-    # for the full scientific experiment.
+    # Mode: "smoke" for pipeline-integrity wiring check,
+    # "infrastructure" for integration qualification with grounded provider,
+    # "scientific" for the full real-model experiment.
     mode: str = "smoke"
     runtime: str = "real"
 
@@ -73,6 +74,7 @@ class QualificationConfig:
     family_regression_tolerance: float = 0.02
     max_single_action_share: float = 0.95
     max_kl_from_baseline: float = 0.25
+    kl_epsilon_smooth: float = 0.1  # smoothing for baseline distribution in KL
     ambiguity_margin: float = 0.05
 
     # Bootstrap settings (Section 10.3).
@@ -100,6 +102,9 @@ class QualificationConfig:
     candidate_model_type: str = "multinomial_logistic"
     candidate_class_weighting: str = "balanced"
 
+    # Runtime completion diagnostics (Section 9).
+    min_action_completion: float = 0.50
+
     # Model backend (Section 11).
     provider: str = PROVIDER_INFRASTRUCTURE
     model: str = "qual-grounded-v04"
@@ -125,8 +130,8 @@ class QualificationConfig:
     strict: bool = False
 
     def __post_init__(self) -> None:
-        if self.mode not in ("smoke", "qualification"):
-            raise ValueError(f"mode must be 'smoke' or 'qualification', got {self.mode!r}")
+        if self.mode not in ("smoke", "infrastructure", "scientific"):
+            raise ValueError(f"mode must be 'smoke', 'infrastructure', or 'scientific', got {self.mode!r}")
         if self.runtime not in ("real", "simulated"):
             raise ValueError(f"runtime must be 'real' or 'simulated', got {self.runtime!r}")
 
@@ -137,8 +142,16 @@ class QualificationConfig:
         return self.mode == "smoke"
 
     @property
+    def is_infrastructure_mode(self) -> bool:
+        return self.mode == "infrastructure"
+
+    @property
+    def is_scientific(self) -> bool:
+        return self.mode == "scientific"
+
+    @property
     def is_qualification(self) -> bool:
-        return self.mode == "qualification"
+        return self.mode in ("scientific", "qualification")
 
     @property
     def is_real(self) -> bool:

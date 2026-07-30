@@ -127,12 +127,37 @@ def run_promotion(config: QualificationConfig) -> dict[str, Any]:
         {"n_real": n_real, "n_total": n_total},
     ))
 
-    # Provider gate: must not be infrastructure-only for a causal claim.
+    # Provider gate: must be REAL_MODEL for a causal claim (Section 4/19).
+    from .provider_classification import ProviderClass, classify_grounded_provider, classify_local_transformers
+    if config.is_infrastructure_provider:
+        provider_caps = classify_grounded_provider()
+    else:
+        provider_caps = classify_local_transformers(
+            config.model, dtype=config.dtype, device=config.device,
+        )
     all_gates.append(GateResult(
-        "real_model_provider_for_causal_claim", GateCategory.INTEGRITY,
-        GateStatus.PASS if not config.is_infrastructure_provider else GateStatus.BLOCKED,
-        {"provider": config.provider, "is_infrastructure": config.is_infrastructure_provider},
+        "provider_class_is_real_model", GateCategory.INTEGRITY,
+        GateStatus.PASS if provider_caps.provider_class is ProviderClass.REAL_MODEL else GateStatus.BLOCKED,
+        {"provider_name": provider_caps.provider_name,
+         "provider_class": provider_caps.provider_class.value,
+         "supports_gate_a": provider_caps.supports_gate_a_claim,
+         "supports_gate_b": provider_caps.supports_gate_b_claim},
     ))
+
+    # --- Runtime completion diagnostics gate ---
+    diag_path = artifacts / "runtime_completion_diagnostics.json"
+    if diag_path.exists():
+        diag = read_json(diag_path)
+        all_gates.append(GateResult(
+            "runtime_completion_passes", GateCategory.EVIDENCE_COMPLETENESS,
+            GateStatus.PASS if diag.get("status") == "PASS" else GateStatus.BLOCKED,
+            {"status": diag.get("status"), "failed_actions": diag.get("failed_actions", [])},
+        ))
+    else:
+        all_gates.append(GateResult(
+            "runtime_completion_passes", GateCategory.EVIDENCE_COMPLETENESS,
+            GateStatus.NOT_RUN, {"reason": "runtime_completion_diagnostics.json missing"},
+        ))
 
     # --- Gate A gates ---
     if gate_a is None:

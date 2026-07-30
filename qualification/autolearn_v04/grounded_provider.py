@@ -56,9 +56,18 @@ class GroundedQualificationProvider(LLMProvider):
 
     # Marker so callers can detect this is the infrastructure-only provider.
     is_infrastructure_only: bool = True
+    # Provider classification (Section 4).
+    provider_class = "infrastructure"
+    supports_gate_a_claim = False
+    supports_gate_b_claim = False
 
     def __init__(self) -> None:
         self.calls: list[str] = []
+
+    @property
+    def provider_capabilities(self):
+        from .provider_classification import classify_grounded_provider
+        return classify_grounded_provider()
 
     async def generate(self, request: LLMRequest, model_cfg: dict) -> LLMResult:
         started = time.perf_counter()

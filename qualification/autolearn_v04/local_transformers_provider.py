@@ -108,6 +108,9 @@ class LocalTransformersProvider(LLMProvider):
             output_hidden_states=self.collect_hidden_states,
         ).to(self.device)
         self._model.eval()
+        # Section 10: all parameters frozen — no gradient computation.
+        for param in self._model.parameters():
+            param.requires_grad_(False)
         # Record revisions if available.
         try:
             cfg = getattr(self._model, "config", None)
@@ -118,6 +121,20 @@ class LocalTransformersProvider(LLMProvider):
                 self._tokenizer_revision = getattr(self._tokenizer, "_commit_hash", None)
         except Exception:
             pass
+
+    @property
+    def provider_capabilities(self):
+        from .provider_classification import classify_local_transformers
+        return classify_local_transformers(
+            self.model_id,
+            model_revision=self._model_revision,
+            tokenizer_id=self.model_id,
+            tokenizer_revision=self._tokenizer_revision,
+            dtype=self.dtype,
+            device=self.device,
+            generation_config=self.generation_config,
+            supports_hidden_states=self.collect_hidden_states,
+        )
 
     @property
     def model_execution_identity(self) -> ModelExecutionIdentity:
@@ -137,7 +154,19 @@ class LocalTransformersProvider(LLMProvider):
         import torch
         started = time.perf_counter()
         prompt = self._build_prompt(request)
-        inputs = self._tokenizer(prompt, return_tensors="pt").to(self.device)
+        # Use tokenizer chat template if available, otherwise plain text.
+        if hasattr(self._tokenizer, "apply_chat_template") and self._tokenizer.chat_template:
+            messages = [{"role": "user", "content": prompt}]
+            try:
+                input_ids = self._tokenizer.apply_chat_template(
+                    messages, add_generation_prompt=True, return_tensors="pt"
+                ).to(self.device)
+                attention_mask = torch.ones_like(input_ids)
+                inputs = {"input_ids": input_ids, "attention_mask": attention_mask}
+            except Exception:
+                inputs = self._tokenizer(prompt, return_tensors="pt", padding=True).to(self.device)
+        else:
+            inputs = self._tokenizer(prompt, return_tensors="pt", padding=True).to(self.device)
         with torch.no_grad():
             outputs = self._model.generate(
                 **inputs,
