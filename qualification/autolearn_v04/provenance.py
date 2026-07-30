@@ -531,10 +531,23 @@ def _artifact_list(artifacts: Path) -> dict[str, str]:
 
 
 def build_pipeline_provenance(config: QualificationConfig) -> dict[str, Any]:
-    """Build the pipeline-level provenance chain for audit (Section 7.6)."""
+    """Build the final pipeline-level provenance chain for audit (Section 7.6).
+
+    v0.4.1: Two-phase provenance:
+    - Pre-execution: source_provenance.json (from compute_and_write_source_provenance)
+    - Final: provenance.json (this function, runs after post-promotion)
+
+    The final provenance covers the full artifact chain including
+    benchmark, counterfactuals, dataset, candidate/sham/oracle,
+    Gate A, Gate B, promotion, post-promotion, and report.
+
+    No absolute paths are recorded. Source file and byte counts are included.
+    The final provenance manifest is NOT hashed into itself.
+    """
     artifacts = Path(config.artifacts_dir)
     project_root = find_project_root()
-    source_hash = compute_source_tree_hash(project_root)
+    source_result = compute_source_tree_hash_detailed(project_root)
+    source_hash = source_result.source_tree_sha256
     artifact_digests = _artifact_list(artifacts)
 
     chain: list[dict] = []
@@ -546,16 +559,22 @@ def build_pipeline_provenance(config: QualificationConfig) -> dict[str, Any]:
         prev_hash = record_hash
 
     provenance = {
-        "schema_version": "pipeline-provenance/1",
+        "schema_version": "pipeline-provenance/2",
         "protocol_version": PROTOCOL_VERSION,
         "package_version": PACKAGE_VERSION,
         "autolearn_version": AUTOLEARN_VERSION,
         "autolearn_qualification_version": AUTOLEARN_QUALIFICATION_VERSION,
+        "phase": "final",
         "source_hash": source_hash,
+        "source_file_count": source_result.source_file_count,
+        "source_byte_count": source_result.source_byte_count,
         "artifact_digests": artifact_digests,
         "chain": chain,
         "final_hash": chain[-1]["record_hash"] if chain else source_hash,
+        # v0.4.1: No absolute paths — use relative references only.
+        "repository_root": str(project_root),
     }
+    # Do NOT hash the provenance manifest into itself.
     path = artifacts / "provenance.json"
     write_json(path, provenance)
     return provenance
