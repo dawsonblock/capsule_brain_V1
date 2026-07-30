@@ -146,6 +146,25 @@ class Provenance:
     task_id: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source": self.source,
+            "policy_version": self.policy_version,
+            "task_family": self.task_family,
+            "task_id": self.task_id,
+            "extra": dict(self.extra),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Provenance":
+        return cls(
+            source=str(data.get("source", "production")),
+            policy_version=str(data.get("policy_version", "baseline_v1")),
+            task_family=str(data.get("task_family", "unknown")),
+            task_id=data.get("task_id"),
+            extra=dict(data.get("extra", {}) or {}),
+        )
+
 
 @dataclass(slots=True)
 class ExecutiveExperience:

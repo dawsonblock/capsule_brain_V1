@@ -8,6 +8,7 @@ from capsule_brain.autolearn.controller import (
     DispatcherResult,
     ExecutiveState,
 )
+from capsule_brain.autolearn.schema import Action
 from capsule_brain.events.local_bus import LocalEventBus
 from capsule_brain.events.models import EventEnvelope
 from capsule_brain.llm.gateway import LLMGateway
@@ -36,6 +37,7 @@ class ConversationService(CapsuleService):
         tool_registry=None,
         autolearn_service=None,
         workflow_runner=None,
+        autolearn_enabled: bool | None = None,
     ) -> None:
         super().__init__(cfg)
         self.event_bus = event_bus
@@ -70,11 +72,16 @@ class ConversationService(CapsuleService):
             "system_prompt",
             "You are Capsule Brain, a precise autonomous AI assistant.",
         )
-        # AutoLearn v0.2: when autolearn.enable is true, route requests
-        # through the ExecutiveController. When false (default for backward
-        # compatibility), preserve the original direct-generation path
-        # byte-for-byte.
-        self.autolearn_enabled = bool(self.cfg.get("autolearn_enable", False))
+        # AutoLearn v0.3: the enable flag is passed explicitly from
+        # build_application() (derived from autolearn.enable), NOT parsed
+        # from a second conversation.autolearn_enable flag. This eliminates
+        # the silent bypass bug where autolearn.enable=true but
+        # conversation.autolearn_enable was unset.
+        # autolearn_enabled defaults to False when autolearn_service is None.
+        if autolearn_enabled is not None:
+            self.autolearn_enabled = bool(autolearn_enabled)
+        else:
+            self.autolearn_enabled = bool(autolearn_service is not None)
         self._unsubscribers: list = []
         self._requests = 0
         self._failures = 0
@@ -85,6 +92,85 @@ class ConversationService(CapsuleService):
         # Per-request context used by the dispatcher; set during
         # _respond_via_autolearn and cleared in its finally block.
         self._current_request: dict[str, Any] | None = None
+
+    # ------------------------------------------------------------------
+    # Public executive-action API (v0.3)
+    # ------------------------------------------------------------------
+    #
+    # This is the single public entry point for dispatching executive
+    # actions through real Capsule Brain services. Both the
+    # ExecutiveController (production path) and RealCounterfactualRuntime
+    # (qualification path) use this same method. There is only one
+    # implementation of runtime action semantics.
+    #
+    # Supported actions: ANSWER_DIRECT, RETRIEVE_MEMORY, CALL_TOOL,
+    # START_WORKFLOW. REFLECT and ASK_OPERATOR are handled by the baseline
+    # safety path and are not dispatched through this API.
+
+    async def execute_executive_action(
+        self,
+        *,
+        action: "Action",
+        state: "ExecutiveState",
+        conversation_id: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> "DispatcherResult":
+        """Execute one executive action through real Capsule Brain services.
+
+        This is the canonical action dispatcher. It sets up the per-request
+        context from ``state`` and ``metadata``, delegates to the
+        corresponding ``_respond_*`` method, and returns a
+        ``DispatcherResult``. Both production routing (via
+        ExecutiveController) and counterfactual qualification (via
+        RealCounterfactualRuntime) call this same method.
+
+        Args:
+            action: One of ANSWER_DIRECT, RETRIEVE_MEMORY, CALL_TOOL,
+                START_WORKFLOW.
+            state: The executive state (prompt, memory, tools, etc.).
+            conversation_id: Unique conversation ID for this execution.
+            metadata: Optional metadata (e.g. task_id, counterfactual
+                context). When ``metadata`` contains ``text``, ``history``,
+                ``memory_records``, they are used as the request context;
+                otherwise the context is built from ``state``.
+
+        Returns:
+            DispatcherResult with the real outcome of the action.
+        """
+        from capsule_brain.autolearn.schema import Action as _Action
+
+        # Build per-request context from state + metadata.
+        md = metadata or {}
+        text = md.get("text") or str(state.prompt_features.get("text", ""))
+        history = md.get("history", [])
+        memory_records = md.get("memory_records", [])
+
+        # Set up the per-request context so _respond_* methods can access it.
+        self._current_request = {
+            "conversation": type("C", (), {"id": conversation_id})(),
+            "user_turn": type("T", (), {"id": md.get("user_turn_id", "cf_turn")})(),
+            "text": text,
+            "history": history,
+            "memory_records": memory_records,
+            "correlation_id": md.get("correlation_id"),
+        }
+        try:
+            if action == _Action.ANSWER_DIRECT:
+                return await self._respond_direct(state, conversation_id=conversation_id)
+            elif action == _Action.RETRIEVE_MEMORY:
+                return await self._respond_with_memory(state, conversation_id=conversation_id)
+            elif action == _Action.CALL_TOOL:
+                return await self._respond_with_tools(state, conversation_id=conversation_id)
+            elif action == _Action.START_WORKFLOW:
+                return await self._respond_with_workflow(state, conversation_id=conversation_id)
+            else:
+                return DispatcherResult(
+                    runtime_error=True,
+                    action_completed=False,
+                    metadata={"reason": f"unsupported action for execute_executive_action: {action}"},
+                )
+        finally:
+            self._current_request = None
 
     async def start(self) -> None:
         self.state = ServiceState.STARTING

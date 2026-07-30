@@ -1,0 +1,191 @@
+{
+  "archetype_count": 26,
+  "archetypes": {
+    "add": {
+      "ood": 0,
+      "test": 0,
+      "total": 1,
+      "train": 1
+    },
+    "balanced_parens": {
+      "ood": 1,
+      "test": 0,
+      "total": 1,
+      "train": 0
+    },
+    "caesar_cipher": {
+      "ood": 1,
+      "test": 0,
+      "total": 1,
+      "train": 0
+    },
+    "capitalize_words": {
+      "ood": 0,
+      "test": 1,
+      "total": 1,
+      "train": 0
+    },
+    "count_vowels": {
+      "ood": 0,
+      "test": 0,
+      "total": 1,
+      "train": 1
+    },
+    "count_words": {
+      "ood": 0,
+      "test": 1,
+      "total": 1,
+      "train": 0
+    },
+    "factorial": {
+      "ood": 0,
+      "test": 0,
+      "total": 1,
+      "train": 1
+    },
+    "factual": {
+      "ood": 0,
+      "test": 4,
+      "total": 16,
+      "train": 12
+    },
+    "factual_ood": {
+      "ood": 4,
+      "test": 0,
+      "total": 4,
+      "train": 0
+    },
+    "fibonacci": {
+      "ood": 0,
+      "test": 0,
+      "total": 1,
+      "train": 1
+    },
+    "filter_even": {
+      "ood": 0,
+      "test": 0,
+      "total": 1,
+      "train": 1
+    },
+    "gcd": {
+      "ood": 0,
+      "test": 0,
+      "total": 1,
+      "train": 1
+    },
+    "is_even": {
+      "ood": 0,
+      "test": 0,
+      "total": 1,
+      "train": 1
+    },
+    "is_palindrome": {
+      "ood": 0,
+      "test": 0,
+      "total": 1,
+      "train": 1
+    },
+    "is_prime": {
+      "ood": 0,
+      "test": 1,
+      "total": 1,
+      "train": 0
+    },
+    "live_nonce": {
+      "ood": 0,
+      "test": 4,
+      "total": 16,
+      "train": 12
+    },
+    "live_nonce_ood": {
+      "ood": 4,
+      "test": 0,
+      "total": 4,
+      "train": 0
+    },
+    "max_of_two": {
+      "ood": 0,
+      "test": 0,
+      "total": 1,
+      "train": 1
+    },
+    "reverse_string": {
+      "ood": 0,
+      "test": 0,
+      "total": 1,
+      "train": 1
+    },
+    "run_length_encode": {
+      "ood": 1,
+      "test": 0,
+      "total": 1,
+      "train": 0
+    },
+    "sort_ascending": {
+      "ood": 0,
+      "test": 0,
+      "total": 1,
+      "train": 1
+    },
+    "stored_secret": {
+      "ood": 0,
+      "test": 4,
+      "total": 16,
+      "train": 12
+    },
+    "stored_secret_ood": {
+      "ood": 4,
+      "test": 0,
+      "total": 4,
+      "train": 0
+    },
+    "sum_list": {
+      "ood": 0,
+      "test": 0,
+      "total": 1,
+      "train": 1
+    },
+    "to_uppercase": {
+      "ood": 0,
+      "test": 1,
+      "total": 1,
+      "train": 0
+    },
+    "word_frequency": {
+      "ood": 1,
+      "test": 0,
+      "total": 1,
+      "train": 0
+    }
+  },
+  "benchmark_version": "autolearn_v0.3",
+  "feature_schema_version": "exec_features_v2",
+  "learned_actions": [
+    "ANSWER_DIRECT",
+    "RETRIEVE_MEMORY",
+    "CALL_TOOL",
+    "START_WORKFLOW"
+  ],
+  "ood_archetypes": [
+    "factual_ood",
+    "stored_secret_ood",
+    "live_nonce_ood",
+    "caesar_cipher",
+    "balanced_parens",
+    "run_length_encode",
+    "word_frequency"
+  ],
+  "runtime_controlled_actions": [
+    "REFLECT",
+    "ASK_OPERATOR"
+  ],
+  "schema_version": "exec_experience_v2",
+  "split_counts": {
+    "ood": 16,
+    "test": 16,
+    "train": 48
+  },
+  "split_strategy": "archetype_based",
+  "task_count": 80,
+  "utility_config_version": "exec_utility_v3"
+}

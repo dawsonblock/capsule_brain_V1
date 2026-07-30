@@ -233,7 +233,8 @@ class TestFeatureSchemaV2:
 
 class TestUtilityV2:
     def test_utility_config_version_is_v2(self):
-        assert UTILITY_CONFIG_VERSION == "exec_utility_v2"
+        # v0.3 bumped the utility config version to v3 (adds w_runtime_error).
+        assert UTILITY_CONFIG_VERSION == "exec_utility_v3"
 
     def test_over_routing_tool_penalty(self):
         ufn = UtilityFunction(UtilityConfig())

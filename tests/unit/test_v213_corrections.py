@@ -252,6 +252,7 @@ async def test_conversation_service_can_use_registered_tools(tmp_path: Path):
                 "use_tools": True,
                 "db_path": str(tmp_path / "conversation.sqlite"),
             },
+            "autolearn": {"enable": False},
             "feedback": {"enable": False},
             "reflection": {"enable": False},
             "verification": {"enable": False},

@@ -120,7 +120,9 @@ class SupervisedRouterLearner:
         self.cfg = cfg or LearnerConfig()
         self.extractor = extractor or FeatureExtractor()
         if not self.cfg.actions:
-            self.cfg.actions = tuple(Action.all())
+            # v0.3: the learned policy only trains on the 4 learned actions.
+            # REFLECT and ASK_OPERATOR remain runtime-controlled (safety floor).
+            self.cfg.actions = tuple(Action.learned())
         self.action_index = {a: i for i, a in enumerate(self.cfg.actions)}
         self.n_features = len(FEATURE_NAMES)
         self.n_actions = len(self.cfg.actions)

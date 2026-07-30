@@ -79,6 +79,7 @@ def _config(tmp_path):
         "execution": {"enable": False},
         "goal_planner": {"db_path": str(tmp_path / "goals.sqlite")},
         "redis_bridge": {"enable": False},
+        "autolearn": {"enable": False},
     }
 
 

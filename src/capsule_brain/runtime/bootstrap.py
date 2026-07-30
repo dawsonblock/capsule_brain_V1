@@ -197,7 +197,8 @@ def build_application(
     from capsule_brain.autolearn.service import AutoLearnService
 
     autolearn_cfg = cfg.get("autolearn", {})
-    if autolearn_cfg.get("enable", True):
+    autolearn_enabled = bool(autolearn_cfg.get("enable", True))
+    if autolearn_enabled:
         autolearn = AutoLearnService(cfg=autolearn_cfg)
         app.services.register(autolearn, requires=["experience_store"])
 
@@ -214,11 +215,10 @@ def build_application(
 
         # Resolve the AutoLearn service if it was registered, so
         # ConversationService can route through the ExecutiveController when
-        # autolearn_enable is true. The workflow runner is resolved lazily
-        # after it is registered (see below).
-        autolearn_svc = None
-        if autolearn_cfg.get("enable", True):
-            autolearn_svc = autolearn
+        # autolearn.enable is true. The autolearn_enabled flag is passed
+        # explicitly — ConversationService must NOT independently parse a
+        # second enable flag from conversation config (v0.3 wiring fix).
+        autolearn_svc = autolearn if autolearn_enabled else None
 
         conversation = ConversationService(
             event_bus=bus,
@@ -228,6 +228,7 @@ def build_application(
             experience_store=experience_store,
             tool_registry=tool_registry,
             autolearn_service=autolearn_svc,
+            autolearn_enabled=autolearn_enabled,
         )
         conversation_requires = [
             "event_bus", "memory", "llm_gateway", "experience_store"

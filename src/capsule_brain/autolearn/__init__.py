@@ -1,13 +1,23 @@
-"""Capsule Brain AutoLearn v0.2.
+"""Capsule Brain AutoLearn v0.3.
 
 A learned executive/router policy layer that sits on top of the frozen
-Capsule Brain v2.15.0 execution substrate. AutoLearn chooses which action
+Capsule Brain v2.15.1 execution substrate. AutoLearn chooses which action
 the runtime should take for a given task; the ExecutiveController dispatches
-that action through the *real* Capsule Brain services; the
+that action through the *real* Capsule Brain services via the public
+``ConversationService.execute_executive_action()`` API; the
 VerificationService judges the outcome; the resulting ExecutiveExperience is
 persisted. Promoting a new policy requires passing a statistical promotion
 gate on held-out, independently verified tasks whose counterfactual outcomes
 come from real service execution, not a simulator.
+
+v0.3 key changes:
+- Single public action API (``execute_executive_action``) used by both
+  production and counterfactual qualification.
+- Canonical ``counterfactual.py`` with Protocol + Real + Simulated runtimes.
+- Qualification refuses to run with the simulated runtime.
+- REFLECT and ASK_OPERATOR remain outside the learned action space.
+- 80-task benchmark with archetype-based splits and genuine OOD.
+- 12-gate promotion gate (adds coverage gate).
 
 AutoLearn never modifies the safety envelope and never mutates production
 behavior live. Candidate policies are trained offline from real
@@ -51,6 +61,15 @@ from capsule_brain.autolearn.controller import (
     MemoryExperienceSink,
     VerifierFn,
 )
+from capsule_brain.autolearn.counterfactual import (
+    CounterfactualResult,
+    CounterfactualRuntime,
+    CounterfactualTask,
+    LEARNED_ACTIONS_V03,
+    RealCounterfactualRuntime,
+    SimulatedCounterfactualRuntime,
+    assert_runtime_is_real,
+)
 
 __all__ = [
     "Action",
@@ -60,6 +79,9 @@ __all__ = [
     "BaselinePolicy",
     "BaselinePolicyV2",
     "ControllerDecision",
+    "CounterfactualResult",
+    "CounterfactualRuntime",
+    "CounterfactualTask",
     "DispatcherResult",
     "ExecutiveController",
     "ExecutiveExperience",
@@ -70,6 +92,7 @@ __all__ = [
     "FeatureExtractor",
     "JSONLExperienceSink",
     "LEARNED_ACTIONS",
+    "LEARNED_ACTIONS_V03",
     "LearnedPolicy",
     "MemoryExperienceSink",
     "Outcome",
@@ -79,8 +102,11 @@ __all__ = [
     "PolicyRegistry",
     "Provenance",
     "ActionResult",
+    "RealCounterfactualRuntime",
     "SCHEMA_VERSION",
+    "SimulatedCounterfactualRuntime",
     "UtilityConfig",
     "UtilityFunction",
     "VerifierFn",
+    "assert_runtime_is_real",
 ]

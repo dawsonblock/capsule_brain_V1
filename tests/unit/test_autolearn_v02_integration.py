@@ -83,8 +83,8 @@ async def test_conversation_autolearn_disabled_preserves_v01_behavior(tmp_path):
         llm=gateway,
         cfg={
             "db_path": str(tmp_path / "conv.sqlite"),
-            "autolearn_enable": False,
         },
+        autolearn_enabled=False,
     )
     await svc.start()
 
@@ -114,8 +114,8 @@ async def test_conversation_autolearn_enabled_routes_through_controller(tmp_path
         llm=gateway,
         cfg={
             "db_path": str(tmp_path / "conv.sqlite"),
-            "autolearn_enable": True,
         },
+        autolearn_enabled=True,
     )
     await svc.start()
 
@@ -161,8 +161,8 @@ async def test_conversation_dispatcher_retrieve_memory(tmp_path):
         llm=gateway,
         cfg={
             "db_path": str(tmp_path / "conv.sqlite"),
-            "autolearn_enable": True,
         },
+        autolearn_enabled=True,
     )
     await svc.start()
 
@@ -203,8 +203,8 @@ async def test_conversation_dispatcher_call_tool_no_tools(tmp_path):
         llm=gateway,
         cfg={
             "db_path": str(tmp_path / "conv.sqlite"),
-            "autolearn_enable": True,
         },
+        autolearn_enabled=True,
     )
     await svc.start()
 
@@ -245,8 +245,8 @@ async def test_conversation_dispatcher_start_workflow_no_runner(tmp_path):
         llm=gateway,
         cfg={
             "db_path": str(tmp_path / "conv.sqlite"),
-            "autolearn_enable": True,
         },
+        autolearn_enabled=True,
     )
     await svc.start()
 
