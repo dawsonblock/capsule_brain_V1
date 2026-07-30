@@ -38,10 +38,13 @@ from capsule_brain.autolearn.features import (
     FeatureExtractor,
 )
 from capsule_brain.autolearn.utility import (
+    ExperienceQuality,
+    OutcomeUtility,
     UtilityConfig,
     UtilityFunction,
+    compute_experience_quality,
 )
-from capsule_brain.autolearn.baseline import BaselinePolicy, BaselinePolicyV2
+from capsule_brain.autolearn.baseline import BaselinePolicy, BaselinePolicyV2, BaselinePolicyV3
 from capsule_brain.autolearn.policy import (
     FeatureTransform,
     LearnedPolicy,
@@ -49,6 +52,14 @@ from capsule_brain.autolearn.policy import (
     PolicyLoadError,
 )
 from capsule_brain.autolearn.registry import PolicyManifest, PolicyRegistry
+from capsule_brain.autolearn.promotion import (
+    GateConfigV31,
+    GateResultV31,
+    GateStatus,
+    GateV31,
+    PromotionEvidence,
+    evaluate_promotion_gate_v31,
+)
 from capsule_brain.autolearn.service import AutoLearnService, ExecutiveController
 from capsule_brain.autolearn.controller import (
     ActionDispatcher,
@@ -115,6 +126,7 @@ __all__ = [
     "AutoLearnService",
     "BaselinePolicy",
     "BaselinePolicyV2",
+    "BaselinePolicyV3",
     "BootstrapResult",
     "ControllerDecision",
     "CounterfactualIsolationFactory",
@@ -128,6 +140,11 @@ __all__ = [
     "ExecutiveState",
     "ExperienceSink",
     "ExperienceStoreSink",
+    "ExperienceQuality",
+    "GateConfigV31",
+    "GateResultV31",
+    "GateStatus",
+    "GateV31",
     "FEATURE_SCHEMA_VERSION",
     "FeatureTransform",
     "FeatureExtractor",
@@ -139,11 +156,13 @@ __all__ = [
     "MemoryExperienceSink",
     "MemoryTaskProvisioner",
     "Outcome",
+    "OutcomeUtility",
     "PermutationTestResult",
     "PolicyDecision",
     "PolicyLoadError",
     "PolicyManifest",
     "PolicyRegistry",
+    "PromotionEvidence",
     "Provenance",
     "ProvisionedTask",
     "QualificationProvider",
@@ -162,8 +181,10 @@ __all__ = [
     "VerifierFn",
     "WorkflowTaskProvisioner",
     "assert_runtime_is_real",
+    "compute_experience_quality",
     "compute_file_hash",
     "compute_qualification_statistics",
+    "evaluate_promotion_gate_v31",
     "compute_source_tree_hash",
     "compute_string_hash",
     "get_provisioner",

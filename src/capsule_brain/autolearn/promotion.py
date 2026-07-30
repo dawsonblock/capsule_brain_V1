@@ -271,3 +271,335 @@ class V2GateMetrics:
             candidate_over_routing_rate=float(data.get("candidate_over_routing_rate", 0.0)),
             candidate_brier_score=float(data.get("candidate_brier_score", 0.0)),
         )
+
+
+# ---------------------------------------------------------------------------
+# v0.3.1 Section 22: Promotion gate v3.1 (24 mandatory gates)
+# ---------------------------------------------------------------------------
+
+from enum import Enum
+
+
+class GateStatus(Enum):
+    """Status of a single promotion gate."""
+    PASS = "PASS"
+    FAIL = "FAIL"
+    BLOCKED = "BLOCKED"
+    NOT_RUN = "NOT_RUN"
+
+
+@dataclass(frozen=True, slots=True)
+class GateV31:
+    """A single gate in the v3.1 promotion gate (24 gates).
+
+    Every gate must report: name, status, observed, threshold, reason,
+    evidence_artifact.
+    """
+    name: str
+    status: GateStatus
+    observed: Any
+    threshold: Any
+    reason: str
+    evidence_artifact: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "status": self.status.value,
+            "observed": self.observed,
+            "threshold": self.threshold,
+            "reason": self.reason,
+            "evidence_artifact": self.evidence_artifact,
+        }
+
+
+@dataclass(slots=True)
+class GateConfigV31:
+    """v3.1 gate configuration: 24 mandatory gates."""
+    # Runtime type gates (1-5)
+    require_real_training_runtime: bool = True
+    require_real_validation_runtime: bool = True
+    require_real_test_runtime: bool = True
+    require_real_ood_runtime: bool = True
+    require_real_post_promotion_runtime: bool = True
+    # Parity gates (6-8)
+    require_policy_serialization_parity: bool = True
+    require_feature_schema_match: bool = True
+    # Performance gates (9-11)
+    require_verified_success_non_decrease: bool = True
+    require_mean_utility_improvement: bool = True
+    epsilon_utility: float = 0.1  # minimum practical effect
+    require_ci_lower_bound_above_epsilon: bool = True
+    # Control gates (11-12)
+    require_candidate_beats_sham: bool = True
+    # Safety gates (12)
+    require_no_safety_regression: bool = True
+    # Family gates (13)
+    require_no_catastrophic_family_regression: bool = True
+    family_regression_max_delta: float = -2.0
+    # Tool/workflow gates (14-17)
+    tool_precision_min: float = 0.6
+    tool_recall_min: float = 0.6
+    workflow_precision_min: float = 0.6
+    workflow_recall_min: float = 0.6
+    # OOD gate (18)
+    ood_utility_floor: float = 0.0
+    # Calibration gate (19)
+    calibration_max: float = 0.3
+    # Coverage gate (20)
+    effective_coverage_min: float = 0.60
+    # Runtime error gate (21)
+    runtime_error_max_increase: float = 0.1
+    # Provenance gate (22)
+    require_provenance_complete: bool = True
+    # Artifacts gate (23)
+    require_all_artifacts_exist: bool = True
+    # Tests gate (24)
+    require_all_tests_pass: bool = True
+
+
+@dataclass(slots=True)
+class GateResultV31:
+    """Result of the v3.1 promotion gate (24 gates)."""
+    passed: bool
+    gates: list[GateV31] = field(default_factory=list)
+
+    @property
+    def reason(self) -> str:
+        failed = [g for g in self.gates if g.status == GateStatus.FAIL]
+        if not failed:
+            return "all gates passed"
+        return "failed gates: " + ", ".join(g.name for g in failed)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "passed": self.passed,
+            "gates": [g.to_dict() for g in self.gates],
+            "reason": self.reason,
+        }
+
+
+@dataclass(slots=True)
+class PromotionEvidence:
+    """Evidence supplied to the v3.1 promotion gate."""
+    # Runtime types
+    training_runtime_type: str = ""
+    validation_runtime_type: str = ""
+    test_runtime_type: str = ""
+    ood_runtime_type: str = ""
+    post_promotion_runtime_type: str = ""
+    # Parity
+    policy_serialization_parity: bool = False
+    feature_schema_match: bool = False
+    # Performance
+    baseline_verified_success_rate: float = 0.0
+    candidate_verified_success_rate: float = 0.0
+    baseline_mean_utility: float = 0.0
+    candidate_mean_utility: float = 0.0
+    delta_ci_low: float = 0.0
+    delta_ci_high: float = 0.0
+    mean_delta: float = 0.0
+    # Sham comparison
+    sham_mean_utility: float = 0.0
+    candidate_beats_sham: bool = False
+    # Safety
+    baseline_safety_violations: int = 0
+    candidate_safety_violations: int = 0
+    # Family
+    worst_family: str = ""
+    worst_family_delta: float = 0.0
+    # Tool/workflow
+    tool_precision: float = 0.0
+    tool_recall: float = 0.0
+    workflow_precision: float = 0.0
+    workflow_recall: float = 0.0
+    # OOD
+    ood_mean_delta: float = 0.0
+    # Calibration
+    brier_score: float = 0.0
+    # Coverage
+    effective_candidate_coverage: float = 0.0
+    # Runtime error
+    baseline_runtime_error_rate: float = 0.0
+    candidate_runtime_error_rate: float = 0.0
+    # Provenance
+    provenance_complete: bool = False
+    # Artifacts
+    all_artifacts_exist: bool = False
+    # Tests
+    all_tests_pass: bool = False
+    # Evidence artifact paths
+    artifact_paths: dict[str, str] = field(default_factory=dict)
+
+
+def evaluate_promotion_gate_v31(
+    evidence: PromotionEvidence,
+    config: GateConfigV31 | None = None,
+) -> GateResultV31:
+    """Evaluate the 24 mandatory v3.1 promotion gates.
+
+    Promotion must fail unless every mandatory condition passes.
+    """
+    config = config or GateConfigV31()
+    gates: list[GateV31] = []
+
+    def _gate(name: str, status: GateStatus, observed: Any, threshold: Any,
+              reason: str, artifact: str = "") -> None:
+        gates.append(GateV31(
+            name=name, status=status, observed=observed,
+            threshold=threshold, reason=reason, evidence_artifact=artifact,
+        ))
+
+    # Gate 1: training runtime type == real
+    s = GateStatus.PASS if evidence.training_runtime_type == "real" else GateStatus.FAIL
+    if config.require_real_training_runtime and s == GateStatus.FAIL:
+        s = GateStatus.FAIL
+    _gate("training_runtime_real", s, evidence.training_runtime_type, "real",
+          "training must use real runtime", "training_results.json")
+
+    # Gate 2: validation runtime type == real
+    s = GateStatus.PASS if evidence.validation_runtime_type == "real" else GateStatus.FAIL
+    _gate("validation_runtime_real", s, evidence.validation_runtime_type, "real",
+          "validation must use real runtime", "validation_results.json")
+
+    # Gate 3: test runtime type == real
+    s = GateStatus.PASS if evidence.test_runtime_type == "real" else GateStatus.FAIL
+    _gate("test_runtime_real", s, evidence.test_runtime_type, "real",
+          "test must use real runtime", "test_results.json")
+
+    # Gate 4: OOD runtime type == real
+    s = GateStatus.PASS if evidence.ood_runtime_type == "real" else GateStatus.FAIL
+    _gate("ood_runtime_real", s, evidence.ood_runtime_type, "real",
+          "OOD must use real runtime", "ood_results.json")
+
+    # Gate 5: post-promotion runtime type == real
+    s = GateStatus.PASS if evidence.post_promotion_runtime_type == "real" else GateStatus.NOT_RUN
+    if evidence.post_promotion_runtime_type == "":
+        s = GateStatus.NOT_RUN
+    _gate("post_promotion_runtime_real", s, evidence.post_promotion_runtime_type, "real",
+          "post-promotion must use real runtime", "post_promotion_results.json")
+
+    # Gate 6: policy serialization parity passes
+    s = GateStatus.PASS if evidence.policy_serialization_parity else GateStatus.FAIL
+    _gate("policy_serialization_parity", s, evidence.policy_serialization_parity, True,
+          "serialized and reloaded policies must produce identical predictions",
+          "candidate_policy.json")
+
+    # Gate 7: feature schema matches
+    s = GateStatus.PASS if evidence.feature_schema_match else GateStatus.FAIL
+    _gate("feature_schema_match", s, evidence.feature_schema_match, True,
+          "feature schema must match between training and inference",
+          "candidate_policy.json")
+
+    # Gate 8: verified success does not decrease
+    s = GateStatus.PASS if evidence.candidate_verified_success_rate >= evidence.baseline_verified_success_rate - 1e-9 else GateStatus.FAIL
+    _gate("verified_success_non_decrease", s,
+          evidence.candidate_verified_success_rate, evidence.baseline_verified_success_rate,
+          "candidate verified success rate must not decrease",
+          "test_results.json")
+
+    # Gate 9: mean utility improves over baseline
+    s = GateStatus.PASS if evidence.candidate_mean_utility > evidence.baseline_mean_utility + 1e-9 else GateStatus.FAIL
+    _gate("mean_utility_improves", s,
+          evidence.candidate_mean_utility, evidence.baseline_mean_utility,
+          "candidate mean utility must improve over baseline",
+          "test_results.json")
+
+    # Gate 10: paired bootstrap lower bound > epsilon
+    s = GateStatus.PASS if evidence.delta_ci_low > config.epsilon_utility else GateStatus.FAIL
+    _gate("ci_lower_bound_above_epsilon", s,
+          evidence.delta_ci_low, config.epsilon_utility,
+          f"lower CI must exceed epsilon={config.epsilon_utility}",
+          "test_results.json")
+
+    # Gate 11: candidate beats sham
+    s = GateStatus.PASS if evidence.candidate_beats_sham else GateStatus.FAIL
+    _gate("candidate_beats_sham", s,
+          evidence.candidate_mean_utility, evidence.sham_mean_utility,
+          "candidate must beat sham control",
+          "sham_results.json")
+
+    # Gate 12: no safety regression
+    s = GateStatus.PASS if evidence.candidate_safety_violations <= evidence.baseline_safety_violations else GateStatus.FAIL
+    _gate("no_safety_regression", s,
+          evidence.candidate_safety_violations, evidence.baseline_safety_violations,
+          "candidate must not increase safety violations",
+          "safety_results.json")
+
+    # Gate 13: no catastrophic family regression
+    s = GateStatus.PASS if evidence.worst_family_delta >= config.family_regression_max_delta else GateStatus.FAIL
+    _gate("no_catastrophic_family_regression", s,
+          evidence.worst_family_delta, config.family_regression_max_delta,
+          f"worst family delta must not be below {config.family_regression_max_delta}",
+          "test_results.json")
+
+    # Gate 14: tool precision >= threshold
+    s = GateStatus.PASS if evidence.tool_precision >= config.tool_precision_min else GateStatus.FAIL
+    _gate("tool_precision", s, evidence.tool_precision, config.tool_precision_min,
+          f"tool precision must be >= {config.tool_precision_min}",
+          "test_results.json")
+
+    # Gate 15: tool recall >= threshold
+    s = GateStatus.PASS if evidence.tool_recall >= config.tool_recall_min else GateStatus.FAIL
+    _gate("tool_recall", s, evidence.tool_recall, config.tool_recall_min,
+          f"tool recall must be >= {config.tool_recall_min}",
+          "test_results.json")
+
+    # Gate 16: workflow precision >= threshold
+    s = GateStatus.PASS if evidence.workflow_precision >= config.workflow_precision_min else GateStatus.FAIL
+    _gate("workflow_precision", s, evidence.workflow_precision, config.workflow_precision_min,
+          f"workflow precision must be >= {config.workflow_precision_min}",
+          "test_results.json")
+
+    # Gate 17: workflow recall >= threshold
+    s = GateStatus.PASS if evidence.workflow_recall >= config.workflow_recall_min else GateStatus.FAIL
+    _gate("workflow_recall", s, evidence.workflow_recall, config.workflow_recall_min,
+          f"workflow recall must be >= {config.workflow_recall_min}",
+          "test_results.json")
+
+    # Gate 18: OOD utility >= floor
+    s = GateStatus.PASS if evidence.ood_mean_delta >= config.ood_utility_floor else GateStatus.FAIL
+    _gate("ood_utility_above_floor", s, evidence.ood_mean_delta, config.ood_utility_floor,
+          f"OOD mean delta must be >= {config.ood_utility_floor}",
+          "ood_results.json")
+
+    # Gate 19: calibration <= threshold
+    s = GateStatus.PASS if evidence.brier_score <= config.calibration_max + 1e-9 else GateStatus.FAIL
+    _gate("calibration_below_threshold", s, evidence.brier_score, config.calibration_max,
+          f"Brier score must be <= {config.calibration_max}",
+          "calibration_results.json")
+
+    # Gate 20: effective candidate coverage >= minimum
+    s = GateStatus.PASS if evidence.effective_candidate_coverage >= config.effective_coverage_min else GateStatus.FAIL
+    _gate("effective_coverage", s, evidence.effective_candidate_coverage, config.effective_coverage_min,
+          f"effective candidate coverage must be >= {config.effective_coverage_min}",
+          "coverage_results.json")
+
+    # Gate 21: runtime-error rate does not materially increase
+    delta_re = evidence.candidate_runtime_error_rate - evidence.baseline_runtime_error_rate
+    s = GateStatus.PASS if delta_re <= config.runtime_error_max_increase + 1e-9 else GateStatus.FAIL
+    _gate("runtime_error_no_increase", s, delta_re, config.runtime_error_max_increase,
+          f"runtime error rate increase must be <= {config.runtime_error_max_increase}",
+          "test_results.json")
+
+    # Gate 22: provenance chain is complete
+    s = GateStatus.PASS if evidence.provenance_complete else GateStatus.FAIL
+    _gate("provenance_complete", s, evidence.provenance_complete, True,
+          "provenance chain must be complete",
+          "provenance_manifest.json")
+
+    # Gate 23: all mandatory artifacts exist
+    s = GateStatus.PASS if evidence.all_artifacts_exist else GateStatus.FAIL
+    _gate("all_artifacts_exist", s, evidence.all_artifacts_exist, True,
+          "all mandatory artifacts must exist",
+          "artifacts/")
+
+    # Gate 24: all existing tests pass
+    s = GateStatus.PASS if evidence.all_tests_pass else GateStatus.FAIL
+    _gate("all_tests_pass", s, evidence.all_tests_pass, True,
+          "all existing tests must pass",
+          "test_results/")
+
+    failed = [g for g in gates if g.status in (GateStatus.FAIL, GateStatus.BLOCKED, GateStatus.NOT_RUN)]
+    passed = not failed
+    return GateResultV31(passed=passed, gates=gates)

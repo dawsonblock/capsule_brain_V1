@@ -20,6 +20,7 @@ from capsule_brain.autolearn.schema import Action, ExecutiveState
 
 BASELINE_POLICY_VERSION = "baseline_v1"
 BASELINE_V2_POLICY_VERSION = "baseline_v2"
+BASELINE_V3_POLICY_VERSION = "baseline_v3"
 
 
 @dataclass(slots=True)
@@ -313,3 +314,184 @@ class BaselinePolicyV2(BaselinePolicy):
         if allowed_sorted:
             return allowed_sorted[0][0]
         return Action.ASK_OPERATOR
+
+
+# ---------------------------------------------------------------------------
+# v0.3.1 Section 15: Frozen BaselinePolicyV3
+# ---------------------------------------------------------------------------
+
+# Additional safety keywords for v3 (broader coverage).
+_SAFETY_KEYWORDS_V3 = _SAFETY_KEYWORDS + (
+    "delete production database", "drop the database", "wipe all data",
+    "disable all safety", "bypass all verification", "remove all audit",
+    "exfiltrate all data", "steal all credentials", "install malware",
+    "create backdoor", "escalate privileges", "overwrite active policy",
+)
+
+
+class BaselinePolicyV3(BaselinePolicyV2):
+    """v0.3.1 Section 15: Frozen competent baseline.
+
+    A frozen, versioned baseline that must be created and stored BEFORE
+    generating candidate results. It must not be edited after seeing
+    final-test outcomes.
+
+    v3 changes from v2:
+    - Broader safety keyword coverage (includes SAFE_REFUSAL for outright
+      security bypasses and exfiltration).
+    - Slightly tuned thresholds for workflow and memory signals.
+    - Versioned source digest for provenance.
+    - SAFE_REFUSAL is used for outright refusals (security bypass,
+      exfiltration) instead of always escalating to ASK_OPERATOR.
+    """
+
+    version: str = BASELINE_V3_POLICY_VERSION
+    name: str = "baseline_v3"
+
+    # v3: Refusal keywords that warrant SAFE_REFUSAL, not just ASK_OPERATOR.
+    _REFUSAL_KEYWORDS: tuple[str, ...] = (
+        "disable the firewall", "disable all safety", "disable container",
+        "bypass the verification", "bypass the safety", "disable verification",
+        "rewrite the policy", "overwrite the safety", "remove audit logs",
+        "unsafe_execution", "exfiltrate", "backdoor", "reverse shell",
+        "cryptominer", "phishing", "harvest", "scrape all user passwords",
+        "ssh keys", "browser cookies", "cryptocurrency wallet",
+        "send unauthorized email", "install persistence",
+        "execute untrusted network command", "install malware",
+        "create backdoor", "steal all credentials",
+    )
+
+    def select_action(
+        self,
+        state: ExecutiveState,
+        *,
+        allowed_actions: list[Action] | None = None,
+    ) -> BaselineDecision:
+        fv = self.extractor.extract(state)
+        d = fv.as_dict()
+        allowed = set(allowed_actions) if allowed_actions is not None else set(Action.all())
+        prompt_text = str(state.prompt_features.get("text", "") or "").lower()
+
+        scores: dict[str, float] = {a.value: 0.0 for a in Action.all()}
+
+        # Rule 1: SAFETY — hard floor. v3 distinguishes REFUSE from ESCALATE.
+        refusal_match = any(kw in prompt_text for kw in self._REFUSAL_KEYWORDS)
+        if refusal_match:
+            if Action.SAFE_REFUSAL in allowed:
+                scores[Action.SAFE_REFUSAL.value] = 10.0
+                return BaselineDecision(
+                    action=Action.SAFE_REFUSAL,
+                    scores=scores,
+                    reason="safety refusal: security bypass or exfiltration detected",
+                    policy_version=self.version,
+                    feature_vector=fv,
+                )
+            # Fallback to ASK_OPERATOR if SAFE_REFUSAL not allowed.
+            scores[Action.ASK_OPERATOR.value] = 10.0
+            chosen = Action.ASK_OPERATOR if Action.ASK_OPERATOR in allowed else self._best_allowed(scores, allowed)
+            return BaselineDecision(
+                action=chosen,
+                scores=scores,
+                reason="safety refusal (SAFE_REFUSAL not allowed); operator escalation",
+                policy_version=self.version,
+                feature_vector=fv,
+            )
+
+        # Check destructive keywords for operator escalation.
+        destructive_match = any(kw in prompt_text for kw in _SAFETY_KEYWORDS_V3)
+        if destructive_match:
+            scores[Action.ASK_OPERATOR.value] = 10.0
+            chosen = Action.ASK_OPERATOR if Action.ASK_OPERATOR in allowed else self._best_allowed(scores, allowed)
+            return BaselineDecision(
+                action=chosen,
+                scores=scores,
+                reason="safety keyword match; operator escalation",
+                policy_version=self.version,
+                feature_vector=fv,
+            )
+
+        # Rule 2: REFLECTION — previous attempt failed verification.
+        if d["previous_attempt_failed"] >= 1.0 and Action.REFLECT in allowed:
+            scores[Action.REFLECT.value] = 5.0
+            return BaselineDecision(
+                action=Action.REFLECT,
+                scores=scores,
+                reason="previous attempt failed verification; reflect",
+                policy_version=self.version,
+                feature_vector=fv,
+            )
+
+        # Rule 3: TOOL — strong tool signal. v3: slightly lower threshold.
+        tool_signal = (
+            d["tool_required_keywords"]
+            + 0.5 * d["arithmetic_indicators"]
+            + 0.25 * d["structured_output_request"]
+        )
+        scores[Action.CALL_TOOL.value] = tool_signal
+        has_tool = d["num_available_tools"] >= 1.0
+        if Action.CALL_TOOL in allowed and has_tool and tool_signal >= 1.3:
+            return BaselineDecision(
+                action=Action.CALL_TOOL,
+                scores=scores,
+                reason="tool signal above threshold with tool available",
+                policy_version=self.version,
+                feature_vector=fv,
+            )
+
+        # Rule 4: WORKFLOW — code indicators + workflow available + match.
+        workflow_signal = (
+            d["code_indicators"]
+            + 0.5 * d["workflow_capability_match"]
+        ) * d["workflow_available"]
+        scores[Action.START_WORKFLOW.value] = workflow_signal
+        if (
+            Action.START_WORKFLOW in allowed
+            and d["workflow_available"] >= 1.0
+            and workflow_signal >= 1.3
+        ):
+            return BaselineDecision(
+                action=Action.START_WORKFLOW,
+                scores=scores,
+                reason="code indicators with workflow available and capability match",
+                policy_version=self.version,
+                feature_vector=fv,
+            )
+
+        # Rule 5: MEMORY — retrieval keywords or strong semantic hit.
+        memory_signal = (
+            d["retrieval_indicators"]
+            + 2.0 * d["semantic_memory_similarity"]
+            + 0.5 * d["semantic_memory_hit_count"]
+        )
+        scores[Action.RETRIEVE_MEMORY.value] = memory_signal
+        if Action.RETRIEVE_MEMORY in allowed and memory_signal >= 1.3:
+            return BaselineDecision(
+                action=Action.RETRIEVE_MEMORY,
+                scores=scores,
+                reason="memory retrieval signal above threshold",
+                policy_version=self.version,
+                feature_vector=fv,
+            )
+
+        # Rule 6: DEFAULT — direct answer.
+        scores[Action.ANSWER_DIRECT.value] = max(0.0, 1.0 - 0.3 * (
+            tool_signal + memory_signal + workflow_signal
+        ))
+        if Action.ANSWER_DIRECT in allowed:
+            return BaselineDecision(
+                action=Action.ANSWER_DIRECT,
+                scores=scores,
+                reason="no stronger signal; default direct answer",
+                policy_version=self.version,
+                feature_vector=fv,
+            )
+
+        # Fallback: highest-scoring allowed action.
+        chosen = self._best_allowed(scores, allowed)
+        return BaselineDecision(
+            action=chosen,
+            scores=scores,
+            reason="fallback to highest-scoring allowed action",
+            policy_version=self.version,
+            feature_vector=fv,
+        )

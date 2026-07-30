@@ -194,3 +194,97 @@ class UtilityFunction:
             "runtime_error": 1.0 if outcome.runtime_error else 0.0,
         }
         return utility, components
+
+
+# ---------------------------------------------------------------------------
+# v0.3.1 Section 14: Utility v3.1 with components and quality score
+# ---------------------------------------------------------------------------
+
+UTILITY_CONFIG_VERSION_V31 = "exec_utility_v3_1"
+
+
+@dataclass(frozen=True, slots=True)
+class OutcomeUtility:
+    """Structured utility result with all components stored separately.
+
+    v0.3.1: Do not collapse evidence strength into utility. Represent
+    utility_value, utility_components, verifier_confidence, and
+    evidence_quality separately.
+    """
+
+    utility_value: float
+    utility_components: dict[str, float]
+    verifier_confidence: float
+    evidence_quality: float
+
+
+@dataclass(frozen=True, slots=True)
+class ExperienceQuality:
+    """Experience-quality score Q_i for weighting training examples.
+
+    Q_i = verifier_reliability × execution_integrity ×
+          counterfactual_completeness × isolation_integrity
+
+    Example:
+    - real execution + deterministic verifier + full action set + isolation
+      → Q close to 1.0
+    - simulated execution
+      → Q low and non-qualifying
+    """
+
+    verifier_reliability: float
+    execution_integrity: float
+    counterfactual_completeness: float
+    isolation_integrity: float
+
+    @property
+    def quality_score(self) -> float:
+        return (
+            self.verifier_reliability
+            * self.execution_integrity
+            * self.counterfactual_completeness
+            * self.isolation_integrity
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "verifier_reliability": self.verifier_reliability,
+            "execution_integrity": self.execution_integrity,
+            "counterfactual_completeness": self.counterfactual_completeness,
+            "isolation_integrity": self.isolation_integrity,
+            "quality_score": self.quality_score,
+        }
+
+
+def compute_experience_quality(
+    *,
+    runtime_type: str,
+    verifier_type: str = "deterministic",
+    action_set_complete: bool = True,
+    isolation_enforced: bool = True,
+) -> ExperienceQuality:
+    """Compute the experience-quality score for a counterfactual execution.
+
+    Simulated execution gets a low, non-qualifying quality score.
+    Real execution with a deterministic verifier and full action set
+    gets a quality score close to 1.0.
+    """
+    # Execution integrity: real=1.0, simulated=0.1
+    execution_integrity = 1.0 if runtime_type == "real" else 0.1
+    # Verifier reliability: deterministic=1.0, llm_judge=0.5, none=0.0
+    if verifier_type == "deterministic":
+        verifier_reliability = 1.0
+    elif verifier_type == "llm_judge":
+        verifier_reliability = 0.5
+    else:
+        verifier_reliability = 0.0
+    # Counterfactual completeness: all eligible actions executed
+    counterfactual_completeness = 1.0 if action_set_complete else 0.5
+    # Isolation integrity: each action from clean state
+    isolation_integrity = 1.0 if isolation_enforced else 0.1
+    return ExperienceQuality(
+        verifier_reliability=verifier_reliability,
+        execution_integrity=execution_integrity,
+        counterfactual_completeness=counterfactual_completeness,
+        isolation_integrity=isolation_integrity,
+    )
