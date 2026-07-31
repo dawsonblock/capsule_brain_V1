@@ -51,6 +51,18 @@ class LocalGPUExecutor:
         If True, collect hidden states for Gate B.
     hidden_layer_ids : list[int] | None
         Layer indices for hidden-state collection.
+    use_flash_attention : bool
+        If True, load the model with ``attn_implementation="flash_attention_2"``
+        for faster attention computation (requires flash-attn installed).
+    use_torch_compile : bool
+        If True, wrap the model with ``torch.compile()`` for graph-level
+        optimisation (requires PyTorch 2.0+).
+    use_autocast : bool
+        If True, run generation under ``torch.cuda.amp.autocast`` for
+        mixed-precision inference.
+    batch_size : int
+        Number of prompts to process in a single batched forward pass.
+        Set to 1 to disable batched generation.
     """
 
     def __init__(
@@ -60,12 +72,20 @@ class LocalGPUExecutor:
         dtype: str = "float16",
         collect_hidden_states: bool = False,
         hidden_layer_ids: list[int] | None = None,
+        use_flash_attention: bool = False,
+        use_torch_compile: bool = False,
+        use_autocast: bool = False,
+        batch_size: int = 1,
     ) -> None:
         self.model_id = model_id
         self.device = device
         self.dtype = dtype
         self.collect_hidden_states = collect_hidden_states
         self.hidden_layer_ids = hidden_layer_ids or []
+        self.use_flash_attention = use_flash_attention
+        self.use_torch_compile = use_torch_compile
+        self.use_autocast = use_autocast
+        self.batch_size = batch_size
         self._model = None
         self._tokenizer = None
         self._model_revision: str | None = None
@@ -88,27 +108,62 @@ class LocalGPUExecutor:
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.model_id, trust_remote_code=True,
         )
+        # Ensure padding token is set for batched generation.
+        if self._tokenizer.pad_token is None:
+            self._tokenizer.pad_token = self._tokenizer.eos_token
         print(f"  Tokenizer loaded in {time.perf_counter()-t0:.1f}s")
 
         print(f"  Loading model: {self.model_id} [{self.dtype}] on {self.device} ...")
         t0 = time.perf_counter()
+        # Build kwargs — try flash attention if requested.
+        load_kwargs: dict[str, Any] = {
+            "trust_remote_code": True,
+        }
         # Try new API (transformers 5.x) first, fall back to old API.
+        load_kwargs["dtype"] = torch_dtype
+        if self.use_flash_attention:
+            load_kwargs["attn_implementation"] = "flash_attention_2"
         try:
             self._model = AutoModelForCausalLM.from_pretrained(
-                self.model_id,
-                dtype=torch_dtype,
-                trust_remote_code=True,
+                self.model_id, **load_kwargs,
             ).to(self.device)
         except TypeError:
+            # Fall back to old API (torch_dtype instead of dtype).
+            load_kwargs.pop("dtype", None)
+            load_kwargs["torch_dtype"] = torch_dtype
+            if self.use_flash_attention:
+                load_kwargs["attn_implementation"] = "flash_attention_2"
+            try:
+                self._model = AutoModelForCausalLM.from_pretrained(
+                    self.model_id, **load_kwargs,
+                ).to(self.device)
+            except (TypeError, OSError, ImportError):
+                # Flash attention not available — fall back to default.
+                load_kwargs.pop("attn_implementation", None)
+                self._model = AutoModelForCausalLM.from_pretrained(
+                    self.model_id, **load_kwargs,
+                ).to(self.device)
+        except (OSError, ImportError):
+            # Flash attention not available — fall back to default.
+            load_kwargs.pop("attn_implementation", None)
             self._model = AutoModelForCausalLM.from_pretrained(
-                self.model_id,
-                torch_dtype=torch_dtype,
-                trust_remote_code=True,
+                self.model_id, **load_kwargs,
             ).to(self.device)
         self._model.eval()
         # Section 10: all parameters frozen — no gradient computation.
         for param in self._model.parameters():
             param.requires_grad_(False)
+
+        # torch.compile() for graph-level optimisation (PyTorch 2.0+).
+        if self.use_torch_compile:
+            try:
+                self._model = torch.compile(
+                    self._model, mode="reduce-overhead",
+                )
+                print("  torch.compile() enabled (reduce-overhead mode)")
+            except Exception as e:
+                print(f"  torch.compile() failed, using eager mode: {e}")
+
         load_time = time.perf_counter() - t0
         vram_gb = torch.cuda.memory_allocated() / 1024**3 if self.device.startswith("cuda") else 0
         print(f"  Model loaded in {load_time:.1f}s, VRAM: {vram_gb:.2f} GB")
@@ -127,7 +182,13 @@ class LocalGPUExecutor:
     # ------------------------------------------------------------------
 
     def generate(self, prompt: str, max_new_tokens: int = 256) -> dict[str, Any]:
-        """Single generation on the local GPU."""
+        """Single generation on the local GPU.
+
+        Uses ``torch.inference_mode()`` (faster than ``torch.no_grad()``)
+        and optionally ``torch.cuda.amp.autocast`` for mixed precision.
+        The KV cache is cleared after each generation to prevent memory
+        buildup across many sequential calls.
+        """
         import torch
 
         started = time.perf_counter()
@@ -145,8 +206,23 @@ class LocalGPUExecutor:
             inputs = self._tokenizer(prompt, return_tensors="pt", padding=True).to(self.device)
 
         input_len = inputs["input_ids"].shape[1]
-        with torch.no_grad():
-            outputs = self._model.generate(
+
+        # Use inference_mode (faster than no_grad) with optional autocast.
+        def _do_generate() -> Any:
+            if self.use_autocast and self.device.startswith("cuda"):
+                with torch.cuda.amp.autocast():
+                    return self._model.generate(
+                        **inputs,
+                        max_new_tokens=max_new_tokens,
+                        do_sample=False,
+                        temperature=1.0,
+                        top_p=1.0,
+                        return_dict_in_generate=True,
+                        output_scores=True,
+                        output_hidden_states=self.collect_hidden_states,
+                        use_cache=True,
+                    )
+            return self._model.generate(
                 **inputs,
                 max_new_tokens=max_new_tokens,
                 do_sample=False,
@@ -155,7 +231,18 @@ class LocalGPUExecutor:
                 return_dict_in_generate=True,
                 output_scores=True,
                 output_hidden_states=self.collect_hidden_states,
+                use_cache=True,
             )
+
+        with torch.inference_mode():
+            outputs = _do_generate()
+
+        # Clear KV cache to prevent memory buildup across generations.
+        if hasattr(self._model, "past_key_values"):
+            self._model.past_key_values = None
+        if self.device.startswith("cuda"):
+            torch.cuda.empty_cache()
+
         generated_ids = outputs.sequences[0][input_len:]
         text = self._tokenizer.decode(generated_ids, skip_special_tokens=True)
         token_ids = generated_ids.tolist()
@@ -203,24 +290,160 @@ class LocalGPUExecutor:
         }
 
     def batch_generate(self, prompts: list[str], max_new_tokens: int = 256) -> list[dict[str, Any]]:
-        """Sequential batch generation on the local GPU.
+        """Batch generation on the local GPU.
 
-        This is the fastest path for small-to-medium batches on a single GPU.
+        When ``self.batch_size > 1``, processes multiple prompts in a single
+        forward pass with left-padding for efficient batched generation.
+        Otherwise falls back to sequential generation.
+
         No network round-trips, no cold starts — just pure GPU inference.
         """
-        results = []
+        if self.batch_size <= 1:
+            # Sequential generation (original fast path).
+            results = []
+            n = len(prompts)
+            t0 = time.perf_counter()
+            for i, prompt in enumerate(prompts):
+                result = self.generate(prompt, max_new_tokens=max_new_tokens)
+                results.append(result)
+                if (i + 1) % 20 == 0 or i == n - 1:
+                    elapsed = time.perf_counter() - t0
+                    rate = (i + 1) / elapsed
+                    print(f"    [{i+1}/{n}] {rate:.1f} prompts/s, "
+                          f"{elapsed/(i+1):.3f}s/prompt, "
+                          f"ETA: {(n-i-1)/rate:.0f}s")
+            return results
+
+        # Batched generation with padding.
+        import torch
+        results: list[dict[str, Any]] = []
         n = len(prompts)
         t0 = time.perf_counter()
-        for i, prompt in enumerate(prompts):
-            result = self.generate(prompt, max_new_tokens=max_new_tokens)
-            results.append(result)
-            if (i + 1) % 20 == 0 or i == n - 1:
+        bs = self.batch_size
+        for batch_start in range(0, n, bs):
+            batch_prompts = prompts[batch_start:batch_start + bs]
+            batch_results = self._generate_batch(batch_prompts, max_new_tokens)
+            results.extend(batch_results)
+            done = batch_start + len(batch_prompts)
+            if done % 20 == 0 or done == n:
                 elapsed = time.perf_counter() - t0
-                rate = (i + 1) / elapsed
-                print(f"    [{i+1}/{n}] {rate:.1f} prompts/s, "
-                      f"{elapsed/(i+1):.3f}s/prompt, "
-                      f"ETA: {(n-i-1)/rate:.0f}s")
+                rate = done / elapsed
+                print(f"    [{done}/{n}] {rate:.1f} prompts/s, "
+                      f"{elapsed/done:.3f}s/prompt, "
+                      f"ETA: {(n-done)/rate:.0f}s")
         return results
+
+    def _generate_batch(
+        self, prompts: list[str], max_new_tokens: int = 256,
+    ) -> list[dict[str, Any]]:
+        """Generate responses for a batch of prompts with left-padding."""
+        import torch
+
+        started = time.perf_counter()
+        # Tokenise all prompts with left-padding for batched generation.
+        self._tokenizer.padding_side = "left"
+        texts: list[str] = []
+        for prompt in prompts:
+            if hasattr(self._tokenizer, "apply_chat_template") and self._tokenizer.chat_template:
+                messages = [{"role": "user", "content": prompt}]
+                try:
+                    chat_text = self._tokenizer.apply_chat_template(
+                        messages, add_generation_prompt=True, tokenize=False,
+                    )
+                    texts.append(chat_text)
+                    continue
+                except Exception:
+                    pass
+            texts.append(prompt)
+
+        inputs = self._tokenizer(
+            texts, return_tensors="pt", padding=True, truncation=True,
+        ).to(self.device)
+        input_lens = inputs["attention_mask"].sum(dim=1).tolist()
+
+        def _do_generate() -> Any:
+            if self.use_autocast and self.device.startswith("cuda"):
+                with torch.cuda.amp.autocast():
+                    return self._model.generate(
+                        **inputs,
+                        max_new_tokens=max_new_tokens,
+                        do_sample=False,
+                        temperature=1.0,
+                        top_p=1.0,
+                        return_dict_in_generate=True,
+                        output_scores=True,
+                        output_hidden_states=self.collect_hidden_states,
+                        use_cache=True,
+                    )
+            return self._model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                do_sample=False,
+                temperature=1.0,
+                top_p=1.0,
+                return_dict_in_generate=True,
+                output_scores=True,
+                output_hidden_states=self.collect_hidden_states,
+                use_cache=True,
+            )
+
+        with torch.inference_mode():
+            outputs = _do_generate()
+
+        # Clear KV cache.
+        if hasattr(self._model, "past_key_values"):
+            self._model.past_key_values = None
+        if self.device.startswith("cuda"):
+            torch.cuda.empty_cache()
+
+        elapsed = time.perf_counter() - started
+        batch_results: list[dict[str, Any]] = []
+        for i, (prompt, input_len) in enumerate(zip(prompts, input_lens)):
+            generated_ids = outputs.sequences[i][input_len:]
+            text = self._tokenizer.decode(generated_ids, skip_special_tokens=True)
+            token_ids = generated_ids.tolist()
+            token_count = len(token_ids)
+
+            # Per-token log-probs (best effort for batched).
+            logprobs: list[float] = []
+            if hasattr(outputs, "scores") and outputs.scores:
+                import torch.nn.functional as F
+                for step_scores in outputs.scores:
+                    if step_scores is None:
+                        continue
+                    if i < step_scores.shape[0]:
+                        probs = F.log_softmax(step_scores[i], dim=-1)
+                        top_id = probs.argmax().item()
+                        logprobs.append(round(probs[top_id].item(), 6))
+
+            # Hidden states (optional, for Gate B).
+            hidden_states: dict[str, Any] = {}
+            if self.collect_hidden_states and hasattr(outputs, "hidden_states") and outputs.hidden_states:
+                for layer_id in self.hidden_layer_ids:
+                    if layer_id < len(outputs.hidden_states):
+                        hs = outputs.hidden_states[layer_id]
+                        if hs is not None and i < hs.shape[0]:
+                            avg = hs[i].mean(dim=0).cpu()
+                            hidden_states[str(layer_id)] = {
+                                "shape": list(avg.shape),
+                                "mean": round(float(avg.mean()), 6),
+                                "norm": round(float(avg.norm()), 6),
+                            }
+
+            batch_results.append({
+                "text": text,
+                "token_ids": token_ids,
+                "token_count": token_count,
+                "logprobs": logprobs,
+                "latency_ms": round(elapsed * 1000 / len(prompts), 1),
+                "model_id": self.model_id,
+                "model_revision": self._model_revision,
+                "tokenizer_revision": self._tokenizer_revision,
+                "dtype": self.dtype,
+                "device": self.device,
+                "hidden_states": hidden_states,
+            })
+        return batch_results
 
 
 # ---------------------------------------------------------------------------
@@ -237,6 +460,10 @@ def run_local_gpu_counterfactuals(
     max_new_tokens: int = 256,
     collect_hidden_states: bool = False,
     hidden_layer_ids: list[int] | None = None,
+    use_flash_attention: bool = False,
+    use_torch_compile: bool = False,
+    use_autocast: bool = False,
+    batch_size: int = 1,
 ) -> list[dict[str, Any]]:
     """Execute counterfactuals on scientific tasks using the local GPU.
 
@@ -245,11 +472,16 @@ def run_local_gpu_counterfactuals(
     outcomes: list[dict[str, Any]] = []
 
     # Build all prompts for batch execution.
+    # Always generate all 4 actions for every task so the action matrix
+    # is complete (A0.13).  Safety tasks that only declare ANSWER_DIRECT
+    # still get probed with the other 3 actions — they will simply fail
+    # verification, which is the correct counterfactual behavior.
+    _ALL_ACTIONS = ("ANSWER_DIRECT", "RETRIEVE_MEMORY", "CALL_TOOL", "START_WORKFLOW")
     prompts: list[str] = []
     prompt_meta: list[tuple[dict, str]] = []
     for task in tasks:
         task_dict = task.to_dict() if hasattr(task, "to_dict") else task
-        for action_name in task_dict["allowed_actions"]:
+        for action_name in _ALL_ACTIONS:
             prompt = _build_action_prompt(task_dict, action_name)
             prompts.append(prompt)
             prompt_meta.append((task_dict, action_name))
@@ -264,6 +496,10 @@ def run_local_gpu_counterfactuals(
         dtype=dtype,
         collect_hidden_states=collect_hidden_states,
         hidden_layer_ids=hidden_layer_ids,
+        use_flash_attention=use_flash_attention,
+        use_torch_compile=use_torch_compile,
+        use_autocast=use_autocast,
+        batch_size=batch_size,
     )
 
     # Batch generate.
@@ -356,6 +592,10 @@ def run_local_gpu_counterfactuals_to_artifacts(
     max_new_tokens: int = 256,
     collect_hidden_states: bool = False,
     hidden_layer_ids: list[int] | None = None,
+    use_flash_attention: bool = False,
+    use_torch_compile: bool = False,
+    use_autocast: bool = False,
+    batch_size: int = 1,
 ) -> list[dict[str, Any]]:
     """Execute scientific counterfactuals on local GPU and write artifacts."""
     artifacts = Path(artifacts_dir)
@@ -372,6 +612,10 @@ def run_local_gpu_counterfactuals_to_artifacts(
         max_new_tokens=max_new_tokens,
         collect_hidden_states=collect_hidden_states,
         hidden_layer_ids=hidden_layer_ids,
+        use_flash_attention=use_flash_attention,
+        use_torch_compile=use_torch_compile,
+        use_autocast=use_autocast,
+        batch_size=batch_size,
     )
 
     # Write outcomes.

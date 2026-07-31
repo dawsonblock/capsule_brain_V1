@@ -178,6 +178,7 @@ def compute_serialization_parity(
             "reloaded_logits": [],
             "max_abs_diff": None,
             "selected_action_parity": False,
+            "parity": False,
             "status": AuditStatus.BLOCKED.value,
         }
 
@@ -244,5 +245,6 @@ def compute_serialization_parity(
         "reloaded_logits": reloaded_logits,
         "max_abs_diff": max_abs_diff,
         "selected_action_parity": selected_action_parity,
+        "parity": selected_action_parity and max_abs_diff <= DEFAULT_TOLERANCE,
         "status": status.value,
     }
