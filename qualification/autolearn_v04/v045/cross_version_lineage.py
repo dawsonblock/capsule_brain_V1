@@ -106,6 +106,9 @@ def validate_cross_version_lineage(
             "analysis_version": analysis_version,
             "version_gap_valid": False,
             "lineage_complete": False,
+            "linked": False,
+            "historical_ref": historical_version,
+            "current_ref": analysis_version,
             "checks": checks,
             "errors": errors,
         }
@@ -347,6 +350,9 @@ def validate_cross_version_lineage(
         "analysis_version": analysis_version,
         "version_gap_valid": version_gap_valid,
         "lineage_complete": lineage_complete,
+        "linked": lineage_complete,
+        "historical_ref": historical_version,
+        "current_ref": analysis_version,
         "checks": checks,
         "errors": errors,
     }

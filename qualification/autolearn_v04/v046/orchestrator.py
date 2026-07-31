@@ -88,6 +88,17 @@ def _load_json(path: Path) -> dict:
         return json.load(f)
 
 
+def _load_json_file(path: Path) -> dict | None:
+    """Load a JSON file, returning None if it does not exist."""
+    if not path.exists():
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
 def _load_jsonl(path: Path) -> list[dict]:
     rows: list[dict] = []
     if not path.exists():
@@ -305,7 +316,9 @@ def run_all_v046_diagnostics(
 
     # === Stage 10: Audit split access ===
     print("[10/25] Auditing split access...")
-    split_access = audit_split_access(None, split_manifest)
+    # Try to load split access log from evidence dir.
+    split_access_log = _load_json_file(ev_path / "split_access_log.json")
+    split_access = audit_split_access(split_access_log, split_manifest)
     _write("split_access_audit.json", split_access)
 
     # === Stage 11: Compute serialization parity ===
@@ -318,7 +331,9 @@ def run_all_v046_diagnostics(
 
     # === Stage 12: Validate artifact lineage ===
     print("[12/25] Validating artifact lineage...")
-    artifact_lineage = validate_artifact_lineage({}, origin_str)
+    # Try to load artifact lineage from evidence dir.
+    artifact_lineage_input = _load_json_file(ev_path / "artifact_lineage.json") or {}
+    artifact_lineage = validate_artifact_lineage(artifact_lineage_input, origin_str)
     _write("artifact_lineage_report.json", artifact_lineage)
 
     # === Stage 13: Investigate oracle discrepancy ===

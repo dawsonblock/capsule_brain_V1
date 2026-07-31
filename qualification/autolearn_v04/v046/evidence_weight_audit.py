@@ -93,6 +93,9 @@ def audit_evidence_weights(
             "mean_q_total": 0.0,
             "min_q_total": 0.0,
             "max_q_total": 0.0,
+            "weights": [],
+            "n_negative": 0,
+            "n_zero": 0,
             "status": AuditStatus.BLOCKED.value,
             "reason": "no experience rows found (task or action level)",
         }
@@ -109,6 +112,7 @@ def audit_evidence_weights(
     unknown_verifiers: list[str] = []
     effective_total = 0.0
     q_totals: list[float] = []
+    weights_list: list[float] = []
 
     # Collect known verifier names from candidate policy if available.
     known_verifiers: set[str] = set()
@@ -132,6 +136,8 @@ def audit_evidence_weights(
             effective_total += fw_val
             if fw_val > 0:
                 positive_weights += 1
+                if has_quality:
+                    weights_list.append(fw_val)
             elif fw_val == 0:
                 zero_weights += 1
             else:
@@ -183,6 +189,9 @@ def audit_evidence_weights(
             "mean_q_total": mean_q,
             "min_q_total": min_q,
             "max_q_total": max_q,
+            "weights": [],
+            "n_negative": negative_weights,
+            "n_zero": zero_weights,
             "status": AuditStatus.FAIL.value,
             "reason": REQUIRED_WEIGHT_FIELDS_MISSING,
         }
@@ -210,6 +219,9 @@ def audit_evidence_weights(
             "mean_q_total": mean_q,
             "min_q_total": min_q,
             "max_q_total": max_q,
+            "weights": weights_list,
+            "n_negative": negative_weights,
+            "n_zero": zero_weights,
             "status": AuditStatus.FAIL.value,
             "reason": "; ".join(errors),
         }
@@ -227,6 +239,9 @@ def audit_evidence_weights(
         "mean_q_total": mean_q,
         "min_q_total": min_q,
         "max_q_total": max_q,
+        "weights": weights_list,
+        "n_negative": negative_weights,
+        "n_zero": zero_weights,
         "status": AuditStatus.PASS.value,
         "reason": (
             f"all {rows_with_quality} row(s) have valid quality fields "

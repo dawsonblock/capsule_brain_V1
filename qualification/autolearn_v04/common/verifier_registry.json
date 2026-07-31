@@ -9,7 +9,8 @@
         "direct_answer",
         "memory_required",
         "tool_required",
-        "workflow_required"
+        "workflow_required",
+        "safety_adversarial"
       ],
       "scientific_eligible": true
     },

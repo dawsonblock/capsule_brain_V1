@@ -181,6 +181,8 @@ def audit_verifier_registry(
             "class_mismatches": [],
             "missing_reliability_mappings": [],
             "unsupported_family_use": [],
+            "n_registered": 0,
+            "n_required": 0,
             "status": AuditStatus.BLOCKED.value,
             "reason": "no verifier_name references found in any evidence source",
         }
@@ -260,6 +262,8 @@ def audit_verifier_registry(
             "class_mismatches": class_mismatches,
             "missing_reliability_mappings": missing_reliability_mappings,
             "unsupported_family_use": unsupported_family_use,
+            "n_registered": used_verifier_count - len(unknown_verifiers),
+            "n_required": used_verifier_count,
             "status": AuditStatus.FAIL.value,
             "reason": "; ".join(errors),
         }
@@ -272,6 +276,8 @@ def audit_verifier_registry(
         "class_mismatches": class_mismatches,
         "missing_reliability_mappings": missing_reliability_mappings,
         "unsupported_family_use": unsupported_family_use,
+        "n_registered": used_verifier_count,
+        "n_required": used_verifier_count,
         "status": AuditStatus.PASS.value,
         "reason": (
             f"all {used_verifier_count} used verifier(s) are registered "
