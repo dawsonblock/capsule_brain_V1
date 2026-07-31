@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Split Manifest",
+  "type": "object",
+  "required": ["run_id", "benchmark_digest", "splits"],
+  "properties": {
+    "run_id": {"type": "string"},
+    "benchmark_digest": {"type": "string"},
+    "splits": {
+      "type": "object",
+      "required": ["experience", "validation", "test", "ood", "safety"],
+      "properties": {
+        "experience": {"$ref": "#/definitions/split"},
+        "validation": {"$ref": "#/definitions/split"},
+        "test": {"$ref": "#/definitions/split"},
+        "ood": {"$ref": "#/definitions/split"},
+        "safety": {"$ref": "#/definitions/split"}
+      }
+    }
+  },
+  "definitions": {
+    "split": {
+      "type": "object",
+      "required": ["count", "task_ids"],
+      "properties": {
+        "count": {"type": "integer", "minimum": 0},
+        "task_ids": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

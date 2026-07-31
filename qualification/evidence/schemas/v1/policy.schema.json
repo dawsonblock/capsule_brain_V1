@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Policy",
+  "type": "object",
+  "required": ["policy_id", "policy_type", "model_id", "feature_schema_digest", "weights", "action_ordering"],
+  "properties": {
+    "policy_id": {"type": "string"},
+    "policy_type": {"type": "string"},
+    "model_id": {"type": "string"},
+    "model_revision": {"type": "string"},
+    "feature_schema_digest": {"type": "string"},
+    "feature_transform_digest": {"type": "string"},
+    "weights": {"type": "array", "items": {"type": "array", "items": {"type": "number"}}},
+    "bias": {"type": "array", "items": {"type": "number"}},
+    "action_ordering": {"type": "array", "items": {"type": "string"}},
+    "normalization_state": {"type": "object"},
+    "training_seed": {"type": "integer"},
+    "training_split_digest": {"type": "string"},
+    "learner_config_digest": {"type": "string"},
+    "policy_sha256": {"type": "string"}
+  }
+}

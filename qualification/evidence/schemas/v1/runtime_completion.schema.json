@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Runtime Completion Diagnostics",
+  "type": "object",
+  "required": ["run_id", "completed", "n_tasks_completed", "n_tasks_total"],
+  "properties": {
+    "run_id": {"type": "string"},
+    "completed": {"type": "boolean"},
+    "n_tasks_completed": {"type": "integer"},
+    "n_tasks_total": {"type": "integer"},
+    "n_errors": {"type": "integer"},
+    "n_timeouts": {"type": "integer"},
+    "elapsed_seconds": {"type": "number"},
+    "provider_class": {"type": "string"},
+    "runtime_type": {"type": "string"}
+  }
+}

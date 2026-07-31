@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Decision Trace",
+  "type": "object",
+  "required": ["task_id", "run_id", "raw_logits", "raw_probabilities", "raw_argmax_action", "final_selected_action", "executed_action"],
+  "properties": {
+    "task_id": {"type": "string"},
+    "run_id": {"type": "string"},
+    "feature_vector": {"type": "array", "items": {"type": "number"}},
+    "raw_logits": {"type": "array", "items": {"type": "number"}},
+    "raw_probabilities": {"type": "array", "items": {"type": "number"}},
+    "raw_argmax_action": {"type": "string"},
+    "allowed_action_mask": {"type": "array", "items": {"type": "boolean"}},
+    "masked_argmax_action": {"type": "string"},
+    "confidence": {"type": "number"},
+    "confidence_threshold": {"type": "number"},
+    "abstention_decision": {"type": "boolean"},
+    "shift_score": {"type": "number"},
+    "shift_threshold": {"type": "number"},
+    "shift_fallback_decision": {"type": "boolean"},
+    "safety_decision": {"type": "string"},
+    "fallback_policy": {"type": "string"},
+    "final_selected_action": {"type": "string"},
+    "executed_action": {"type": "string"},
+    "raw_action_utility": {"type": ["number", "null"]},
+    "final_action_utility": {"type": ["number", "null"]},
+    "oracle_utility": {"type": ["number", "null"]},
+    "raw_regret": {"type": ["number", "null"]},
+    "executed_regret": {"type": ["number", "null"]}
+  }
+}

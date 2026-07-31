@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Policy Evaluation",
+  "type": "object",
+  "required": ["policy_id", "run_id", "split", "mean_utility", "task_count"],
+  "properties": {
+    "policy_id": {"type": "string"},
+    "run_id": {"type": "string"},
+    "split": {"type": "string"},
+    "mean_utility": {"type": "number"},
+    "mean_utility_full_precision": {"type": "number"},
+    "mean_utility_display": {"type": "number"},
+    "median_utility": {"type": "number"},
+    "task_count": {"type": "integer"},
+    "task_rows": {"type": "array"},
+    "verified_success_rate": {"type": "number"},
+    "wins": {"type": "integer"},
+    "ties": {"type": "integer"},
+    "losses": {"type": "integer"},
+    "mean_regret": {"type": "number"},
+    "action_distribution": {"type": "object"},
+    "task_ids_digest": {"type": "string"},
+    "utility_version": {"type": "string"}
+  }
+}

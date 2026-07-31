@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Utility Manifest",
+  "type": "object",
+  "required": ["utility_version", "utility_config_sha256", "normalization_version", "utility_scale"],
+  "properties": {
+    "utility_version": {"type": "string"},
+    "utility_config_sha256": {"type": "string"},
+    "normalization_version": {"type": "string"},
+    "utility_scale": {"type": "object"},
+    "timeout_utility_defined": {"type": "boolean"},
+    "error_utility_defined": {"type": "boolean"},
+    "nonexecution_utility_defined": {"type": "boolean"}
+  }
+}

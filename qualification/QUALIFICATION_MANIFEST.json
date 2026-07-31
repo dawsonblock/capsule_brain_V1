@@ -1,7 +1,7 @@
 {
-  "package_version": "2.15.8",
+  "package_version": "2.15.9",
   "active_qualification": "autolearn_v04",
-  "qualification_version": "0.4.4",
-  "active_analysis": "v044",
+  "qualification_version": "0.4.5",
+  "active_analysis": "v045",
   "status": "current"
 }

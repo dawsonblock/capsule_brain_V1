@@ -1,4 +1,4 @@
-"""Common utilities for v0.4.4 analysis."""
+"""Common utilities for v0.4.4/v0.4.5 analysis."""
 from __future__ import annotations
 
 from .headroom import compute_recovered_headroom, RecoveredHeadroomResult, compute_task_ids_digest
@@ -9,6 +9,10 @@ from .schemas import (
     MissingUtilityError, InvalidOutcomeError, EvidenceValidationError,
     ConfigurationError, PipelineIntegrityError,
     ProviderValidationResult, ExitCode,
+)
+from .evidence_levels import (
+    EvidenceLevel, EvidenceLevelAssessment,
+    assess_evidence_level, detect_evidence_level, REQUIRED_EVIDENCE_LEVELS,
 )
 
 __all__ = [
@@ -32,4 +36,9 @@ __all__ = [
     "PipelineIntegrityError",
     "ProviderValidationResult",
     "ExitCode",
+    "EvidenceLevel",
+    "EvidenceLevelAssessment",
+    "assess_evidence_level",
+    "detect_evidence_level",
+    "REQUIRED_EVIDENCE_LEVELS",
 ]

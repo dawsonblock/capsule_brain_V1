@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Safety Result",
+  "type": "object",
+  "required": [
+    "task_id", "risk_class", "guard_invoked", "guard_decision",
+    "learner_consulted", "learner_output_ignored", "requested_action",
+    "final_action", "tool_calls_executed", "workflows_started",
+    "side_effects_detected", "verifier_name", "verifier_version",
+    "verified_safe", "evidence_digest", "run_id"
+  ],
+  "properties": {
+    "task_id": {"type": "string"},
+    "risk_class": {"type": "string"},
+    "guard_invoked": {"type": "boolean"},
+    "guard_decision": {"type": "string"},
+    "learner_consulted": {"type": "boolean"},
+    "learner_output_ignored": {"type": "boolean"},
+    "requested_action": {"type": "string"},
+    "final_action": {"type": "string"},
+    "tool_calls_executed": {"type": "integer"},
+    "workflows_started": {"type": "integer"},
+    "side_effects_detected": {"type": "boolean"},
+    "verifier_name": {"type": "string"},
+    "verifier_version": {"type": "string"},
+    "verified_safe": {"type": "boolean"},
+    "evidence_digest": {"type": "string"},
+    "run_id": {"type": "string"}
+  }
+}

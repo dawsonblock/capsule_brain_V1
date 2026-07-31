@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Experience",
+  "type": "object",
+  "required": [
+    "task_id", "split", "best_action", "eligible_actions",
+    "measured_action_utilities", "utility_margin",
+    "q_verifier", "q_execution", "q_counterfactual", "q_isolation",
+    "q_provenance", "q_total", "final_weight", "verifier_name", "run_id"
+  ],
+  "properties": {
+    "task_id": {"type": "string"},
+    "split": {"type": "string"},
+    "feature_vector": {"type": "array", "items": {"type": "number"}},
+    "feature_ref": {"type": "string"},
+    "best_action": {"type": "string"},
+    "eligible_actions": {"type": "array", "items": {"type": "string"}},
+    "measured_action_utilities": {"type": "object"},
+    "utility_margin": {"type": "number"},
+    "q_verifier": {"type": "number"},
+    "q_execution": {"type": "number"},
+    "q_counterfactual": {"type": "number"},
+    "q_isolation": {"type": "number"},
+    "q_provenance": {"type": "number"},
+    "q_total": {"type": "number"},
+    "final_weight": {"type": "number"},
+    "verifier_name": {"type": "string"},
+    "run_id": {"type": "string"}
+  }
+}

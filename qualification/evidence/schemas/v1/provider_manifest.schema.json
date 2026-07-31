@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Provider Manifest",
+  "type": "object",
+  "required": ["provider_class", "runtime_type", "model_id", "model_revision", "tokenizer_id", "tokenizer_revision"],
+  "properties": {
+    "provider_class": {"type": "string", "enum": ["REAL_MODEL", "INFRASTRUCTURE", "SIMULATED"]},
+    "runtime_type": {"type": "string"},
+    "model_id": {"type": "string"},
+    "model_revision": {"type": "string"},
+    "model_digest": {"type": ["string", "null"]},
+    "tokenizer_id": {"type": "string"},
+    "tokenizer_revision": {"type": "string"},
+    "generation_config_digest": {"type": "string"},
+    "supports_gate_a": {"type": "boolean"},
+    "supports_gate_b": {"type": "boolean"},
+    "provider_manifest_sha256": {"type": "string"}
+  }
+}
