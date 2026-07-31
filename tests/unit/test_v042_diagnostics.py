@@ -1,4 +1,4 @@
-"""Tests for AutoLearn v0.4.2 diagnostic modules.
+"""Tests for AutoLearn v0.4.3 diagnostic modules.
 
 Covers:
 - Control policies (majority, frequency, random, reproducibility)
@@ -777,7 +777,7 @@ class TestArchive:
         artifacts.mkdir()
         (artifacts / "benchmark_manifest.json").write_text(json.dumps({"tasks": []}))
         (artifacts / "counterfactual_outcomes.json").write_text("[]")
-        (artifacts / "qualification_report.json").write_text(json.dumps({"package_version": "2.15.6", "protocol_version": "0.4.2"}))
+        (artifacts / "qualification_report.json").write_text(json.dumps({"package_version": "2.15.7", "protocol_version": "0.4.3"}))
         (artifacts / "gate_a_result.json").write_text(json.dumps({"status": "FAIL"}))
 
         # Need to create a proper run. Use the real artifacts if available.

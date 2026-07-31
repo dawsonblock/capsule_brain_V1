@@ -50,10 +50,10 @@ class TestVersionConsistency:
             AUTOLEARN_QUALIFICATION_VERSION,
             PROTOCOL_VERSION,
         )
-        assert PACKAGE_VERSION == "2.15.6"
-        assert AUTOLEARN_VERSION == "0.3.5"
-        assert AUTOLEARN_QUALIFICATION_VERSION == "0.4.2"
-        assert PROTOCOL_VERSION == "0.4.2"
+        assert PACKAGE_VERSION == "2.15.7"
+        assert AUTOLEARN_VERSION == "0.3.6"
+        assert AUTOLEARN_QUALIFICATION_VERSION == "0.4.3"
+        assert PROTOCOL_VERSION == "0.4.3"
 
 
 # ---------------------------------------------------------------------------
@@ -367,8 +367,8 @@ class TestQualificationManifest:
         assert manifest_path.exists()
         manifest = json.loads(manifest_path.read_text())
         assert manifest["active_qualification"] == "autolearn_v04"
-        assert manifest["qualification_version"] == "0.4.2"
-        assert manifest["package_version"] == "2.15.6"
+        assert manifest["qualification_version"] == "0.4.3"
+        assert manifest["package_version"] == "2.15.7"
         assert manifest["status"] == "current"
 
     def test_archive_readme_exists(self):
@@ -634,7 +634,7 @@ class TestSourceHashingRegression:
         result1 = compute_source_tree_hash_detailed(repo)
         # Modify a source file.
         (repo / "src" / "capsule_brain" / "version.py").write_text(
-            "PACKAGE_VERSION = '2.15.6'\nAUTOLEARN_VERSION = '0.3.4'\n"
+            "PACKAGE_VERSION = '2.15.7'\nAUTOLEARN_VERSION = '0.3.4'\n"
         )
         result2 = compute_source_tree_hash_detailed(repo)
         assert result1.source_tree_sha256 != result2.source_tree_sha256
