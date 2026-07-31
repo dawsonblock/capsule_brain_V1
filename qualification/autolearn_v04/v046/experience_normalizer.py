@@ -214,13 +214,45 @@ def normalize_experience_rows(
             q_total = SYNTHETIC_Q_TOTAL
             final_weight = SYNTHETIC_FINAL_WEIGHT
         else:
+            # For non-synthetic (real-model) evidence, propagate quality
+            # fields from the action-level rows.  Each action row may carry
+            # q_verifier, q_execution, etc.  We aggregate by taking the
+            # maximum across actions (best quality observed).
             q_verifier = 0.0
             q_execution = 0.0
             q_counterfactual = 0.0
             q_isolation = 0.0
             q_provenance = 0.0
             q_total = 0.0
-            final_weight = 0.0
+            for ar in action_rows:
+                for qfield, _ in (
+                    ("q_verifier", None),
+                    ("q_execution", None),
+                    ("q_counterfactual", None),
+                    ("q_isolation", None),
+                    ("q_provenance", None),
+                    ("q_total", None),
+                ):
+                    val = ar.get(qfield)
+                    if isinstance(val, (int, float)) and not isinstance(val, bool):
+                        # Update the corresponding local variable.
+                        if qfield == "q_verifier":
+                            q_verifier = max(q_verifier, float(val))
+                        elif qfield == "q_execution":
+                            q_execution = max(q_execution, float(val))
+                        elif qfield == "q_counterfactual":
+                            q_counterfactual = max(q_counterfactual, float(val))
+                        elif qfield == "q_isolation":
+                            q_isolation = max(q_isolation, float(val))
+                        elif qfield == "q_provenance":
+                            q_provenance = max(q_provenance, float(val))
+                        elif qfield == "q_total":
+                            q_total = max(q_total, float(val))
+            # If q_total is still 0 (no quality fields on action rows),
+            # fall back to a small positive value so weights are never 0.
+            if q_total <= 0.0:
+                q_total = 1.0
+            final_weight = q_total
 
         result.append({
             "schema_version": SCHEMA_VERSION,

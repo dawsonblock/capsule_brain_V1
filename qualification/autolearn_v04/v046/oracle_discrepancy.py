@@ -224,6 +224,10 @@ def investigate_oracle_discrepancy(
                 ),
             }
 
+    # If no historical headroom to compare against, and oracle_minus_sham is
+    # non-negative, there is no discrepancy to investigate — but only if no
+    # possible causes are identified.  We compute possible causes first and
+    # then decide.
     # --- Attempt classification ---
     possible_causes: list[str] = []
 
@@ -267,6 +271,29 @@ def investigate_oracle_discrepancy(
             oracle_minus_sham - historical_headroom
         ) > 1.0:
             possible_causes.append("CALCULATION_DEFECT")
+
+    # If no historical headroom to compare against, oracle_minus_sham is
+    # non-negative, and no possible causes are identified, there is no
+    # discrepancy to investigate.
+    if (
+        historical_headroom is None
+        and oracle_minus_sham is not None
+        and oracle_minus_sham >= -_HEADROOM_TOLERANCE
+        and len(possible_causes) == 0
+    ):
+        return {
+            "status": AuditStatus.PASS.value,
+            "classification": "NO_DISCREPANCY",
+            "oracle_mean": oracle_mean,
+            "sham_mean": sham_mean,
+            "oracle_minus_sham": oracle_minus_sham,
+            "task_set_digest": task_set_digest,
+            "utility_version": utility_version,
+            "evidence_origin": origin,
+            "discrepancy_found": False,
+            "possible_causes": possible_causes,
+            "reason": "no discrepancy: oracle-minus-sham is non-negative and no historical headroom to compare against",
+        }
 
     # --- Classify ---
     if len(possible_causes) == 0:

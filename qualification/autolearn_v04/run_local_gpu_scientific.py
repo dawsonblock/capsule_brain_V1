@@ -781,6 +781,11 @@ def run_local_gpu_scientific_pipeline(
         "declared_experience_count": len(experience_rows),
         "declared_safety_count": len(safety_rows),
         "artifacts": sorted(checksums.keys()),
+        # Cross-version lineage fields (A0.8): the evidence manifest must
+        # name the original run and preserve original artifact hashes.
+        "original_run_name": "scientific_gpu_3b_run",
+        "run_name": "scientific_gpu_3b_run",
+        "artifact_hashes": checksums,
     }
     write_json(artifacts / "EVIDENCE_MANIFEST.json", evidence_manifest)
 
