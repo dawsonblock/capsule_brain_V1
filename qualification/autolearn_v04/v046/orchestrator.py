@@ -393,6 +393,10 @@ def run_all_v046_diagnostics(
         },
         config.compute_digest(),
     )
+    # Add run name fields required by cross-version lineage check.
+    analysis_identity["analysis_run_name"] = run_id
+    analysis_identity["run_name"] = run_id
+    analysis_identity["run_id"] = run_id
     _write("analysis_identity_report.json", analysis_identity)
 
     # === Stage 16: Validate cross-version lineage ===
