@@ -222,11 +222,14 @@ def main() -> int:
     parser.add_argument("--runtime", choices=["real", "simulated"], default="real")
     parser.add_argument("--provider", default="qual_grounded")
     parser.add_argument("--model", default="qual-grounded-v04")
+    parser.add_argument("--device", default="cpu")
+    parser.add_argument("--dtype", default="float32")
     parser.add_argument("--task-seed", type=int, default=42)
     args = parser.parse_args()
     config = QualificationConfig(
         mode=args.mode, runtime=args.runtime, provider=args.provider,
         model=args.model, artifacts_dir=args.artifacts_dir, task_seed=args.task_seed,
+        device=args.device, dtype=args.dtype,
     )
     if config.is_simulated:
         print(config.simulated_banner, file=sys.stderr)

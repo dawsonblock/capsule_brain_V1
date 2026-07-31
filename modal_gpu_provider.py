@@ -79,12 +79,20 @@ class FrozenTransformerProvider:
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.model_id, trust_remote_code=True,
         )
-        self._model = AutoModelForCausalLM.from_pretrained(
-            self.model_id,
-            torch_dtype=torch_dtype,
-            trust_remote_code=True,
-            output_hidden_states=self.collect_hidden_states,
-        ).to("cuda")
+        # v0.4.1: transformers 5.x deprecates torch_dtype in favor of dtype,
+        # and output_hidden_states must be passed to generate(), not from_pretrained.
+        try:
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.model_id,
+                dtype=torch_dtype,
+                trust_remote_code=True,
+            ).to("cuda")
+        except TypeError:
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.model_id,
+                torch_dtype=torch_dtype,
+                trust_remote_code=True,
+            ).to("cuda")
         self._model.eval()
         # Freeze all parameters (Section 10).
         for param in self._model.parameters():
@@ -174,11 +182,14 @@ class FrozenTransformerProvider:
                     logprobs.append(float(torch.log(probs[token_ids[i]] + 1e-10)))
 
         # Hidden states for Gate B.
+        # v0.4.1: transformers 5.x changes hidden_states to tuple-of-tuples
+        # (per generation step). Take the final step's per-layer tensors.
         hidden_states = {}
-        if self.collect_hidden_states and hasattr(outputs, "hidden_states"):
+        if self.collect_hidden_states and hasattr(outputs, "hidden_states") and outputs.hidden_states:
+            final_step = outputs.hidden_states[-1]
             for layer_idx in self._hidden_layer_ids:
-                if layer_idx < len(outputs.hidden_states):
-                    layer_hs = outputs.hidden_states[layer_idx]
+                if layer_idx < len(final_step):
+                    layer_hs = final_step[layer_idx]
                     last_token_hs = layer_hs[0, -1, :].cpu().float().tolist()
                     hidden_states[str(layer_idx)] = last_token_hs
 
@@ -238,10 +249,16 @@ def generate_single(prompt, model_id=MODEL_ID_DEFAULT, max_new_tokens=256,
 
     # Load model (cached by Modal after first call in container).
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id, torch_dtype=torch.float16, trust_remote_code=True,
-        output_hidden_states=collect_hidden_states,
-    ).to("cuda")
+    # v0.4.1: transformers 5.x compat — dtype instead of torch_dtype,
+    # and output_hidden_states goes to generate(), not from_pretrained.
+    try:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_id, dtype=torch.float16, trust_remote_code=True,
+        ).to("cuda")
+    except TypeError:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_id, torch_dtype=torch.float16, trust_remote_code=True,
+        ).to("cuda")
     model.eval()
     for p in model.parameters():
         p.requires_grad_(False)
@@ -282,10 +299,12 @@ def generate_single(prompt, model_id=MODEL_ID_DEFAULT, max_new_tokens=256,
                 logprobs.append(float(torch.log(probs[token_ids[i]] + 1e-10)))
 
     hidden_states = {}
-    if collect_hidden_states and hasattr(outputs, "hidden_states"):
+    if collect_hidden_states and hasattr(outputs, "hidden_states") and outputs.hidden_states:
+        # v0.4.1: transformers 5.x — tuple-of-tuples (per generation step).
+        final_step = outputs.hidden_states[-1]
         for layer_idx in layer_ids:
-            if layer_idx < len(outputs.hidden_states):
-                hs = outputs.hidden_states[layer_idx]
+            if layer_idx < len(final_step):
+                hs = final_step[layer_idx]
                 hidden_states[str(layer_idx)] = hs[0, -1, :].cpu().float().tolist()
 
     elapsed = time.perf_counter() - started

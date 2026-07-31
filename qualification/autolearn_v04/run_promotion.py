@@ -182,9 +182,15 @@ def run_promotion(config: QualificationConfig) -> dict[str, Any]:
     ))
 
     # Provider gate: must be REAL_MODEL for a causal claim (Section 4/19).
-    from .provider_classification import ProviderClass, classify_grounded_provider, classify_local_transformers
+    from .provider_classification import ProviderClass, classify_grounded_provider, classify_local_transformers, classify_modal_gpu
+    from .config import PROVIDER_MODAL_GPU
     if config.is_infrastructure_provider:
         provider_caps = classify_grounded_provider()
+    elif config.provider == PROVIDER_MODAL_GPU:
+        provider_caps = classify_modal_gpu(
+            config.model,
+            dtype=config.dtype,
+        )
     else:
         provider_caps = classify_local_transformers(
             config.model, dtype=config.dtype, device=config.device,

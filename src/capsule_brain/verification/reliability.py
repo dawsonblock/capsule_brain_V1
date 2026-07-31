@@ -82,6 +82,7 @@ _register("compiler", VerifierClass.DETERMINISTIC, 1.0)
 _register("pytest", VerifierClass.DETERMINISTIC, 1.0)
 _register("database_constraint", VerifierClass.DETERMINISTIC, 1.0)
 _register("deterministic", VerifierClass.DETERMINISTIC, 1.0)
+_register("scientific_independent", VerifierClass.DETERMINISTIC, 1.0)  # scientific executor exact-match
 
 # Retrieval-grounded verifiers (reliability 0.90–0.98).
 _register("retrieval_grounded", VerifierClass.RETRIEVAL_GROUNDED, 0.95)

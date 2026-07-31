@@ -123,7 +123,8 @@ def run_scientific_pipeline(
     print("\n[3/9] Runtime completion diagnostics...")
     from .diagnose_runtime_completion import diagnose_runtime_completion
     from .config import QualificationConfig
-    config = QualificationConfig(mode="scientific", runtime="real", artifacts_dir=str(artifacts))
+    config = QualificationConfig(mode="scientific", runtime="real", artifacts_dir=str(artifacts),
+                                  provider="modal_gpu", model=model_id, dtype="float16")
     diag = diagnose_runtime_completion(config)
     print(f"  Status: {diag['status']}")
     for action, rate in diag.get("completion_rates", {}).items():

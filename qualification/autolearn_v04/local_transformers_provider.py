@@ -101,12 +101,21 @@ class LocalTransformersProvider(LLMProvider):
         self._tokenizer = AutoTokenizer.from_pretrained(
             self.model_id, trust_remote_code=True,
         )
-        self._model = AutoModelForCausalLM.from_pretrained(
-            self.model_id,
-            torch_dtype=torch_dtype,
-            trust_remote_code=True,
-            output_hidden_states=self.collect_hidden_states,
-        ).to(self.device)
+        # v0.4.1: transformers 5.x deprecates torch_dtype in favor of dtype,
+        # and output_hidden_states must be passed to generate(), not from_pretrained.
+        # Try new API first, fall back to old API for compatibility.
+        try:
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.model_id,
+                dtype=torch_dtype,
+                trust_remote_code=True,
+            ).to(self.device)
+        except TypeError:
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.model_id,
+                torch_dtype=torch_dtype,
+                trust_remote_code=True,
+            ).to(self.device)
         self._model.eval()
         # Section 10: all parameters frozen — no gradient computation.
         for param in self._model.parameters():

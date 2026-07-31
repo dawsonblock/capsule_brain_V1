@@ -96,6 +96,34 @@ def classify_local_transformers(
     )
 
 
+def classify_modal_gpu(
+    model_id: str,
+    *,
+    model_revision: str | None = None,
+    tokenizer_id: str | None = None,
+    tokenizer_revision: str | None = None,
+    dtype: str = "float16",
+    gpu_type: str = "a10g",
+    generation_config: dict | None = None,
+    supports_hidden_states: bool = True,
+) -> ProviderCapabilities:
+    """Classify the Modal GPU provider (real frozen model on remote GPU)."""
+    return ProviderCapabilities(
+        provider_name="modal_gpu",
+        provider_class=ProviderClass.REAL_MODEL,
+        model_id=model_id,
+        model_revision=model_revision,
+        tokenizer_id=tokenizer_id or model_id,
+        tokenizer_revision=tokenizer_revision,
+        dtype=dtype,
+        device="cuda",
+        generation_config=generation_config or {},
+        supports_hidden_states=supports_hidden_states,
+        supports_gate_a_claim=True,
+        supports_gate_b_claim=supports_hidden_states,
+    )
+
+
 def classify_simulated() -> ProviderCapabilities:
     return ProviderCapabilities(
         provider_name="simulated",

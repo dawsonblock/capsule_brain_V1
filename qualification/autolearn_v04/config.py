@@ -20,10 +20,15 @@ from . import (
 # Provider identifiers.
 PROVIDER_INFRASTRUCTURE = "qual_grounded"  # deterministic, infrastructure-only
 PROVIDER_LOCAL_TRANSFORMERS = "local_transformers"  # real HF transformers model
+PROVIDER_MODAL_GPU = "modal_gpu"  # real frozen model on Modal GPU infrastructure
 
 # The infrastructure provider may qualify infrastructure only -- never a
 # causal learning claim (Section 11.2).
 INFRASTRUCTURE_ONLY_PROVIDERS = frozenset({PROVIDER_INFRASTRUCTURE})
+
+# Providers that serve a real frozen transformer model and may be used
+# for scientific/causal-learning qualification (Gate A/Gate B).
+REAL_MODEL_PROVIDERS = frozenset({PROVIDER_LOCAL_TRANSFORMERS, PROVIDER_MODAL_GPU})
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,7 +189,7 @@ class QualificationConfig:
 
     @property
     def is_real_model_provider(self) -> bool:
-        return self.provider == PROVIDER_LOCAL_TRANSFORMERS
+        return self.provider in REAL_MODEL_PROVIDERS
 
     @property
     def simulated_banner(self) -> str:
