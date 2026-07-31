@@ -1,0 +1,102 @@
+[
+  {
+    "original_path": "qualification/autolearn_v04/artifacts/synthetic_7b_run/counterfactual_outcomes.json",
+    "original_sha256": "8b3065a0f59d0ddcb29e12611a7368f726d96b7986f41409ddd8f635be71871f",
+    "normalized_path": "qualification/evidence/fixtures/synthetic_7b_routing/counterfactual_outcomes.jsonl",
+    "normalized_sha256": "0ec803470f4c33950c0df9850f89ae4328a2425ec17503cd906f78f62f25cc04",
+    "normalizer_version": "1.0.0",
+    "field_mappings": "schema_version, run_id, split, family, archetype added; action_id→eligible_action; availability→action_status; utility preserved",
+    "dropped_fields": [],
+    "added_derived_fields": [
+      "schema_version",
+      "run_id",
+      "split",
+      "family",
+      "archetype",
+      "verifier_name",
+      "verifier_version",
+      "verifier_class"
+    ],
+    "normalization_timestamp": "2026-07-31T09:17:42.692630+00:00"
+  },
+  {
+    "original_path": "qualification/autolearn_v04/artifacts/synthetic_7b_run/split_manifest.json",
+    "original_sha256": "16d42b58662cab6956cf86cf1858a89013226082c1e37e143ccc6ce8ca0da98a",
+    "normalized_path": "qualification/evidence/fixtures/synthetic_7b_routing/split_manifest.json",
+    "normalized_sha256": "c348ec5ae2a8fc7e1f5ad0a3909ad68dfc46efe08554ab08e6ac5d0b2183c533",
+    "normalizer_version": "1.0.0",
+    "field_mappings": "schema_version, run_id, split, family, archetype added; action_id→eligible_action; availability→action_status; utility preserved",
+    "dropped_fields": [],
+    "added_derived_fields": [
+      "schema_version",
+      "run_id",
+      "split",
+      "family",
+      "archetype",
+      "verifier_name",
+      "verifier_version",
+      "verifier_class"
+    ],
+    "normalization_timestamp": "2026-07-31T09:17:42.692712+00:00"
+  },
+  {
+    "original_path": "qualification/autolearn_v04/artifacts/synthetic_7b_run/candidate_policy.json",
+    "original_sha256": "db7413caf2a3c2ed953348733358ec612eebd34d319bf80385e25d50d01ddda2",
+    "normalized_path": "qualification/evidence/fixtures/synthetic_7b_routing/candidate_policy.json",
+    "normalized_sha256": "80e0f8805b8057b03ea2fc050b1e6ef1b36eee94db311c6839819219193a0214",
+    "normalizer_version": "1.0.0",
+    "field_mappings": "schema_version, run_id, split, family, archetype added; action_id→eligible_action; availability→action_status; utility preserved",
+    "dropped_fields": [],
+    "added_derived_fields": [
+      "schema_version",
+      "run_id",
+      "split",
+      "family",
+      "archetype",
+      "verifier_name",
+      "verifier_version",
+      "verifier_class"
+    ],
+    "normalization_timestamp": "2026-07-31T09:17:42.692786+00:00"
+  },
+  {
+    "original_path": "qualification/autolearn_v04/artifacts/synthetic_7b_run/sham_policy.json",
+    "original_sha256": "19a60df4c26f0e5e21de26371641a643db5ac4ccbfbb90ee4ac1949106619e2d",
+    "normalized_path": "qualification/evidence/fixtures/synthetic_7b_routing/sham_policy.json",
+    "normalized_sha256": "4e5a8a9b9e8ff324c7b8f316bcab64886e9d92a68c9b6ec74a64a5dc3425788d",
+    "normalizer_version": "1.0.0",
+    "field_mappings": "schema_version, run_id, split, family, archetype added; action_id→eligible_action; availability→action_status; utility preserved",
+    "dropped_fields": [],
+    "added_derived_fields": [
+      "schema_version",
+      "run_id",
+      "split",
+      "family",
+      "archetype",
+      "verifier_name",
+      "verifier_version",
+      "verifier_class"
+    ],
+    "normalization_timestamp": "2026-07-31T09:17:42.692853+00:00"
+  },
+  {
+    "original_path": "qualification/autolearn_v04/artifacts/synthetic_7b_run/benchmark_manifest.json",
+    "original_sha256": "fcb8433860ebd8c7b8137c590e812157ebc1c4fe90f8ddbc598a7a91781ffe7e",
+    "normalized_path": "qualification/evidence/fixtures/synthetic_7b_routing/benchmark_manifest.json",
+    "normalized_sha256": "fcb8433860ebd8c7b8137c590e812157ebc1c4fe90f8ddbc598a7a91781ffe7e",
+    "normalizer_version": "1.0.0",
+    "field_mappings": "schema_version, run_id, split, family, archetype added; action_id→eligible_action; availability→action_status; utility preserved",
+    "dropped_fields": [],
+    "added_derived_fields": [
+      "schema_version",
+      "run_id",
+      "split",
+      "family",
+      "archetype",
+      "verifier_name",
+      "verifier_version",
+      "verifier_class"
+    ],
+    "normalization_timestamp": "2026-07-31T09:17:42.693008+00:00"
+  }
+]

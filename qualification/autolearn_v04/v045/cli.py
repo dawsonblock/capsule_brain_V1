@@ -74,8 +74,8 @@ def main(argv: list[str] | None = None) -> int:
     # create-evidence-package
     p_create = subparsers.add_parser("create-evidence-package", help="Create evidence package from run")
     p_create.add_argument("--source-run-dir", required=True)
-    p_create.add_argument("--output-dir", default="qualification/evidence/seven_b_full_run")
-    p_create.add_argument("--run-id", default="scientific_full_7b_001")
+    p_create.add_argument("--output-dir", default="qualification/evidence/fixtures/synthetic_7b_routing")
+    p_create.add_argument("--run-id", default="synthetic_v045_fixture_001")
 
     # create-pilot-manifest
     p_pilot = subparsers.add_parser("create-pilot-manifest", help="Create pilot manifest")

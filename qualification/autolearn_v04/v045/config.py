@@ -12,8 +12,8 @@ from capsule_brain.version import (
     PACKAGE_VERSION,
 )
 
-# Evidence package directory
-EVIDENCE_DIR = "qualification/evidence/seven_b_full_run"
+# Evidence package directory (synthetic fixture for infrastructure testing)
+EVIDENCE_DIR = "qualification/evidence/fixtures/synthetic_7b_routing"
 
 # Schema version for evidence
 SCHEMA_VERSION = "v1"

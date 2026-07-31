@@ -65,6 +65,157 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _detect_synthetic(
+    source: Path,
+    benchmark: dict,
+    dataset_manifest: dict,
+) -> bool:
+    """Detect whether the source run is synthetic.
+
+    A run is considered synthetic if any of the following markers are present:
+    - model_id contains "synthetic"
+    - tokenizer_id contains "synthetic"
+    - source path contains "synthetic"
+    - dataset manifest generator contains "synthetic"
+    """
+    source_str = str(source).lower()
+    if "synthetic" in source_str:
+        return True
+
+    # Check dataset manifest generator.
+    dm_generator = ""
+    if dataset_manifest:
+        dm_meta = dataset_manifest.get("metadata", {})
+        dm_generator = str(dm_meta.get("generator", "")).lower()
+    if "synthetic" in dm_generator:
+        return True
+
+    # Check benchmark tasks for synthetic model/tokenizer markers.
+    for task in benchmark.get("tasks", []):
+        model_id = str(task.get("model_id", "")).lower()
+        tokenizer_id = str(task.get("tokenizer_id", "")).lower()
+        if "synthetic" in model_id or "synthetic" in tokenizer_id:
+            return True
+
+    # Check execution metadata in counterfactual outcomes for synthetic model.
+    cf_path = source / "counterfactual_outcomes.json"
+    if cf_path.exists():
+        try:
+            cf_data = _load_json(cf_path)
+            for row in cf_data:
+                exec_meta = row.get("execution_metadata", {})
+                model = str(exec_meta.get("model", "")).lower()
+                if "synthetic" in model:
+                    return True
+        except Exception:
+            pass
+
+    return False
+
+
+def _generate_experience_rows(
+    cf_normalized: list[dict],
+    benchmark: dict,
+    provider_manifest: dict,
+    run_id: str,
+) -> list[dict]:
+    """Generate executive experience rows from counterfactual outcomes.
+
+    Only tasks in the "experience" split contribute experience rows. For each
+    experience-split task, for each action (counterfactual outcome), one
+    experience row is produced.
+    """
+    task_lookup: dict[str, dict] = {}
+    for task in benchmark.get("tasks", []):
+        task_lookup[task["task_id"]] = task
+
+    rows: list[dict] = []
+    for cf in cf_normalized:
+        tid = cf.get("task_id", "")
+        task_info = task_lookup.get(tid, {})
+        if task_info.get("split", "test") != "experience":
+            continue
+
+        action = cf.get("eligible_action", "")
+        verified_success = cf.get("verified_success")
+        utility = cf.get("utility")
+
+        # Build state from task features.
+        setup_spec = task_info.get("setup_spec", {})
+        features = setup_spec.get("features", [])
+        available_tools = task_info.get("allowed_actions", [])
+        prompt = task_info.get("prompt", "")
+        context_length = len(prompt)
+
+        # Feature slices (best-effort mapping from the 17-feature schema).
+        prompt_features = features[0:5] if len(features) >= 5 else features
+        memory_features = features[5:10] if len(features) >= 10 else []
+        conversation_features = features[10:17] if len(features) >= 17 else []
+
+        state = {
+            "available_tools": available_tools,
+            "context_length": context_length,
+            "conversation_features": conversation_features,
+            "memory_features": memory_features,
+            "prompt_features": prompt_features,
+            "model_id": provider_manifest.get("model_id", ""),
+        }
+
+        # Build outcome from counterfactual outcome.
+        action_status = cf.get("action_status", "EXECUTED")
+        action_completed = action_status == "EXECUTED"
+        verification_status = "verified" if verified_success else (
+            "failed" if verified_success is False else "unverified"
+        )
+        outcome = {
+            "verified_success": verified_success,
+            "latency_ms": cf.get("latency_ms"),
+            "token_count": cf.get("input_tokens"),
+            "tool_calls_executed": 1 if action in ("CALL_TOOL", "START_WORKFLOW") and action_completed else 0,
+            "tool_failures": 0,
+            "runtime_error": action_status in ("EXECUTION_ERROR", "TIMEOUT", "UNVERIFIABLE"),
+            "safety_violation": False,
+            "operator_intervention": False,
+            "action_completed": action_completed,
+            "verification_status": verification_status,
+        }
+
+        # Build provenance.
+        provenance = {
+            "source": "counterfactual_v1",
+            "task_family": cf.get("family", ""),
+            "task_id": tid,
+            "policy_version": "candidate_training",
+            "extra": {
+                "archetype": cf.get("archetype", ""),
+                "expected_action": task_info.get("allowed_actions", [None])[0],
+                "split": "experience",
+            },
+        }
+
+        experience_id = hashlib.sha256(
+            f"{tid}:{action}".encode()
+        ).hexdigest()
+
+        rows.append({
+            "task_id": tid,
+            "action": action,
+            "utility": utility,
+            "verified_success": verified_success,
+            "split": "experience",
+            "family": cf.get("family", ""),
+            "archetype": cf.get("archetype", ""),
+            "policy_version": "candidate_training",
+            "timestamp": _now(),
+            "experience_id": experience_id,
+            "state": state,
+            "outcome": outcome,
+            "provenance": provenance,
+        })
+
+    return rows
+
+
 # ---------------------------------------------------------------------------
 # Normalizers
 # ---------------------------------------------------------------------------
@@ -343,18 +494,40 @@ def create_evidence_package(
     if dm_path.exists():
         dataset_manifest = _load_json(dm_path)
 
-    # Build provider manifest.
+    # Detect synthetic source and adjust run_id default.
+    is_synthetic = _detect_synthetic(source, benchmark, dataset_manifest)
+    if is_synthetic and run_id == "scientific_full_7b_001":
+        run_id = "synthetic_v045_fixture_001"
+
+    # Build provider manifest with correct classification.
+    if is_synthetic:
+        provider_class = "SYNTHETIC"
+        runtime_type = "synthetic"
+        supports_gate_a = False
+        supports_gate_b = False
+        scientific_claim_eligible = False
+        promotable = False
+    else:
+        provider_class = "REAL_MODEL"
+        runtime_type = "real"
+        supports_gate_a = True
+        supports_gate_b = False
+        scientific_claim_eligible = True
+        promotable = False
+
     provider_manifest = {
-        "provider_class": "REAL_MODEL",
-        "runtime_type": "real",
+        "provider_class": provider_class,
+        "runtime_type": runtime_type,
         "model_id": "synthetic-7b",
         "model_revision": "1.0",
         "model_digest": None,
         "tokenizer_id": "synthetic-tokenizer",
         "tokenizer_revision": "1.0",
         "generation_config_digest": hashlib.sha256(b"synthetic").hexdigest(),
-        "supports_gate_a": True,
-        "supports_gate_b": False,
+        "supports_gate_a": supports_gate_a,
+        "supports_gate_b": supports_gate_b,
+        "scientific_claim_eligible": scientific_claim_eligible,
+        "promotable": promotable,
         "provider_manifest_sha256": "",
     }
     provider_manifest["provider_manifest_sha256"] = _sha256_dict(provider_manifest)
@@ -376,7 +549,35 @@ def create_evidence_package(
     # Normalize safety results.
     safety_rows = _normalize_safety_results(benchmark, split_normalized, run_id)
 
+    # Generate executive experience rows from counterfactual outcomes for
+    # tasks in the "experience" split.
+    experience_rows = _generate_experience_rows(
+        cf_normalized, benchmark, provider_manifest, run_id,
+    )
+
     # Build source provenance.
+    if is_synthetic:
+        original_config_sha256 = _sha256_dict(
+            {"provider_class": "SYNTHETIC", "runtime_type": "synthetic"}
+        )
+        original_dependency_lock_sha256 = _sha256_dict({"synthetic": True})
+    else:
+        # Compute from actual config/dependency files if available.
+        config_path = source / "config.json"
+        original_config_sha256 = (
+            _sha256_file(config_path) if config_path.exists()
+            else _sha256_dict({"provider_class": "REAL_MODEL", "runtime_type": "real"})
+        )
+        dep_path = source / "requirements.lock" or source / "poetry.lock"
+        dep_candidates = [source / "requirements.lock", source / "poetry.lock", source / "requirements.txt"]
+        original_dependency_lock_sha256 = ""
+        for cand in dep_candidates:
+            if cand.exists():
+                original_dependency_lock_sha256 = _sha256_file(cand)
+                break
+        if not original_dependency_lock_sha256:
+            original_dependency_lock_sha256 = _sha256_dict({"real": True})
+
     source_provenance = {
         "original_commit_sha": None,  # Not available for synthetic run
         "original_source_tree_sha256": hashlib.sha256(b"synthetic-7b-source").hexdigest(),
@@ -385,8 +586,8 @@ def create_evidence_package(
             (source / f).stat().st_size for f in required_source if (source / f).exists()
         ),
         "original_qualification_source_sha256": hashlib.sha256(b"v041").hexdigest(),
-        "original_config_sha256": "",
-        "original_dependency_lock_sha256": "",
+        "original_config_sha256": original_config_sha256,
+        "original_dependency_lock_sha256": original_dependency_lock_sha256,
         "original_benchmark_sha256": _sha256_dict(benchmark),
         "original_provider_manifest_sha256": provider_manifest["provider_manifest_sha256"],
         "source_tree_sha256": hashlib.sha256(b"synthetic-7b-source").hexdigest(),
@@ -422,17 +623,27 @@ def create_evidence_package(
     for name, result in results_normalized.items():
         _write_json(output / f"{name}_results.json", result)
 
-    # Write gate_a results.
-    _write_json(output / "gate_a_results.json", gate_a_result or {
+    # Write gate_a results. Mark sham percentile as unavailable if no ensemble.
+    gate_a_output = gate_a_result.copy() if gate_a_result else {
         "gate_a_verdict": "FAIL",
         "run_id": run_id,
-    })
+    }
+    # If gate_a_result has A4 with candidate_percentile, mark it as unavailable
+    # since the sham ensemble evidence is not in the package.
+    if isinstance(gate_a_output.get("gate_a4"), dict):
+        gate_a_output["gate_a4"]["candidate_percentile"] = None
+        gate_a_output["gate_a4"]["candidate_percentile_available"] = False
+        gate_a_output["gate_a4"]["reason"] = (
+            gate_a_output["gate_a4"].get("reason", "") +
+            " [candidate_percentile marked unavailable: sham ensemble evidence not packaged]"
+        )
+    _write_json(output / "gate_a_results.json", gate_a_output)
 
     # Write safety results as JSONL.
     _write_jsonl(output / "safety_results.jsonl", safety_rows)
 
     # Write placeholder files for artifacts not available in source.
-    _write_jsonl(output / "executive_experiences.jsonl", [])  # Will be populated if available
+    _write_jsonl(output / "executive_experiences.jsonl", experience_rows)
     _write_json(output / "ood_results.json", {"run_id": run_id, "status": "NOT_RUN"})
     _write_json(output / "coverage_results.json", {"run_id": run_id, "status": "NOT_RUN"})
     _write_json(output / "runtime_completion_diagnostics.json", {
@@ -450,6 +661,13 @@ def create_evidence_package(
     _write_json(output / "artifact_checksums.json", checksums)
 
     # Build evidence manifest.
+    if is_synthetic:
+        evidence_origin = "SYNTHETIC"
+        scientific_result = "synthetic_fixture"
+    else:
+        evidence_origin = "REAL_MODEL"
+        scientific_result = "negative"
+
     evidence_manifest = {
         "evidence_package_version": "1.0.0",
         "original_run_id": run_id,
@@ -461,8 +679,11 @@ def create_evidence_package(
         "model_digest": None,
         "tokenizer_id": provider_manifest["tokenizer_id"],
         "tokenizer_revision": provider_manifest["tokenizer_revision"],
-        "provider_class": "REAL_MODEL",
-        "runtime_type": "real",
+        "provider_class": provider_class,
+        "runtime_type": runtime_type,
+        "evidence_origin": evidence_origin,
+        "scientific_claim_eligible": scientific_claim_eligible,
+        "promotable": promotable,
         "benchmark_sha256": _sha256_dict(benchmark),
         "split_sha256": checksums.get("split_manifest.json", ""),
         "counterfactuals_sha256": checksums.get("counterfactual_outcomes.jsonl", ""),
@@ -476,8 +697,15 @@ def create_evidence_package(
         "source_provenance_sha256": checksums.get("source_provenance.json", ""),
         "creation_timestamp": _now(),
         "immutable": True,
-        "scientific_result": "negative",
+        "scientific_result": scientific_result,
         "promoted": False,
+        "n_tasks": len(benchmark.get("tasks", [])),
+        "n_counterfactual_outcomes": len(cf_normalized),
+        "n_experiences": len(experience_rows),
+        "n_validation_tasks": len(split_normalized.get("splits", {}).get("validation", {}).get("task_ids", [])),
+        "n_test_tasks": len(split_normalized.get("splits", {}).get("test", {}).get("task_ids", [])),
+        "n_ood_tasks": len(split_normalized.get("splits", {}).get("ood", {}).get("task_ids", [])),
+        "n_safety_tasks": len(split_normalized.get("splits", {}).get("safety", {}).get("task_ids", [])),
     }
 
     _write_json(output / "EVIDENCE_MANIFEST.json", evidence_manifest)
@@ -521,8 +749,10 @@ def create_evidence_package(
         "output_dir": str(output),
         "n_counterfactual_rows": len(cf_normalized),
         "n_tasks": len(benchmark.get("tasks", [])),
+        "n_experiences": len(experience_rows),
         "n_safety_rows": len(safety_rows),
         "n_eval_results": len(results_normalized),
+        "is_synthetic": is_synthetic,
         "checksums": checksums,
         "lineage_entries": len(lineage),
     }

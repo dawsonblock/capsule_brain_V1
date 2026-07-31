@@ -83,7 +83,7 @@ from qualification.autolearn_v04.v045.config import AnalysisConfig
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-EVIDENCE_DIR = REPO_ROOT / "qualification" / "evidence" / "seven_b_full_run"
+EVIDENCE_DIR = REPO_ROOT / "qualification" / "evidence" / "fixtures" / "synthetic_7b_routing"
 QUALIFICATION_MANIFEST = REPO_ROOT / "qualification" / "QUALIFICATION_MANIFEST.json"
 
 # A real-looking 64-char hex sha256 used for commit / digest placeholders.

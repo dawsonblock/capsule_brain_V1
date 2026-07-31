@@ -1,0 +1,160 @@
+{
+  "policy_id": "baseline",
+  "run_id": "synthetic_v045_fixture_001",
+  "split": "test",
+  "mean_utility": 3.755355,
+  "mean_utility_full_precision": 3.755355,
+  "mean_utility_display": 3.7554,
+  "median_utility": 0.0,
+  "task_count": 20,
+  "task_rows": [
+    {
+      "task_id": "task_030",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 8.8267,
+      "success": true,
+      "family": "direct_answer"
+    },
+    {
+      "task_id": "task_031",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 9.2751,
+      "success": true,
+      "family": "direct_answer"
+    },
+    {
+      "task_id": "task_032",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 9.253,
+      "success": true,
+      "family": "direct_answer"
+    },
+    {
+      "task_id": "task_033",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 9.0503,
+      "success": true,
+      "family": "direct_answer"
+    },
+    {
+      "task_id": "task_034",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 8.6868,
+      "success": true,
+      "family": "direct_answer"
+    },
+    {
+      "task_id": "task_035",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 2.0567,
+      "success": false,
+      "family": "memory_required"
+    },
+    {
+      "task_id": "task_036",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 1.76,
+      "success": false,
+      "family": "memory_required"
+    },
+    {
+      "task_id": "task_037",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 2.0637,
+      "success": false,
+      "family": "memory_required"
+    },
+    {
+      "task_id": "task_038",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 2.0875,
+      "success": false,
+      "family": "memory_required"
+    },
+    {
+      "task_id": "task_039",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 2.0871,
+      "success": false,
+      "family": "memory_required"
+    },
+    {
+      "task_id": "task_040",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 2.2125,
+      "success": false,
+      "family": "tool_required"
+    },
+    {
+      "task_id": "task_041",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 1.8894,
+      "success": false,
+      "family": "tool_required"
+    },
+    {
+      "task_id": "task_042",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 1.9036,
+      "success": false,
+      "family": "tool_required"
+    },
+    {
+      "task_id": "task_043",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 2.1654,
+      "success": false,
+      "family": "tool_required"
+    },
+    {
+      "task_id": "task_044",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 1.8669,
+      "success": false,
+      "family": "tool_required"
+    },
+    {
+      "task_id": "task_045",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 2.1514,
+      "success": false,
+      "family": "workflow_required"
+    },
+    {
+      "task_id": "task_046",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 2.1263,
+      "success": false,
+      "family": "workflow_required"
+    },
+    {
+      "task_id": "task_047",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 1.7901,
+      "success": false,
+      "family": "workflow_required"
+    },
+    {
+      "task_id": "task_048",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 1.8133,
+      "success": false,
+      "family": "workflow_required"
+    },
+    {
+      "task_id": "task_049",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 2.0413,
+      "success": false,
+      "family": "workflow_required"
+    }
+  ],
+  "verified_success_rate": 0.25,
+  "wins": 0,
+  "ties": 0,
+  "losses": 0,
+  "mean_regret": 0.0,
+  "action_distribution": {},
+  "task_ids_digest": "fc564ffac19a60068a7366abe1102d89b2bfe246e06723386606427d1c4ca86a",
+  "utility_version": "normalized_v1"
+}

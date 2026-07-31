@@ -1,0 +1,15 @@
+{
+  "provider_class": "SYNTHETIC",
+  "runtime_type": "synthetic",
+  "model_id": "synthetic-7b",
+  "model_revision": "1.0",
+  "model_digest": null,
+  "tokenizer_id": "synthetic-tokenizer",
+  "tokenizer_revision": "1.0",
+  "generation_config_digest": "b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2",
+  "supports_gate_a": false,
+  "supports_gate_b": false,
+  "scientific_claim_eligible": false,
+  "promotable": false,
+  "provider_manifest_sha256": "f06488aa7c5dc50491920109a7ae9f493052fdb094a11dbd6b41e2aec532dee2"
+}

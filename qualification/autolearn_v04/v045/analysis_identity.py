@@ -7,8 +7,12 @@ analysis source tree and configuration have been fingerprinted.
 Required checks:
     1.  current package version == 2.15.9
     2.  current qualification version == 0.4.5
-    3.  current analysis source-tree hash is present
+    3.  current analysis source-tree hash is present (64-char hex sha256)
     4.  current dependency/config digest is present
+
+A Git commit SHA is NOT required — a valid source-tree SHA-256 digest
+is sufficient for establishing current analysis identity.  This allows
+analysis from ZIP distributions that do not contain a .git directory.
 """
 from __future__ import annotations
 

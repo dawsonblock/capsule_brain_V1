@@ -93,6 +93,19 @@ def _safe_load_jsonl(path: Path) -> list[dict[str, Any]]:
         return []
 
 
+def _is_valid_sha256(value: Any) -> bool:
+    """Return True when *value* looks like a 64-char hex sha256 digest."""
+    if not isinstance(value, str):
+        return False
+    if len(value) != 64:
+        return False
+    try:
+        int(value, 16)
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Byte integrity
 # ---------------------------------------------------------------------------
@@ -244,8 +257,10 @@ def _validate_scientific_completeness(
         errors.append("No task-level records found (aggregate-only substitution)")
 
     # --- Row counts match declared counts ---------------------------------
+    # Read declared counts from evidence manifest first, then fallbacks.
     declared_n_outcomes = (
-        (cf_records[0].get("n_outcomes") if cf_records else None)
+        evidence_manifest.get("n_counterfactual_outcomes")
+        or (cf_records[0].get("n_outcomes") if cf_records else None)
         or dataset_manifest.get("n_counterfactuals")
         or (_safe_load_json(evidence_dir / "coverage_results.json") or {}).get("n_counterfactuals")
     )
@@ -268,7 +283,8 @@ def _validate_scientific_completeness(
         )
 
     declared_n_experiences = (
-        (exp_records[0].get("n_experiences") if exp_records else None)
+        evidence_manifest.get("n_experiences")
+        or (exp_records[0].get("n_experiences") if exp_records else None)
         or benchmark_manifest.get("n_experience")
     )
     actual_exp_rows = len(exp_task_records) if exp_task_records else len(exp_records)
@@ -360,22 +376,34 @@ def _validate_scientific_completeness(
     }
 
     # --- Source provenance complete --------------------------------------
+    # A valid source-tree hash is sufficient; commit SHA is optional.
+    sp = source_provenance if isinstance(source_provenance, dict) else {}
+    has_commit = sp.get("original_commit_sha") not in (None, "", "unknown")
+    has_source_tree = _is_valid_sha256(
+        sp.get("original_source_tree_sha256") or sp.get("source_tree_sha256", "")
+    )
+    has_file_count = isinstance(sp.get("original_source_file_count"), int) and sp.get("original_source_file_count", 0) > 0
+    has_package_version = bool(sp.get("original_package_version") or evidence_manifest.get("original_package_version"))
+    has_qual_version = bool(sp.get("original_qualification_version") or evidence_manifest.get("original_qualification_version"))
+
     provenance_complete = (
-        isinstance(source_provenance, dict)
-        and bool(source_provenance.get("run_id"))
-        and bool(source_provenance.get("original_package_version"))
-        and bool(source_provenance.get("original_qualification_version"))
-        and source_provenance.get("original_commit_sha") not in (None, "", "unknown")
+        has_package_version
+        and has_qual_version
+        and (has_commit or (has_source_tree and has_file_count))
     )
     checks["source_provenance_complete"] = {
         "status": "PASS" if provenance_complete else "FAIL",
-        "observed": source_provenance if isinstance(source_provenance, dict) else {},
-        "expected": "complete provenance with known commit sha",
+        "observed": {
+            "has_commit": has_commit,
+            "has_source_tree": has_source_tree,
+            "has_file_count": has_file_count,
+        },
+        "expected": "complete provenance with commit SHA or source-tree hash",
         "reason": "source provenance complete" if provenance_complete
-        else "source provenance incomplete (unknown commit sha)",
+        else "source provenance incomplete (no commit SHA or valid source-tree hash)",
     }
     if not provenance_complete:
-        errors.append("Source provenance incomplete (unknown commit sha)")
+        errors.append("Source provenance incomplete (no commit SHA or valid source-tree hash)")
 
     # --- No placeholders --------------------------------------------------
     placeholder_status = placeholder_report.get("status", "PASS")

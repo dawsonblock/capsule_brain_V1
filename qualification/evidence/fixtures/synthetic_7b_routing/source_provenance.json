@@ -1,0 +1,15 @@
+{
+  "original_commit_sha": null,
+  "original_source_tree_sha256": "5d3c39a6d7e255b83382b0878b16ff31c9db52e6c0b4d98e2497f46600f90534",
+  "original_source_file_count": 19,
+  "original_source_byte_count": 171297,
+  "original_qualification_source_sha256": "9ca04731597e5b1f7cfe1887017c82564af0d29807c9568ce1e8b1538ecaf7a9",
+  "original_config_sha256": "dd11ac09fe20398edd62bb7f466bef1b3fcea34cbaf2100fb53944b4837cd2bb",
+  "original_dependency_lock_sha256": "f1a8594e8976c89f1e5c028870c3d3764a7a5423473cd8635448d7f6d8cc6574",
+  "original_benchmark_sha256": "091807f83627dfa60b6cd64437b567660db1165ffbc7e681db2a6ccec7d5f022",
+  "original_provider_manifest_sha256": "f06488aa7c5dc50491920109a7ae9f493052fdb094a11dbd6b41e2aec532dee2",
+  "source_tree_sha256": "5d3c39a6d7e255b83382b0878b16ff31c9db52e6c0b4d98e2497f46600f90534",
+  "source_file_count": 19,
+  "source_byte_count": 171297,
+  "hash_algorithm_version": "SHA-256"
+}

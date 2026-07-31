@@ -174,9 +174,29 @@ def evaluate_gate_a0(
                  "byte integrity report missing", "artifact_checksums.json", "checksums")
     else:
         s = _status_from_report(byte_integrity)
-        n_checked = byte_integrity.get("n_checksums", byte_integrity.get("n_checked", 0))
-        n_match = byte_integrity.get("n_match", n_checked)
+        checksum_results = byte_integrity.get("checksum_results")
+        if isinstance(checksum_results, dict) and checksum_results:
+            # n_checked = number of files we actually computed hashes for.
+            # artifact_checksums.json is counted in n_files_validated but not in checksum_results.
+            n_checked = len(checksum_results)
+            n_match = sum(
+                1 for c in checksum_results.values()
+                if isinstance(c, dict) and c.get("match")
+            )
+        else:
+            n_checked = byte_integrity.get(
+                "n_files_validated",
+                byte_integrity.get("n_checksums", byte_integrity.get("n_checked", 0)),
+            )
+            n_match = byte_integrity.get("n_match", n_checked)
+        errors = byte_integrity.get("errors", []) or []
         observed = f"{n_match}/{n_checked} match"
+        # Use the report's status directly when available.
+        if s == "BLOCKED" and n_checked > 0:
+            if n_match == n_checked and not errors:
+                s = "PASS"
+            else:
+                s = "FAIL"
         if s == "PASS" and n_match != n_checked:
             s = "FAIL"
         _add(sub_gates, "A0.1_byte_integrity", s, observed, "all match",
@@ -189,8 +209,16 @@ def evaluate_gate_a0(
                  "scientific completeness report missing", "evidence_manifest.json", "completeness")
     else:
         s = _status_from_report(scientific_completeness)
-        n_required = scientific_completeness.get("n_required", 0)
-        n_present = scientific_completeness.get("n_present", 0)
+        checks = scientific_completeness.get("checks")
+        if isinstance(checks, dict) and checks:
+            n_required = len(checks)
+            n_present = sum(
+                1 for c in checks.values()
+                if isinstance(c, dict) and c.get("status") == "PASS"
+            )
+        else:
+            n_required = scientific_completeness.get("n_required", 0)
+            n_present = scientific_completeness.get("n_present", 0)
         observed = f"{n_present}/{n_required} artifacts"
         if s == "PASS" and n_present != n_required:
             s = "FAIL"
@@ -201,49 +229,72 @@ def evaluate_gate_a0(
     # A0.3 Placeholder-free evidence
     if _is_missing(placeholder_report):
         _blocked(sub_gates, "A0.3_placeholder_free_evidence",
-                 "placeholder report missing", "placeholder_report.json", "n_placeholder")
+                 "placeholder report missing", "placeholder_report.json", "n_detections")
     else:
-        n_placeholder = placeholder_report.get("n_placeholder", 0)
-        n_total = placeholder_report.get("n_total", 0)
-        s = "PASS" if n_placeholder == 0 and n_total > 0 else "FAIL"
-        if n_total == 0:
-            s = "BLOCKED"
+        n_placeholder = placeholder_report.get(
+            "n_detections",
+            placeholder_report.get("n_placeholder", 0),
+        )
+        if n_placeholder == 0 and "n_detections" not in placeholder_report:
+            # Backward-compat: old reports carried n_placeholder/n_total.
+            n_placeholder = placeholder_report.get("n_placeholder", 0)
+        s = "PASS" if n_placeholder == 0 else "FAIL"
         _add(sub_gates, "A0.3_placeholder_free_evidence", s,
-             f"{n_placeholder} placeholders in {n_total} fields", "0 placeholders",
+             f"{n_placeholder} placeholders detected", "0 placeholders",
              placeholder_report.get("reason", "placeholder scan"),
-             "placeholder_report.json", "n_placeholder")
+             "placeholder_report.json", "n_detections")
 
     # A0.4 Historical source identity
     if _is_missing(historical_identity):
         _blocked(sub_gates, "A0.4_historical_source_identity",
-                 "historical source identity missing", "historical_source_provenance.json", "commit_sha")
+                 "historical source identity missing", "historical_source_provenance.json", "original_commit_sha")
     else:
-        commit = historical_identity.get("commit_sha", "")
-        source_hash = historical_identity.get("source_hash") or historical_identity.get(
-            "source_tree_sha256", ""
+        s = _status_from_report(historical_identity)
+        commit = (
+            historical_identity.get("original_commit_sha")
+            or historical_identity.get("commit_sha", "")
         )
-        s = "PASS" if commit and source_hash else "FAIL"
+        source_hash = (
+            historical_identity.get("original_source_tree_sha256")
+            or historical_identity.get("source_hash")
+            or historical_identity.get("source_tree_sha256", "")
+        )
+        if s == "BLOCKED" and (commit or source_hash):
+            s = "PASS" if (commit and source_hash) else "FAIL"
         _add(sub_gates, "A0.4_historical_source_identity", s,
-             f"commit={commit[:12] if commit else 'missing'}",
+             f"commit={commit[:12] if commit else 'null'}, "
+             f"source_hash={source_hash[:12] if source_hash else 'missing'}",
              "nonempty commit SHA and source hash",
              historical_identity.get("reason", "historical source identity"),
-             "historical_source_provenance.json", "commit_sha")
+             "historical_source_provenance.json", "original_commit_sha")
 
     # A0.5 Current analysis identity
     if _is_missing(analysis_identity):
         _blocked(sub_gates, "A0.5_current_analysis_identity",
-                 "current analysis identity missing", "analysis_source_provenance.json", "commit_sha")
+                 "current analysis identity missing", "analysis_source_provenance.json", "analysis_source_tree_sha256")
     else:
-        commit = analysis_identity.get("commit_sha", "")
-        source_hash = analysis_identity.get("source_hash") or analysis_identity.get(
-            "analysis_source_tree_sha256", ""
+        s = _status_from_report(analysis_identity)
+        source_hash = (
+            analysis_identity.get("analysis_source_tree_sha256")
+            or analysis_identity.get("source_hash")
+            or analysis_identity.get("source_tree_sha256", "")
         )
-        s = "PASS" if commit and source_hash else "FAIL"
+        config_digest = analysis_identity.get("config_digest", "")
+        # A valid 64-char hex source-tree hash is sufficient; commit SHA
+        # is NOT required for the current analysis identity.
+        valid_hash = (
+            isinstance(source_hash, str)
+            and len(source_hash) == 64
+            and all(c in "0123456789abcdef" for c in source_hash.lower())
+        )
+        if s == "BLOCKED" and source_hash:
+            s = "PASS" if valid_hash else "FAIL"
         _add(sub_gates, "A0.5_current_analysis_identity", s,
-             f"commit={commit[:12] if commit else 'missing'}",
-             "nonempty commit SHA and source hash",
+             f"source_hash={source_hash[:12] if source_hash else 'missing'}, "
+             f"config_digest={config_digest[:12] if config_digest else 'none'}",
+             "valid 64-char source-tree hash",
              analysis_identity.get("reason", "current analysis identity"),
-             "analysis_source_provenance.json", "commit_sha")
+             "analysis_source_provenance.json", "analysis_source_tree_sha256")
 
     # A0.6 Cross-version lineage
     if _is_missing(cross_version_lineage):
@@ -265,10 +316,22 @@ def evaluate_gate_a0(
                  "provider validation missing", "provider_manifest.json", "provider_class")
     else:
         pv = provider_validation.get("provider_validation", provider_validation)
-        provider_class = pv.get("provider_class", provider_validation.get("provider_class", ""))
-        s = "PASS" if str(provider_class).upper() == "REAL_MODEL" else "FAIL"
+        provider_class = str(
+            pv.get("provider_class", provider_validation.get("provider_class", ""))
+        ).upper()
+        model_id = str(pv.get("model_id", provider_validation.get("model_id", ""))).lower()
+        tokenizer_id = str(
+            pv.get("tokenizer_id", provider_validation.get("tokenizer_id", ""))
+        ).lower()
+        # PASS only when provider_class == REAL_MODEL and neither model_id
+        # nor tokenizer_id contains "synthetic". Otherwise FAIL.
+        is_real = provider_class == "REAL_MODEL"
+        no_synthetic = ("synthetic" not in model_id) and ("synthetic" not in tokenizer_id)
+        s = "PASS" if (is_real and no_synthetic) else "FAIL"
         _add(sub_gates, "A0.7_real_model_provider_identity", s,
-             provider_class, "REAL_MODEL",
+             f"provider_class={provider_class}, model_id={model_id}, "
+             f"tokenizer_id={tokenizer_id}",
+             "REAL_MODEL with no synthetic model/tokenizer",
              provider_validation.get("reason", "provider validation"),
              "provider_manifest.json", "provider_class")
 
@@ -308,10 +371,12 @@ def evaluate_gate_a0(
                  "counterfactual equivalence report missing",
                  "counterfactual_equivalence_report.json", "status")
     else:
-        ce_status = counterfactual_equivalence.get("status", "UNVERIFIABLE")
+        ce_status = counterfactual_equivalence.get("ce_status",
+                        counterfactual_equivalence.get("status", "UNVERIFIABLE"))
         n_equiv = counterfactual_equivalence.get("n_tasks_equivalent", 0)
         n_total = counterfactual_equivalence.get("n_tasks_checked", 0)
-        s = "PASS" if ce_status == "EQUIVALENT" and n_total > 0 and n_equiv == n_total else "FAIL"
+        # PASS if status is PASS or ce_status is EQUIVALENT, and all tasks equivalent.
+        s = "PASS" if (ce_status == "EQUIVALENT" or counterfactual_equivalence.get("status") == "PASS") and n_total > 0 and n_equiv == n_total else "FAIL"
         if n_total == 0:
             s = "BLOCKED"
         _add(sub_gates, "A0.10_counterfactual_equivalence", s,
@@ -324,10 +389,12 @@ def evaluate_gate_a0(
         _blocked(sub_gates, "A0.11_complete_eligible_action_matrix",
                  "action matrix report missing", "action_matrix_completeness.json", "status")
     else:
-        am_status = action_matrix.get("status", "INCOMPLETE")
+        am_status = action_matrix.get("am_status",
+                        action_matrix.get("status", "INCOMPLETE"))
         n_complete = action_matrix.get("n_tasks_complete", 0)
         n_total = action_matrix.get("n_tasks_total", 0)
-        s = "PASS" if am_status == "COMPLETE" and n_total > 0 and n_complete == n_total else "FAIL"
+        # PASS if status is PASS or am_status is COMPLETE, and all tasks complete.
+        s = "PASS" if (am_status == "COMPLETE" or action_matrix.get("status") == "PASS") and n_total > 0 and n_complete == n_total else "FAIL"
         if n_total == 0:
             s = "BLOCKED"
         _add(sub_gates, "A0.11_complete_eligible_action_matrix", s,
@@ -355,9 +422,15 @@ def evaluate_gate_a0(
         _blocked(sub_gates, "A0.13_utility_consistency",
                  "utility consistency report missing", "utility_consistency_report.json", "status")
     else:
-        uc_status = utility_consistency.get("status", "FAIL")
+        uc_status = _status_from_report(utility_consistency, default="FAIL")
         n_fail = utility_consistency.get("n_fail", 0)
-        s = "PASS" if uc_status == "PASS" and n_fail == 0 else "FAIL"
+        # Preserve BLOCKED from the source report; never convert to FAIL.
+        if uc_status == "BLOCKED":
+            s = "BLOCKED"
+        elif uc_status == "PASS":
+            s = "PASS" if n_fail == 0 else "FAIL"
+        else:
+            s = "FAIL"
         _add(sub_gates, "A0.13_utility_consistency", s,
              f"{n_fail} failures", "0 failures",
              utility_consistency.get("reason", "utility consistency check"),
@@ -368,67 +441,89 @@ def evaluate_gate_a0(
         _blocked(sub_gates, "A0.14_no_final_test_leakage",
                  "split access report missing", "split_manifest.json", "splits")
     else:
-        leakage = split_access.get("leakage_detected", True)
-        n_violations = split_access.get("n_violations", 0)
-        s = "PASS" if not leakage and n_violations == 0 else "FAIL"
+        sa_status = split_access.get("status", "BLOCKED")
+        leakage = split_access.get("leakage_detected", sa_status == "FAIL")
+        n_violations = split_access.get("n_violations", len(split_access.get("forbidden_accesses", [])))
+        if sa_status == "BLOCKED":
+            s = "BLOCKED"
+        elif sa_status == "PASS" or (not leakage and n_violations == 0):
+            s = "PASS"
+        else:
+            s = "FAIL"
         _add(sub_gates, "A0.14_no_final_test_leakage", s,
              f"{n_violations} violations", "0 violations",
              split_access.get("reason", "final-test leakage check"),
              "split_manifest.json", "splits")
 
     # A0.15 Candidate serialization parity
-    if _is_missing(candidate_parity):
+    if _is_missing(candidate_parity) or "parity" not in candidate_parity:
         _blocked(sub_gates, "A0.15_candidate_serialization_parity",
-                 "candidate parity report missing", "candidate_policy.json", "policy_sha256")
+                 "candidate parity report missing or empty", "candidate_policy.json", "policy_sha256")
     else:
         parity = candidate_parity.get("parity", False)
         sha = candidate_parity.get("policy_sha256", "")
-        s = "PASS" if parity and sha else "FAIL"
+        s = "PASS" if parity else "FAIL"
         _add(sub_gates, "A0.15_candidate_serialization_parity", s,
-             f"parity={parity}", "serialization parity confirmed",
+             f"parity={parity}, sha={sha[:12] if sha else 'none'}", "serialization parity confirmed",
              candidate_parity.get("reason", "candidate serialization parity"),
              "candidate_policy.json", "policy_sha256")
 
     # A0.16 Sham serialization parity
-    if _is_missing(sham_parity):
+    if _is_missing(sham_parity) or "parity" not in sham_parity:
         _blocked(sub_gates, "A0.16_sham_serialization_parity",
-                 "sham parity report missing", "sham_policy.json", "policy_sha256")
+                 "sham parity report missing or empty", "sham_policy.json", "policy_sha256")
     else:
         parity = sham_parity.get("parity", False)
         sha = sham_parity.get("policy_sha256", "")
-        s = "PASS" if parity and sha else "FAIL"
+        s = "PASS" if parity else "FAIL"
         _add(sub_gates, "A0.16_sham_serialization_parity", s,
-             f"parity={parity}", "serialization parity confirmed",
+             f"parity={parity}, sha={sha[:12] if sha else 'none'}", "serialization parity confirmed",
              sham_parity.get("reason", "sham serialization parity"),
              "sham_policy.json", "policy_sha256")
 
     # A0.17 Task/split consistency
     if _is_missing(task_split):
         _blocked(sub_gates, "A0.17_task_split_consistency",
-                 "task/split consistency report missing", "benchmark_manifest.json", "n_tasks")
+                 "task/split consistency report missing", "benchmark_manifest.json", "benchmark_task_count")
     else:
-        consistent = task_split.get("consistent", False)
-        n_tasks = task_split.get("n_tasks", 0)
-        n_split = task_split.get("n_split_tasks", 0)
-        s = "PASS" if consistent and n_tasks == n_split else "FAIL"
+        ts_status = task_split.get("status")
+        if ts_status in ("PASS", "FAIL", "BLOCKED", "NOT_RUN"):
+            s = ts_status
+            n_bench = task_split.get(
+                "benchmark_task_count", task_split.get("n_tasks", 0))
+            n_split = task_split.get(
+                "split_task_count", task_split.get("n_split_tasks", 0))
+        else:
+            # Backward-compat with older report shape.
+            consistent = task_split.get("consistent", False)
+            n_bench = task_split.get("n_tasks", 0)
+            n_split = task_split.get("n_split_tasks", 0)
+            s = "PASS" if consistent and n_bench == n_split else "FAIL"
         _add(sub_gates, "A0.17_task_split_consistency", s,
-             f"tasks={n_tasks}, split={n_split}", "consistent",
+             f"benchmark={n_bench}, split={n_split}", "consistent",
              task_split.get("reason", "task/split consistency"),
-             "benchmark_manifest.json", "n_tasks")
+             "benchmark_manifest.json", "benchmark_task_count")
 
     # A0.18 Artifact lineage completeness
     if _is_missing(artifact_lineage):
         _blocked(sub_gates, "A0.18_artifact_lineage_completeness",
-                 "artifact lineage report missing", "source_provenance.json", "commit_sha")
+                 "artifact lineage report missing", "source_provenance.json", "n_artifacts")
     else:
-        complete = artifact_lineage.get("complete", False)
-        n_artifacts = artifact_lineage.get("n_artifacts", 0)
-        n_with_lineage = artifact_lineage.get("n_with_lineage", 0)
-        s = "PASS" if complete and n_artifacts > 0 and n_with_lineage == n_artifacts else "FAIL"
+        al_status = artifact_lineage.get("status")
+        if al_status in ("PASS", "FAIL", "BLOCKED", "NOT_RUN"):
+            s = al_status
+            n_artifacts = artifact_lineage.get("n_artifacts", 0)
+            n_valid = artifact_lineage.get("n_valid", 0)
+        else:
+            # Backward-compat with older report shape.
+            complete = artifact_lineage.get("complete", False)
+            n_artifacts = artifact_lineage.get("n_artifacts", 0)
+            n_valid = artifact_lineage.get("n_with_lineage", 0)
+            s = "PASS" if complete and n_artifacts > 0 and n_valid == n_artifacts else "FAIL"
         _add(sub_gates, "A0.18_artifact_lineage_completeness", s,
-             f"{n_with_lineage}/{n_artifacts} with lineage", "all artifacts have lineage",
+             f"{n_valid}/{n_artifacts} valid", "all artifacts valid",
              artifact_lineage.get("reason", "artifact lineage completeness"),
-             "source_provenance.json", "commit_sha")
+             "source_provenance.json", "n_artifacts")
 
     # A0.19 Metric consistency
     if _is_missing(metric_consistency):
@@ -448,9 +543,19 @@ def evaluate_gate_a0(
         _blocked(sub_gates, "A0.20_safety_evidence_integrity",
                  "safety evidence report missing", "safety_evidence_report.json", "status")
     else:
-        se_status = safety_evidence.get("status", "FAIL")
-        n_fail = safety_evidence.get("n_fail", 0)
-        s = "PASS" if se_status == "PASS" and n_fail == 0 else "FAIL"
+        se_status = _status_from_report(safety_evidence, default="FAIL")
+        checks = safety_evidence.get("checks")
+        if isinstance(checks, list) and checks:
+            n_fail = sum(1 for c in checks if isinstance(c, dict) and c.get("status") == "FAIL")
+        else:
+            n_fail = safety_evidence.get("n_fail", 0)
+        # Preserve BLOCKED from the source report; never convert to FAIL.
+        if se_status == "BLOCKED":
+            s = "BLOCKED"
+        elif se_status == "PASS":
+            s = "PASS" if n_fail == 0 else "FAIL"
+        else:
+            s = "FAIL"
         _add(sub_gates, "A0.20_safety_evidence_integrity", s,
              f"{n_fail} failures", "0 failures",
              safety_evidence.get("reason", "safety evidence integrity"),

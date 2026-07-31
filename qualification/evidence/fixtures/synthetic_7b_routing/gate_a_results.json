@@ -1,0 +1,44 @@
+{
+  "overall_status": "FAIL",
+  "gate_a0": {
+    "status": "PASS",
+    "key_metric": "PASS",
+    "threshold": "PASS",
+    "reason": "All infrastructure and lineage checks pass."
+  },
+  "gate_a1": {
+    "status": "PASS",
+    "key_metric": 4.63727,
+    "threshold": 0.05,
+    "concentration_status": "BROAD",
+    "reason": "Oracle-sham headroom=4.6373 (> 0.05) and concentration_status=BROAD (not CONCENTRATED)."
+  },
+  "gate_a2": {
+    "status": "FAIL",
+    "key_metric": "FEATURE_SIGNAL_INCONCLUSIVE",
+    "threshold": "FEATURE_SIGNAL_PRESENT",
+    "reason": "Feature signal absent or inconclusive (learnability_conclusion=FEATURE_SIGNAL_INCONCLUSIVE). Candidate does not beat sham significantly.",
+    "candidate_vs_sham_delta": 1.080585
+  },
+  "gate_a3": {
+    "status": "PASS",
+    "key_metric": 1.694065,
+    "threshold": 0.01,
+    "reason": "Candidate-baseline delta=1.6941."
+  },
+  "gate_a4": {
+    "status": "FAIL",
+    "key_metric": 1.080585,
+    "threshold": 0.0,
+    "candidate_percentile": null,
+    "reason": "Candidate-sham delta=1.0806 does not exceed threshold 0.0 or candidate percentile (45%) does not exceed 50%. [candidate_percentile marked unavailable: sham ensemble evidence not packaged]",
+    "candidate_percentile_available": false
+  },
+  "gate_a5": {
+    "status": "FAIL",
+    "key_metric": 0.05,
+    "threshold": 0.1,
+    "reason": "High-margin recovery fraction 0.05 does not meet threshold 0.10."
+  },
+  "summary": "A1 passed (headroom exists) but A2 failed (feature signal inconclusive — candidate doesn't beat sham significantly)."
+}
