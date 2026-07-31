@@ -75,7 +75,7 @@ def _sha256_json(obj: Any) -> str:
 
 
 def create_evidence_package(
-    evidence_dir: str | Path = "qualification/evidence/seven_b_full_run",
+    evidence_dir: str | Path = "qualification/evidence/fixtures/synthetic_7b_routing",
     run_data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Create the immutable 7B evidence package.

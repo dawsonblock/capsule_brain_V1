@@ -65,7 +65,7 @@ from qualification.autolearn_v04.common.schemas import (
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-EVIDENCE_DIR = REPO_ROOT / "qualification" / "evidence" / "seven_b_full_run"
+EVIDENCE_DIR = REPO_ROOT / "qualification" / "evidence" / "fixtures" / "synthetic_7b_routing"
 
 
 @pytest.fixture
@@ -113,13 +113,13 @@ def tmp_evidence(evidence_dir, tmp_path):
 
 class TestVersionIdentity:
     def test_package_version(self):
-        assert PACKAGE_VERSION == "2.15.9"
+        assert PACKAGE_VERSION == "2.15.10"
 
     def test_autolearn_version(self):
-        assert AUTOLEARN_VERSION == "0.3.8"
+        assert AUTOLEARN_VERSION == "0.3.9"
 
     def test_qualification_version(self):
-        assert AUTOLEARN_QUALIFICATION_VERSION == "0.4.5"
+        assert AUTOLEARN_QUALIFICATION_VERSION == "0.4.6"
 
     def test_qualification_manifest_versions(self):
         manifest_path = REPO_ROOT / "qualification" / "QUALIFICATION_MANIFEST.json"
@@ -149,7 +149,7 @@ class TestVersionIdentity:
         # Parse the quoted value.
         pyproject_version = version_line.split("=", 1)[1].strip().strip('"').strip("'")
         assert pyproject_version == PACKAGE_VERSION
-        assert pyproject_version == "2.15.9"
+        assert pyproject_version == "2.15.10"
         # Manifest matches too.
         manifest_path = REPO_ROOT / "qualification" / "QUALIFICATION_MANIFEST.json"
         with open(manifest_path) as f:

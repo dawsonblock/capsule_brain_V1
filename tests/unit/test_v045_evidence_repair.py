@@ -1,4 +1,4 @@
-"""Comprehensive tests for the v0.4.5 release (Capsule Brain 2.15.9 / AutoLearn v0.4.5).
+"""Comprehensive tests for the v0.4.6 release (Capsule Brain 2.15.10 / AutoLearn v0.4.6).
 
 Covers all areas from spec section 37:
 - Version identity
@@ -325,26 +325,26 @@ def tmp_evidence(evidence_dir, tmp_path) -> Path:
 
 class TestVersionIdentity:
     def test_package_version(self):
-        assert PACKAGE_VERSION == "2.15.9"
+        assert PACKAGE_VERSION == "2.15.10"
 
     def test_autolearn_version(self):
-        assert AUTOLEARN_VERSION == "0.3.8"
+        assert AUTOLEARN_VERSION == "0.3.9"
 
     def test_qualification_version(self):
-        assert AUTOLEARN_QUALIFICATION_VERSION == "0.4.5"
+        assert AUTOLEARN_QUALIFICATION_VERSION == "0.4.6"
 
     def test_qualification_manifest_has_correct_versions(self):
         assert QUALIFICATION_MANIFEST.exists()
         manifest = json.loads(QUALIFICATION_MANIFEST.read_text())
-        assert manifest["package_version"] == "2.15.9"
-        assert manifest["qualification_version"] == "0.4.5"
+        assert manifest["package_version"] == "2.15.10"
+        assert manifest["qualification_version"] == "0.4.6"
 
     def test_version_invariant(self):
         pyproject = (REPO_ROOT / "pyproject.toml").read_text()
         # pyproject version line.
-        assert 'version = "2.15.9"' in pyproject
+        assert 'version = "2.15.10"' in pyproject
         manifest = json.loads(QUALIFICATION_MANIFEST.read_text())
-        assert manifest["package_version"] == PACKAGE_VERSION == "2.15.9"
+        assert manifest["package_version"] == PACKAGE_VERSION == "2.15.10"
 
 
 # ---------------------------------------------------------------------------
@@ -782,7 +782,7 @@ class TestHistoricalIdentity:
         assert historical["status"] == "BLOCKED"
 
         lineage = validate_cross_version_lineage(
-            historical, {"status": "PASS", "analysis_package_version": "2.15.9"},
+            historical, {"status": "PASS", "analysis_package_version": "2.15.10"},
             evidence_manifest,
         )
         assert lineage["status"] == "BLOCKED"

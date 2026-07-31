@@ -62,7 +62,7 @@ from qualification.autolearn_v04.v044.provenance import create_final_provenance
 
 
 def run_all_v044_diagnostics(
-    evidence_dir: str = "qualification/evidence/seven_b_full_run",
+    evidence_dir: str = "qualification/evidence/fixtures/synthetic_7b_routing",
     output_dir: str = "qualification/autolearn_v04/artifacts/v044",
     run_id: str = "v044_analysis_001",
     repo_root: str = ".",

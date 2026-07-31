@@ -1,12 +1,12 @@
 """Validate the current analysis identity.
 
 This module verifies that the code performing the *current* analysis is the
-expected Capsule Brain 2.15.9 / qualification 0.4.5 build, and that the
+expected Capsule Brain 2.15.10 / qualification 0.4.6 build, and that the
 analysis source tree and configuration have been fingerprinted.
 
 Required checks:
-    1.  current package version == 2.15.9
-    2.  current qualification version == 0.4.5
+    1.  current package version == 2.15.10
+    2.  current qualification version == 0.4.6
     3.  current analysis source-tree hash is present (64-char hex sha256)
     4.  current dependency/config digest is present
 
@@ -25,8 +25,8 @@ from capsule_brain.version import (
 )
 
 # Expected identity for the current analysis build.
-EXPECTED_PACKAGE_VERSION = "2.15.9"
-EXPECTED_QUALIFICATION_VERSION = "0.4.5"
+EXPECTED_PACKAGE_VERSION = "2.15.10"
+EXPECTED_QUALIFICATION_VERSION = "0.4.6"
 
 
 def _is_nonempty_str(value: Any) -> bool:
@@ -96,7 +96,7 @@ def validate_analysis_identity(
     analysis_source_hash = analysis_source_hash or {}
     source_tree_sha256 = analysis_source_hash.get("source_tree_sha256", "")
 
-    # --- Check 1: current package version == 2.15.9 ------------------------
+    # --- Check 1: current package version == 2.15.10 -----------------------
     if PACKAGE_VERSION == EXPECTED_PACKAGE_VERSION:
         _record(
             "analysis_package_version_current",
@@ -119,7 +119,7 @@ def validate_analysis_identity(
             f"current PACKAGE_VERSION '{PACKAGE_VERSION}' != expected '{EXPECTED_PACKAGE_VERSION}'"
         )
 
-    # --- Check 2: current qualification version == 0.4.5 -------------------
+    # --- Check 2: current qualification version == 0.4.6 --------------------
     if AUTOLEARN_QUALIFICATION_VERSION == EXPECTED_QUALIFICATION_VERSION:
         _record(
             "analysis_qualification_version_current",

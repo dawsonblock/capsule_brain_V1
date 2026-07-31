@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "verifiers": {
+    "exact_match": {
+      "version": "1.0",
+      "class": "ExactMatchVerifier",
+      "reliability": 1.0,
+      "supported_task_families": [
+        "direct_answer",
+        "memory_required",
+        "tool_required",
+        "workflow_required"
+      ],
+      "scientific_eligible": true
+    },
+    "regex_match": {
+      "version": "1.0",
+      "class": "RegexMatchVerifier",
+      "reliability": 0.95,
+      "supported_task_families": [
+        "direct_answer",
+        "memory_required"
+      ],
+      "scientific_eligible": true
+    },
+    "tool_execution": {
+      "version": "1.0",
+      "class": "ToolExecutionVerifier",
+      "reliability": 1.0,
+      "supported_task_families": [
+        "tool_required",
+        "workflow_required"
+      ],
+      "scientific_eligible": true
+    },
+    "workflow_completion": {
+      "version": "1.0",
+      "class": "WorkflowCompletionVerifier",
+      "reliability": 1.0,
+      "supported_task_families": [
+        "workflow_required"
+      ],
+      "scientific_eligible": true
+    },
+    "memory_recall": {
+      "version": "1.0",
+      "class": "MemoryRecallVerifier",
+      "reliability": 0.98,
+      "supported_task_families": [
+        "memory_required"
+      ],
+      "scientific_eligible": true
+    },
+    "synthetic_verifier": {
+      "version": "1.0",
+      "class": "SyntheticVerifier",
+      "reliability": 1.0,
+      "supported_task_families": [
+        "direct_answer",
+        "memory_required",
+        "tool_required",
+        "workflow_required"
+      ],
+      "scientific_eligible": false
+    }
+  }
+}

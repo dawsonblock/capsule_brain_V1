@@ -9,7 +9,7 @@ Required invariant:
     == qualification report package version
     == provenance package version
 """
-PACKAGE_VERSION = "2.15.9"
-AUTOLEARN_VERSION = "0.3.8"
-AUTOLEARN_QUALIFICATION_VERSION = "0.4.5"
-PROTOCOL_VERSION = "0.4.5"
+PACKAGE_VERSION = "2.15.10"
+AUTOLEARN_VERSION = "0.3.9"
+AUTOLEARN_QUALIFICATION_VERSION = "0.4.6"
+PROTOCOL_VERSION = "0.4.6"

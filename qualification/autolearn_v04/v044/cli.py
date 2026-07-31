@@ -2,7 +2,7 @@
 
 Usage:
     python -m qualification.autolearn_v04.v044.cli analyze \
-        --evidence-dir qualification/evidence/seven_b_full_run \
+        --evidence-dir qualification/evidence/fixtures/synthetic_7b_routing \
         --output-dir qualification/autolearn_v04/artifacts/v044/<run_id> \
         --run-id <run_id>
 
@@ -74,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # create-evidence-package
     p_create = subparsers.add_parser("create-evidence-package", help="Create evidence package")
-    p_create.add_argument("--evidence-dir", default="qualification/evidence/seven_b_full_run")
+    p_create.add_argument("--evidence-dir", default="qualification/evidence/fixtures/synthetic_7b_routing")
 
     # create-pilot-manifest
     p_pilot = subparsers.add_parser("create-pilot-manifest", help="Create pilot manifest")

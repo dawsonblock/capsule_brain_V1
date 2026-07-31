@@ -1,0 +1,12 @@
+{
+  "historical_run_id": "scientific_full_7b_001",
+  "status": "UNAVAILABLE",
+  "reason": "Original Modal task-level artifacts are not present in this repository.",
+  "expected_task_count": 130,
+  "expected_counterfactual_count": 490,
+  "expected_model_family": "Qwen 7B",
+  "scientific_claim_eligible": false,
+  "gate_a_status": "BLOCKED",
+  "approve_matched_14b_pilot": false,
+  "approve_full_14b_run": false
+}
