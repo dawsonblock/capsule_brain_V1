@@ -309,10 +309,10 @@ class LocalGPUExecutor:
             import torch
             results = []
             t0 = time.perf_counter()
-            for prompt in tqdm(prompts, desc="Generating", unit="prompt"):
+            for i, prompt in enumerate(tqdm(prompts, desc="Generating", unit="prompt")):
                 result = self.generate(prompt, max_new_tokens=max_new_tokens)
                 results.append(result)
-                if torch.cuda.is_available():
+                if torch.cuda.is_available() and (i + 1) % 40 == 0:
                     vram = torch.cuda.memory_allocated() / 1e9
                     print(f"    VRAM: {vram:.2f} GB")
             return results
@@ -323,11 +323,11 @@ class LocalGPUExecutor:
         n = len(prompts)
         bs = self.batch_size
         batches = list(range(0, n, bs))
-        for batch_start in tqdm(batches, desc="Generating batches", unit="batch"):
+        for i, batch_start in enumerate(tqdm(batches, desc="Generating batches", unit="batch")):
             batch_prompts = prompts[batch_start:batch_start + bs]
             batch_results = self._generate_batch(batch_prompts, max_new_tokens)
             results.extend(batch_results)
-            if torch.cuda.is_available():
+            if torch.cuda.is_available() and (i + 1) % 5 == 0:
                 vram = torch.cuda.memory_allocated() / 1e9
                 print(f"    VRAM: {vram:.2f} GB")
         return results

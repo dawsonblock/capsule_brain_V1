@@ -846,7 +846,7 @@ def main() -> None:
                         help="Use torch.compile() for graph-level optimisation")
     parser.add_argument("--autocast", action="store_true",
                         help="Use torch.cuda.amp.autocast for mixed precision")
-    parser.add_argument("--batch-size", type=int, default=1,
+    parser.add_argument("--batch-size", type=int, default=8,
                         help="Batch size for batched generation (1=sequential)")
     args = parser.parse_args()
 
