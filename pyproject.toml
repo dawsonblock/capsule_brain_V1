@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "capsule-brain"
-version = "2.15.5"
+version = "2.15.6"
 description = "Capsule Brain v2 — async service runtime for an autonomous AI assistant"
 requires-python = ">=3.11"
 dependencies = [

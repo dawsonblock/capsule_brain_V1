@@ -50,10 +50,10 @@ class TestVersionConsistency:
             AUTOLEARN_QUALIFICATION_VERSION,
             PROTOCOL_VERSION,
         )
-        assert PACKAGE_VERSION == "2.15.5"
-        assert AUTOLEARN_VERSION == "0.3.4"
-        assert AUTOLEARN_QUALIFICATION_VERSION == "0.4.1"
-        assert PROTOCOL_VERSION == "0.4.1"
+        assert PACKAGE_VERSION == "2.15.6"
+        assert AUTOLEARN_VERSION == "0.3.5"
+        assert AUTOLEARN_QUALIFICATION_VERSION == "0.4.2"
+        assert PROTOCOL_VERSION == "0.4.2"
 
 
 # ---------------------------------------------------------------------------
@@ -367,8 +367,8 @@ class TestQualificationManifest:
         assert manifest_path.exists()
         manifest = json.loads(manifest_path.read_text())
         assert manifest["active_qualification"] == "autolearn_v04"
-        assert manifest["qualification_version"] == "0.4.1"
-        assert manifest["package_version"] == "2.15.5"
+        assert manifest["qualification_version"] == "0.4.2"
+        assert manifest["package_version"] == "2.15.6"
         assert manifest["status"] == "current"
 
     def test_archive_readme_exists(self):
