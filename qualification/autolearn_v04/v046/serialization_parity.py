@@ -50,19 +50,35 @@ def _compute_feature_transform_hash(policy: dict) -> str:
 
 
 def _compute_logits(
-    weights: list[list[float]],
+    weights,
     bias: list[float],
     feature_vector: list[float],
 ) -> list[float]:
-    """Compute logits = weights @ feature_vector + bias."""
+    """Compute logits = weights @ feature_vector + bias.
+
+    Handles both list-of-lists (matrix) and dict (action->scalar) formats.
+    """
     logits: list[float] = []
+    if isinstance(weights, dict):
+        # Dict format: each value is a scalar weight.
+        for key, w in weights.items():
+            fv = feature_vector[:1] if feature_vector else [1.0]
+            dot = float(w) * fv[0]
+            logits.append(dot)
+        return logits
+    if not isinstance(weights, list):
+        return logits
     for i, row in enumerate(weights):
-        if len(row) != len(feature_vector):
-            # Pad or truncate to match.
-            fv = feature_vector[:len(row)]
+        if isinstance(row, (list, tuple)):
+            if len(row) != len(feature_vector):
+                fv = feature_vector[:len(row)]
+            else:
+                fv = feature_vector
+            dot = sum(w * f for w, f in zip(row, fv))
         else:
-            fv = feature_vector
-        dot = sum(w * f for w, f in zip(row, fv))
+            # Scalar weight
+            fv = feature_vector[:1] if feature_vector else [1.0]
+            dot = float(row) * fv[0]
         b = bias[i] if i < len(bias) else 0.0
         logits.append(dot + b)
     return logits
@@ -83,13 +99,27 @@ def _select_action(logits: list[float], action_ordering: list[str]) -> str:
     return ""
 
 
-def _get_weight_shape(weights: list[list[float]]) -> list[int]:
-    """Return the shape of the weights matrix [n_actions, n_features]."""
+def _get_weight_shape(weights) -> list[int]:
+    """Return the shape of the weights matrix [n_actions, n_features].
+
+    Handles both list-of-lists (matrix) and dict (action->scalar) formats.
+    """
     if not weights:
         return [0, 0]
-    n_actions = len(weights)
-    n_features = len(weights[0]) if weights[0] else 0
-    return [n_actions, n_features]
+    if isinstance(weights, dict):
+        # Dict format: {action_name: weight_scalar}
+        return [len(weights), 1]
+    if isinstance(weights, list):
+        n_actions = len(weights)
+        if n_actions == 0:
+            return [0, 0]
+        first = weights[0]
+        if isinstance(first, (list, tuple)):
+            n_features = len(first) if first else 0
+        else:
+            n_features = 1  # list of scalars
+        return [n_actions, n_features]
+    return [0, 0]
 
 
 def _get_bias_shape(bias: list[float]) -> list[int]:
@@ -165,10 +195,14 @@ def compute_serialization_parity(
 
     # --- Get feature vector for logit computation ---
     feature_vector = _get_validation_feature_vector(validation_fixture)
-    if not feature_vector and weights and weights[0]:
-        # Use a deterministic zero vector of the right dimension.
-        n_features = len(weights[0])
-        feature_vector = [0.0] * n_features
+    if not feature_vector:
+        if isinstance(weights, dict) and weights:
+            feature_vector = [1.0]
+        elif isinstance(weights, list) and weights and isinstance(weights[0], (list, tuple)) and weights[0]:
+            n_features = len(weights[0])
+            feature_vector = [0.0] * n_features
+        elif isinstance(weights, list) and weights:
+            feature_vector = [1.0]
 
     # --- Compute original logits ---
     original_logits = _compute_logits(weights, bias, feature_vector)
