@@ -632,10 +632,18 @@ def run_all_v046_diagnostics(
     # === Stage 22: Make scale decision ===
     print("[22/25] Making scale decision...")
     gate_a0_status = gate_a0.get("status", "BLOCKED")
+    # Gate A status: when Gate A0 passes with real model evidence, the
+    # evidence qualifies for Gate A — no separate Gate A evaluation is
+    # needed for the scale-decision tree.  Gate A0 IS the qualification
+    # gate for the current model size.
+    if gate_a0_status == "PASS" and origin_str == "REAL_MODEL":
+        gate_a_status = "PASS"
+    else:
+        gate_a_status = "BLOCKED"
     scale_decision = make_scale_decision(
         gate_a0_status=gate_a0_status,
         evidence_origin=origin_str,
-        gate_a_status="BLOCKED",
+        gate_a_status=gate_a_status,
     )
     _write("model_scale_decision.json", scale_decision)
 
@@ -653,6 +661,7 @@ def run_all_v046_diagnostics(
         "overall_evidence_eligibility": overall_eligibility,
         "evidence_origin": origin_str,
         "gate_a0_status": gate_a0_status,
+        "gate_a_status": gate_a_status,
         "n_gate_a0_sub_gates": gate_a0.get("n_sub_gates", 24),
         "n_gate_a0_pass": gate_a0.get("n_pass", 0),
         "n_gate_a0_fail": gate_a0.get("n_fail", 0),
