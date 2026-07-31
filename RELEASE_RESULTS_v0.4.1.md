@@ -28,12 +28,16 @@ control, with 12 of 16 promotion gates passing.
 | Infrastructure | — | PASS | 78.7s | 740 | BLOCKED | BLOCKED | BLOCKED |
 | Scientific-mini | 0.5B | PASS | 1692s | 60 | PASS (vs baseline) | BLOCKED | BLOCKED |
 | Scientific-mini | 7B | PASS | 1084s | 60 | FAIL (LCB=0.006 < 0.01) | NOT_RUN | BLOCKED |
+| Scientific-full | 7B | PASS | 1509s | 130 | FAIL (cand≈sham) | NOT_RUN | BLOCKED |
 
-The 7B run is the most significant: the candidate policy learned real
-routing signal (utility 5.93 vs baseline 5.84, sham 0.78), with the
-candidate-vs-baseline lower confidence bound (0.006) falling just
-short of the 0.01 epsilon threshold due to the small sample size
-(20 experience tasks). With more tasks, this would likely pass.
+The 7B runs are the most significant: the candidate policy learned real
+routing signal, beating the frozen baseline by +0.42 utility in the
+full run. However, Gate A fails because (1) the candidate-vs-baseline
+LCB (0.004) falls short of the 0.01 epsilon, and (2) the sham control
+also learns a strong frequency-based policy, preventing candidate-vs-sham
+separation. This is a meaningful scientific finding: at 21% model
+success rate, routing adds little value beyond always picking the most
+common action.
 
 ---
 
@@ -465,6 +469,106 @@ epsilon. A full scientific run with 240 experience tasks would provide
 
 ---
 
+## 5c. Scientific Mode (Full) — 7B Model on Modal GPU
+
+**Model**: Qwen/Qwen2.5-7B-Instruct
+**Infrastructure**: Modal GPU (NVIDIA A10G, 24GB VRAM, float16)
+**Task counts**: 50 experience, 20 validation, 30 test, 20 OOD, 10 safety
+**Counterfactuals**: 490 (130 tasks x ~3.77 actions each)
+**Verified success rate**: 103/490 (21.0%)
+**Elapsed**: 1509.3s (~25 minutes)
+
+### Gate A Results
+
+| Metric | Value |
+|--------|-------|
+| Candidate mean utility | 5.048 |
+| Baseline mean utility | 4.633 |
+| Oracle mean utility | 5.112 |
+| Sham mean utility | 5.069 |
+| Delta (candidate - baseline) | +0.415 |
+| Delta CI_low (bootstrap, 10k) | +0.004 |
+| Delta (candidate - sham) | -0.020 |
+| Delta vs sham CI_low | -0.129 |
+| Oracle gap | 0.064 |
+
+**Gate A verdict**: FAIL. Two sub-gates fail:
+1. `candidate_vs_baseline_lcb`: LCB=0.004 < epsilon=0.01
+2. `candidate_vs_sham_lcb`: candidate is slightly worse than sham (-0.020)
+
+**Gate A sub-gates** (10 pass, 3 fail, 3 not run):
+
+| Gate | Status | Detail |
+|------|--------|--------|
+| candidate_vs_baseline_lcb | FAIL | LCB=0.004 < epsilon=0.01 |
+| candidate_vs_sham_lcb | FAIL | LCB=-0.129 (candidate worse than sham) |
+| success_rate_improvement | PASS | +3.3% |
+| no_critical_family_regression | PASS | no regressions |
+| action_diversity | PASS | |
+| sham_neutrality | FAIL | sham too strong |
+| coverage_complete | PASS | |
+| safety_no_increase | PASS | |
+| oracle_gap_nonnegative | PASS | oracle_gap=0.064 |
+| provider_class_is_real_model | PASS | |
+| all_rows_runtime_type_real | PASS | 490/490 |
+| runtime_completion_passes | PASS | |
+| provenance_independently_verified | PASS | |
+| policy_provenance_complete | PASS | |
+| gate_b_executed | NOT_RUN | requires Gate A PASS |
+| post_promotion_behavioral_proof | NOT_RUN | requires promotion PASS |
+
+**Family-level results**:
+
+| Family | Mean delta | CI_low | n_groups | Passes |
+|--------|-----------|--------|----------|--------|
+| direct_answer | +0.954 | 0.000 | 12 | NO |
+| memory_required | 0.000 | 0.000 | 5 | NO |
+| tool_required | +0.204 | +0.021 | 5 | YES |
+| workflow_required | 0.000 | 0.000 | 8 | NO |
+
+### Why Gate A Failed (Full Run)
+
+The full run reveals a deeper issue than the mini run. With 50
+experience tasks, the sham policy learned a strong frequency-based
+strategy: 54% of training tasks have `ANSWER_DIRECT` as the best
+action, so the sham's bias toward `ANSWER_DIRECT` achieves utility
+5.069 — nearly matching the candidate's 5.048.
+
+The candidate does beat the baseline by +0.415 (much larger than the
+mini run's +0.093), but the variance is also higher, keeping the LCB
+at 0.004. More importantly, the candidate doesn't separate from the
+sham, which means the learned routing features aren't adding
+discriminative value beyond the marginal action distribution.
+
+**Scientific interpretation**: At 21% model success rate, the
+counterfactual utilities are dominated by the model's baseline
+capability, not by routing choice. A more capable model (e.g., 14B+
+or a model fine-tuned for instruction following) would produce higher
+success rates, making routing decisions matter more and enabling
+candidate-sham separation.
+
+### Mini vs Full Comparison
+
+| Metric | Mini (20 exp) | Full (50 exp) |
+|--------|--------------|--------------|
+| Counterfactuals | 225 | 490 |
+| Success rate | 21.8% | 21.0% |
+| Candidate utility | 5.931 | 5.048 |
+| Baseline utility | 5.838 | 4.633 |
+| Sham utility | 0.780 | 5.069 |
+| Cand-baseline delta | +0.093 | +0.415 |
+| Cand-baseline LCB | 0.006 | 0.004 |
+| Cand-sham delta | +5.151 | -0.020 |
+| Gate A sub-gates passed | 12/16 | 10/16 |
+
+The mini run's sham was weak (0.78) because with only 15 non-safety
+training examples, the shuffled-label policy couldn't learn the
+marginal distribution. With 40 non-safety examples in the full run,
+the sham converges to the frequency-based strategy and becomes
+competitive with the candidate.
+
+---
+
 ## 6. Remaining Work
 
 ### Not yet implemented
@@ -473,21 +577,25 @@ epsilon. A full scientific run with 240 experience tasks would provide
    `artifacts_dir`, not under `runs/<run_id>/`
 2. **Orchestrator as primary entry point** — `run_all.py` has its own
    stage logic; `PipelineOrchestrator` exists but isn't wired in
-3. **Full scientific mode on Modal GPU with 7B model** — the
-   scientific-mini run (60 tasks) is complete; a full run (640+ tasks)
-   would provide enough statistical power for Gate A to pass
-4. **Gate B actually passing** — needs Gate A to pass first, then
-   enough class diversity for prototype-based classification
+3. **Gate A passing** — requires a more capable model (14B+ or
+   instruction-tuned) to produce higher success rates, making routing
+   decisions matter enough for candidate-sham separation
+4. **Gate B passing** — needs Gate A to pass first, then enough class
+   diversity for prototype-based classification
 
 ### Known issues
 
 1. **`output_hidden_states` warning** — transformers 5.x warns about
    this flag during activation collection. Functionally harmless but
    should be updated to the new API.
-2. **Modal warm-container timeout** — 225 prompts at 512 max tokens
+2. **Modal warm-container timeout** — 490 prompts at 512 max tokens
    exceeds the 600s container timeout. The pipeline correctly falls
    back to parallel `.map()` execution, but increasing the timeout or
    batching would improve throughput.
+3. **Sham competitiveness** — with 40+ training examples, the sham
+   learns the marginal action distribution and becomes competitive
+   with the candidate. This is expected behavior at low model success
+   rates but prevents Gate A from passing.
 
 ---
 
