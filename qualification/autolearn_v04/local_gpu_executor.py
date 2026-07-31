@@ -29,6 +29,12 @@ import time
 from pathlib import Path
 from typing import Any
 
+try:
+    from tqdm import tqdm
+except ImportError:  # pragma: no cover - tqdm is optional
+    def tqdm(iterable, **kwargs):
+        return iterable
+
 # Reuse the verification and prompt-building logic from the Modal executor.
 from .modal_scientific_executor import (
     _build_action_prompt,
@@ -75,7 +81,7 @@ class LocalGPUExecutor:
         use_flash_attention: bool = False,
         use_torch_compile: bool = False,
         use_autocast: bool = False,
-        batch_size: int = 1,
+        batch_size: int = 8,
     ) -> None:
         self.model_id = model_id
         self.device = device
@@ -300,37 +306,30 @@ class LocalGPUExecutor:
         """
         if self.batch_size <= 1:
             # Sequential generation (original fast path).
+            import torch
             results = []
-            n = len(prompts)
             t0 = time.perf_counter()
-            for i, prompt in enumerate(prompts):
+            for prompt in tqdm(prompts, desc="Generating", unit="prompt"):
                 result = self.generate(prompt, max_new_tokens=max_new_tokens)
                 results.append(result)
-                if (i + 1) % 20 == 0 or i == n - 1:
-                    elapsed = time.perf_counter() - t0
-                    rate = (i + 1) / elapsed
-                    print(f"    [{i+1}/{n}] {rate:.1f} prompts/s, "
-                          f"{elapsed/(i+1):.3f}s/prompt, "
-                          f"ETA: {(n-i-1)/rate:.0f}s")
+                if torch.cuda.is_available():
+                    vram = torch.cuda.memory_allocated() / 1e9
+                    print(f"    VRAM: {vram:.2f} GB")
             return results
 
         # Batched generation with padding.
         import torch
         results: list[dict[str, Any]] = []
         n = len(prompts)
-        t0 = time.perf_counter()
         bs = self.batch_size
-        for batch_start in range(0, n, bs):
+        batches = list(range(0, n, bs))
+        for batch_start in tqdm(batches, desc="Generating batches", unit="batch"):
             batch_prompts = prompts[batch_start:batch_start + bs]
             batch_results = self._generate_batch(batch_prompts, max_new_tokens)
             results.extend(batch_results)
-            done = batch_start + len(batch_prompts)
-            if done % 20 == 0 or done == n:
-                elapsed = time.perf_counter() - t0
-                rate = done / elapsed
-                print(f"    [{done}/{n}] {rate:.1f} prompts/s, "
-                      f"{elapsed/done:.3f}s/prompt, "
-                      f"ETA: {(n-done)/rate:.0f}s")
+            if torch.cuda.is_available():
+                vram = torch.cuda.memory_allocated() / 1e9
+                print(f"    VRAM: {vram:.2f} GB")
         return results
 
     def _generate_batch(
@@ -463,7 +462,7 @@ def run_local_gpu_counterfactuals(
     use_flash_attention: bool = False,
     use_torch_compile: bool = False,
     use_autocast: bool = False,
-    batch_size: int = 1,
+    batch_size: int = 8,
 ) -> list[dict[str, Any]]:
     """Execute counterfactuals on scientific tasks using the local GPU.
 
@@ -595,7 +594,7 @@ def run_local_gpu_counterfactuals_to_artifacts(
     use_flash_attention: bool = False,
     use_torch_compile: bool = False,
     use_autocast: bool = False,
-    batch_size: int = 1,
+    batch_size: int = 8,
 ) -> list[dict[str, Any]]:
     """Execute scientific counterfactuals on local GPU and write artifacts."""
     artifacts = Path(artifacts_dir)

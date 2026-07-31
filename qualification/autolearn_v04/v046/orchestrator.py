@@ -133,6 +133,7 @@ def run_all_v046_diagnostics(
     n_sham_seeds: int = 50,
     n_candidate_seeds: int = 50,
     force: bool = False,
+    evaluate_gate_a: bool = False,
 ) -> dict:
     """Run the complete v0.4.6 analysis pipeline.
 
@@ -632,11 +633,20 @@ def run_all_v046_diagnostics(
     # === Stage 22: Make scale decision ===
     print("[22/25] Making scale decision...")
     gate_a0_status = gate_a0.get("status", "BLOCKED")
-    # Gate A status: when Gate A0 passes with real model evidence, the
-    # evidence qualifies for Gate A — no separate Gate A evaluation is
-    # needed for the scale-decision tree.  Gate A0 IS the qualification
-    # gate for the current model size.
-    if gate_a0_status == "PASS" and origin_str == "REAL_MODEL":
+
+    if evaluate_gate_a and gate_a0_status == "PASS" and origin_str == "REAL_MODEL":
+        # Run full Gate A evaluation for scale-up decisions
+        try:
+            from qualification.autolearn_v04.evaluate_gate_a import evaluate_gate_a
+            from qualification.autolearn_v04.config import QualificationConfig
+            gate_a_config = QualificationConfig(artifacts_dir=str(ev_path))
+            gate_a_result = evaluate_gate_a(gate_a_config)
+            gate_a_status = gate_a_result.get("status", "BLOCKED")
+            _write("gate_a_evaluation.json", gate_a_result)
+        except Exception as e:
+            print(f"  Gate A evaluation failed: {e}")
+            gate_a_status = "BLOCKED"
+    elif gate_a0_status == "PASS" and origin_str == "REAL_MODEL":
         gate_a_status = "PASS"
     else:
         gate_a_status = "BLOCKED"

@@ -113,6 +113,8 @@ def main(argv: list[str] | None = None) -> int:
     p_analyze.add_argument("--n-sham-seeds", type=int, default=50)
     p_analyze.add_argument("--n-candidate-seeds", type=int, default=50)
     p_analyze.add_argument("--force", action="store_true")
+    p_analyze.add_argument("--evaluate-gate-a", action="store_true",
+                           help="Run full Gate A evaluation after Gate A0 passes")
 
     # report
     p_report = subparsers.add_parser(
@@ -376,6 +378,7 @@ def _cmd_analyze(args) -> int:
         n_sham_seeds=args.n_sham_seeds,
         n_candidate_seeds=args.n_candidate_seeds,
         force=args.force,
+        evaluate_gate_a=getattr(args, 'evaluate_gate_a', False),
     )
 
     origin = manifest.get("evidence_origin", "")

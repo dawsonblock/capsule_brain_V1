@@ -128,6 +128,7 @@ def validate_artifact_lineage(
             "status": AuditStatus.BLOCKED.value,
             "n_artifacts": 0,
             "n_valid": 0,
+            "n_artifacts_valid": 0,
             "n_missing_parents": 0,
             "n_cycles": 0,
             "n_cross_origin": 0,
@@ -290,6 +291,24 @@ def validate_artifact_lineage(
     if hash_mismatches:
         errors.append(f"{len(hash_mismatches)} hash mismatch(es)")
 
+    # --- Count artifacts that passed ALL checks ---
+    bad_artifacts: set[str] = set()
+    for mp in missing_parents:
+        bad_artifacts.add(mp["artifact"])
+    for cycle in cyclic:
+        bad_artifacts.update(cycle)
+    for co in cross_origin:
+        bad_artifacts.add(co["artifact"])
+    for cr in cross_run:
+        bad_artifacts.add(cr["artifact"])
+    for sr in synthetic_in_real:
+        bad_artifacts.add(sr["artifact"])
+    for hm in hash_mismatches:
+        bad_artifacts.add(hm["artifact"])
+    n_artifacts_valid = sum(
+        1 for name in structurally_valid if name not in bad_artifacts
+    )
+
     # --- Determine final status ---
     n_valid = sum(1 for c in checks if c["status"] == "PASS")
 
@@ -299,6 +318,7 @@ def validate_artifact_lineage(
             "status": AuditStatus.FAIL.value,
             "n_artifacts": n_artifacts,
             "n_valid": n_valid,
+            "n_artifacts_valid": n_artifacts_valid,
             "n_missing_parents": len(missing_parents),
             "n_cycles": len(cyclic),
             "n_cross_origin": len(cross_origin),
@@ -309,6 +329,7 @@ def validate_artifact_lineage(
         "status": AuditStatus.PASS.value,
         "n_artifacts": n_artifacts,
         "n_valid": n_valid,
+        "n_artifacts_valid": n_artifacts_valid,
         "n_missing_parents": 0,
         "n_cycles": 0,
         "n_cross_origin": 0,

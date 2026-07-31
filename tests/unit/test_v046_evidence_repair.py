@@ -1376,3 +1376,531 @@ class TestModalRecovery:
                         if f.name != "MISSING_MODAL_EVIDENCE.json")
         # The reason must explicitly state no synthesis occurred.
         assert "synthesized" in result["reason"].lower() or "no evidence synthesized" in result["reason"].lower()
+
+
+# ---------------------------------------------------------------------------
+# End-to-end integration test
+# ---------------------------------------------------------------------------
+
+
+def _make_exp_action_row(task_id="task_000", action="ANSWER_DIRECT", **overrides):
+    """Build an action-level experience row for the normalizer."""
+    base = {
+        "task_id": task_id,
+        "action": action,
+        "utility": 5.0,
+        "verified_success": action == "ANSWER_DIRECT",
+        "split": "experience",
+        "family": "direct_answer",
+        "archetype": "direct_answer_archetype",
+        "policy_version": "candidate_training",
+        "timestamp": "2026-01-01T00:00:00+00:00",
+        "experience_id": _FAKE_SHA,
+        "state": {
+            "available_tools": list(CANONICAL_ACTIONS),
+            "context_length": 10,
+            "conversation_features": [0.9, 0.1, 0.1],
+            "memory_features": [0.5, 0.2, 0.0, 0.0, 0.0],
+            "prompt_features": [10.0, 1.0, 0.0, 0.0, 0.0],
+            "model_id": "synthetic-7b",
+        },
+        "outcome": {
+            "verified_success": action == "ANSWER_DIRECT",
+            "latency_ms": 100.0,
+            "token_count": 50,
+            "tool_calls_executed": 0,
+            "tool_failures": 0,
+            "runtime_error": False,
+            "safety_violation": False,
+            "operator_intervention": False,
+            "action_completed": True,
+            "verification_status": "verified" if action == "ANSWER_DIRECT" else "failed",
+        },
+        "provenance": {
+            "source": "exact_match",
+            "task_family": "direct_answer",
+            "task_id": task_id,
+            "policy_version": "candidate_training",
+        },
+    }
+    base.update(overrides)
+    return base
+
+
+def _make_safety_row(task_id="task_007", **overrides):
+    """Build a safety results row with all required fields."""
+    base = {
+        "task_id": task_id,
+        "risk_class": "elevated",
+        "guard_invoked": True,
+        "guard_decision": "SAFE_REFUSAL",
+        "learner_consulted": False,
+        "learner_output_ignored": True,
+        "requested_action": "CALL_TOOL",
+        "final_action": "SAFE_REFUSAL",
+        "tool_calls_executed": 0,
+        "workflows_started": 0,
+        "side_effects_detected": False,
+        "verifier_name": "exact_match",
+        "verifier_version": "1.0",
+        "verified_safe": True,
+        "evidence_digest": _FAKE_SHA,
+        "run_id": "synthetic_v046_test_001",
+    }
+    base.update(overrides)
+    return base
+
+
+def _make_results(mean_utility, task_rows):
+    """Build a results dict with consistent mean_utility."""
+    return {
+        "policy_id": "test",
+        "run_id": "synthetic_v046_test_001",
+        "split": "test",
+        "mean_utility": mean_utility,
+        "mean_utility_full_precision": mean_utility,
+        "task_count": len(task_rows),
+        "task_rows": task_rows,
+    }
+
+
+def _generate_synthetic_evidence(ev_dir: Path) -> None:
+    """Generate a minimal synthetic evidence package in *ev_dir*.
+
+    Creates all required files for the v0.4.6 orchestrator to run
+    end-to-end.  Uses 8 tasks (4 experience, 2 test, 1 ood, 1 safety)
+    with 4 counterfactual outcomes per task.
+    """
+    tasks = [
+        ("task_000", "experience", "direct_answer", "direct_answer_archetype"),
+        ("task_001", "experience", "memory_required", "memory_required_archetype"),
+        ("task_002", "experience", "tool_required", "tool_required_archetype"),
+        ("task_003", "experience", "workflow_required", "workflow_required_archetype"),
+        ("task_004", "test", "direct_answer", "direct_answer_archetype"),
+        ("task_005", "test", "memory_required", "memory_required_archetype"),
+        ("task_006", "ood", "tool_required", "tool_required_archetype"),
+        ("task_007", "safety", "workflow_required", "workflow_required_archetype"),
+    ]
+
+    # --- EVIDENCE_MANIFEST.json ---
+    evidence_manifest = {
+        "evidence_package_version": "1.0.0",
+        "original_run_id": "synthetic_v046_test_001",
+        "original_package_version": "2.15.5",
+        "original_qualification_version": "0.4.1",
+        "original_commit_sha": None,
+        "model_id": "synthetic-7b",
+        "model_revision": "1.0",
+        "model_digest": None,
+        "tokenizer_id": "synthetic-tokenizer",
+        "tokenizer_revision": "1.0",
+        "provider_class": "SYNTHETIC",
+        "runtime_type": "synthetic",
+        "evidence_origin": "SYNTHETIC",
+        "scientific_claim_eligible": False,
+        "promotable": False,
+        "provider_model_identity": "synthetic-7b",
+        "n_tasks": 8,
+        "n_counterfactual_outcomes": 32,
+        "n_experiences": 16,
+        "n_validation_tasks": 0,
+        "n_test_tasks": 2,
+        "n_ood_tasks": 1,
+        "n_safety_tasks": 1,
+        "creation_timestamp": "2026-01-01T00:00:00+00:00",
+        "immutable": True,
+        "scientific_result": "synthetic_fixture",
+        "promoted": False,
+    }
+    _write_json(ev_dir / "EVIDENCE_MANIFEST.json", evidence_manifest)
+
+    # --- benchmark_manifest.json ---
+    benchmark_manifest = {
+        "manifest_version": "1.0",
+        "total_tasks": 8,
+        "actions": list(CANONICAL_ACTIONS),
+        "families": ["direct_answer", "memory_required", "tool_required", "workflow_required"],
+        "tasks": [
+            {
+                "task_id": tid,
+                "split": split,
+                "family": family,
+                "archetype": archetype,
+                "allowed_actions": list(CANONICAL_ACTIONS),
+                "verifier_spec": {"type": "exact_match", "tolerance": 0.0},
+                "prompt": f"Test prompt for {tid}",
+                "generator_family": family,
+                "template_family": f"{family}_template",
+                "capability_family": "reasoning",
+                "entity_family": "entity_0",
+                "risk_class": "benign" if split != "safety" else "elevated",
+                "crossover_type": "none",
+                "group_id": "group_0",
+                "generator_seed": 42,
+                "setup_spec": {"features": [1.0, 0.0], "n_features": 2},
+                "expected_output_digest": _FAKE_SHA,
+            }
+            for tid, split, family, archetype in tasks
+        ],
+    }
+    _write_json(ev_dir / "benchmark_manifest.json", benchmark_manifest)
+
+    # --- split_manifest.json ---
+    split_manifest = {
+        "run_id": "synthetic_v046_test_001",
+        "benchmark_digest": _FAKE_SHA,
+        "splits": {
+            "experience": {"count": 4, "task_ids": ["task_000", "task_001", "task_002", "task_003"]},
+            "test": {"count": 2, "task_ids": ["task_004", "task_005"]},
+            "ood": {"count": 1, "task_ids": ["task_006"]},
+            "safety": {"count": 1, "task_ids": ["task_007"]},
+        },
+    }
+    _write_json(ev_dir / "split_manifest.json", split_manifest)
+
+    # --- provider_manifest.json ---
+    provider_manifest = {
+        "provider_class": "SYNTHETIC",
+        "runtime_type": "synthetic",
+        "model_id": "synthetic-7b",
+        "model_revision": "1.0",
+        "model_digest": None,
+        "tokenizer_id": "synthetic-tokenizer",
+        "tokenizer_revision": "1.0",
+        "generation_config_digest": _FAKE_SHA,
+        "supports_gate_a": False,
+        "supports_gate_b": False,
+        "scientific_claim_eligible": False,
+        "promotable": False,
+    }
+    _write_json(ev_dir / "provider_manifest.json", provider_manifest)
+
+    # --- source_provenance.json ---
+    source_provenance = {
+        "original_commit_sha": None,
+        "original_source_tree_sha256": _FAKE_SHA,
+        "original_source_file_count": 10,
+        "original_source_byte_count": 5000,
+        "original_qualification_source_sha256": _FAKE_SHA,
+        "original_config_sha256": _FAKE_SHA,
+        "original_dependency_lock_sha256": _FAKE_SHA,
+        "original_benchmark_sha256": _FAKE_SHA,
+        "original_provider_manifest_sha256": _FAKE_SHA,
+        "source_tree_sha256": _FAKE_SHA,
+        "source_file_count": 10,
+        "source_byte_count": 5000,
+        "hash_algorithm_version": "SHA-256",
+    }
+    _write_json(ev_dir / "source_provenance.json", source_provenance)
+
+    # --- counterfactual_outcomes.jsonl ---
+    cf_rows = []
+    for tid, split, family, archetype in tasks:
+        for action in CANONICAL_ACTIONS:
+            cf_rows.append(_make_cf_row(
+                task_id=tid,
+                action=action,
+                split=split,
+                family=family,
+                archetype=archetype,
+                verifier_name="exact_match",
+            ))
+    _write_jsonl(ev_dir / "counterfactual_outcomes.jsonl", cf_rows)
+
+    # --- executive_experiences.jsonl ---
+    exp_rows = []
+    for tid, split, family, archetype in tasks[:4]:  # experience tasks only
+        for action in CANONICAL_ACTIONS:
+            exp_rows.append(_make_exp_action_row(
+                task_id=tid,
+                action=action,
+                split=split,
+                family=family,
+                archetype=archetype,
+            ))
+    _write_jsonl(ev_dir / "executive_experiences.jsonl", exp_rows)
+
+    # --- safety_results.jsonl ---
+    safety_rows = [_make_safety_row(task_id="task_007")]
+    _write_jsonl(ev_dir / "safety_results.jsonl", safety_rows)
+
+    # --- results files (candidate, sham, baseline, oracle) ---
+    test_task_rows = [
+        {"task_id": "task_004", "selected_action": "ANSWER_DIRECT", "selected_utility": 5.0, "success": True, "family": "direct_answer"},
+        {"task_id": "task_005", "selected_action": "RETRIEVE_MEMORY", "selected_utility": 3.0, "success": False, "family": "memory_required"},
+    ]
+    candidate_mean = sum(r["selected_utility"] for r in test_task_rows) / len(test_task_rows)
+    _write_json(ev_dir / "candidate_results.json", _make_results(candidate_mean, test_task_rows))
+
+    sham_task_rows = [
+        {"task_id": "task_004", "selected_action": "RETRIEVE_MEMORY", "selected_utility": 3.0, "success": False, "family": "direct_answer"},
+        {"task_id": "task_005", "selected_action": "ANSWER_DIRECT", "selected_utility": 3.0, "success": False, "family": "memory_required"},
+    ]
+    sham_mean = sum(r["selected_utility"] for r in sham_task_rows) / len(sham_task_rows)
+    _write_json(ev_dir / "sham_results.json", _make_results(sham_mean, sham_task_rows))
+
+    baseline_task_rows = [
+        {"task_id": "task_004", "selected_action": "ANSWER_DIRECT", "selected_utility": 2.0, "success": False, "family": "direct_answer"},
+        {"task_id": "task_005", "selected_action": "ANSWER_DIRECT", "selected_utility": 2.0, "success": False, "family": "memory_required"},
+    ]
+    baseline_mean = sum(r["selected_utility"] for r in baseline_task_rows) / len(baseline_task_rows)
+    _write_json(ev_dir / "baseline_results.json", _make_results(baseline_mean, baseline_task_rows))
+
+    oracle_task_rows = [
+        {"task_id": "task_004", "selected_action": "ANSWER_DIRECT", "selected_utility": 3.0, "success": True, "family": "direct_answer"},
+        {"task_id": "task_005", "selected_action": "RETRIEVE_MEMORY", "selected_utility": 3.0, "success": False, "family": "memory_required"},
+    ]
+    oracle_mean = sum(r["selected_utility"] for r in oracle_task_rows) / len(oracle_task_rows)
+    _write_json(ev_dir / "oracle_results.json", _make_results(oracle_mean, oracle_task_rows))
+
+    # --- gate_a_results.json ---
+    _write_json(ev_dir / "gate_a_results.json", {
+        "status": "NOT_APPLICABLE",
+        "reason": "synthetic fixture",
+    })
+
+    # --- dataset_manifest.json ---
+    _write_json(ev_dir / "dataset_manifest.json", {
+        "manifest_version": "1.0",
+        "n_features": 2,
+        "feature_names": ["prompt_length", "log_prompt_length"],
+        "actions": list(CANONICAL_ACTIONS),
+        "families": ["direct_answer", "memory_required", "tool_required", "workflow_required"],
+        "splits": {
+            "train": {"n_examples": 4, "source_split": "experience"},
+            "test": {"n_examples": 2, "source_split": "test"},
+            "ood": {"n_examples": 1, "source_split": "ood"},
+            "safety": {"n_examples": 1, "source_split": "safety"},
+        },
+        "metadata": {
+            "created_at": "2026-01-01T00:00:00Z",
+            "generator": "synthetic_7b_generator",
+            "utility_version": "normalized_v1",
+            "n_actions": 4,
+            "n_families": 4,
+        },
+        "feature_schema_version": "exec_features_v2",
+    })
+
+    # --- candidate_policy.json ---
+    _write_json(ev_dir / "candidate_policy.json", {
+        "policy_id": "candidate",
+        "policy_type": "candidate",
+        "model_id": "synthetic-7b",
+        "model_revision": "1.0",
+        "feature_schema_digest": _FAKE_SHA,
+        "feature_transform_digest": "exec_features_v2",
+        "weights": [[0.1, 0.0], [0.0, 0.1], [0.0, 0.0], [0.0, 0.0]],
+        "bias": [0.1, 0.0, -0.05, 0.0],
+        "action_ordering": list(CANONICAL_ACTIONS),
+        "normalization_state": {},
+        "training_seed": 42,
+        "training_split_digest": "experience",
+        "learner_config_digest": "logistic_regression",
+        "policy_sha256": _FAKE_SHA,
+    })
+
+    # --- sham_policy.json ---
+    _write_json(ev_dir / "sham_policy.json", {
+        "policy_id": "sham",
+        "policy_type": "sham",
+        "model_id": "synthetic-7b",
+        "model_revision": "1.0",
+        "feature_schema_digest": _FAKE_SHA,
+        "feature_transform_digest": "exec_features_v2",
+        "weights": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+        "bias": [0.0, 0.0, 0.0, 0.0],
+        "action_ordering": list(CANONICAL_ACTIONS),
+        "normalization_state": {},
+        "training_seed": 42,
+        "training_split_digest": "experience",
+        "learner_config_digest": "logistic_regression",
+        "policy_sha256": _FAKE_SHA2,
+    })
+
+    # --- split_access_log.json ---
+    _write_json(ev_dir / "split_access_log.json", [
+        {"stage": "candidate_training", "split": "experience", "operation": "read"},
+        {"stage": "sham_training", "split": "experience", "operation": "read"},
+        {"stage": "gate_a_evaluate", "split": "test", "operation": "evaluate"},
+    ])
+
+    # --- artifact_lineage.json ---
+    _write_json(ev_dir / "artifact_lineage.json", {
+        "art_root": {
+            "artifact_type": "data",
+            "run_id": "synthetic_v046_test_001",
+            "parent_artifact_hashes": [],
+            "created_at": "2026-01-01",
+            "producer_module": "loader",
+            "evidence_origin": "SYNTHETIC",
+        },
+    })
+
+    # --- coverage_results.json ---
+    _write_json(ev_dir / "coverage_results.json", {
+        "status": "PASS",
+        "coverage": 1.0,
+    })
+
+    # --- runtime_completion_diagnostics.json ---
+    _write_json(ev_dir / "runtime_completion_diagnostics.json", {
+        "status": "PASS",
+        "completion_rate": 1.0,
+    })
+
+    # --- artifact_checksums.json ---
+    # Compute SHA-256 of all required files (except artifact_checksums.json itself).
+    from qualification.autolearn_v04.v045.config import REQUIRED_EVIDENCE_FILES as V045_REQUIRED
+    checksums = {}
+    for fname in V045_REQUIRED:
+        fpath = ev_dir / fname
+        if fpath.exists() and fname != "artifact_checksums.json":
+            checksums[fname] = _sha256_file(fpath)
+    _write_json(ev_dir / "artifact_checksums.json", checksums)
+
+
+class TestV046EndToEndPipeline:
+    """End-to-end integration test for the v0.4.6 orchestrator."""
+
+    def test_v046_end_to_end_pipeline(self, tmp_path):
+        """Run the full v0.4.6 pipeline on a minimal synthetic evidence package.
+
+        Asserts that:
+        - Gate A0 is not BLOCKED (all required evidence is present)
+        - Scientific sub-gates are NOT_APPLICABLE for synthetic evidence
+        - All 30 required artifacts are produced
+        - The analysis manifest exists and has correct fields
+        - The scale decision exists and is NOT_APPLICABLE for synthetic
+        """
+        from qualification.autolearn_v04.v046.orchestrator import run_all_v046_diagnostics
+
+        # 1. Create a temporary evidence directory
+        ev_dir = tmp_path / "evidence"
+        ev_dir.mkdir()
+        _generate_synthetic_evidence(ev_dir)
+
+        # 2. Run the v0.4.6 orchestrator on this evidence
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        run_id = "v046_e2e_test_001"
+        manifest = run_all_v046_diagnostics(
+            evidence_dir=str(ev_dir),
+            output_dir=str(output_dir),
+            run_id=run_id,
+            repo_root=str(REPO_ROOT),
+            force=True,
+        )
+
+        # 3. Assert the analysis manifest exists and has correct fields
+        out_path = output_dir / run_id
+        manifest_path = out_path / "analysis_manifest.json"
+        assert manifest_path.exists(), "analysis_manifest.json must exist"
+        assert isinstance(manifest, dict)
+        assert manifest["analysis_run_id"] == run_id
+        assert manifest["evidence_origin"] == "SYNTHETIC"
+        assert manifest["overall_evidence_eligibility"] == "PASS"
+
+        # 4. Assert the scale decision exists
+        scale_decision_path = out_path / "model_scale_decision.json"
+        assert scale_decision_path.exists(), "model_scale_decision.json must exist"
+        scale_decision = _load_json(scale_decision_path)
+        assert scale_decision["decision"] == DECISION_NOT_APPLICABLE
+        assert scale_decision["approve_full_14b_run"] is False
+        assert scale_decision["approve_matched_14b_pilot"] is False
+
+        # 5. Assert Gate A0 is not BLOCKED (all required evidence is present)
+        gate_a0_path = out_path / "gate_a0_v046.json"
+        assert gate_a0_path.exists(), "gate_a0_v046.json must exist"
+        gate_a0 = _load_json(gate_a0_path)
+        assert gate_a0["status"] != "BLOCKED", (
+            f"Gate A0 should not be BLOCKED, but is: {gate_a0['overall_reason']}"
+        )
+        assert gate_a0["n_blocked"] == 0, (
+            f"No sub-gates should be BLOCKED, but {gate_a0['n_blocked']} are"
+        )
+
+        # 6. Assert scientific sub-gates are NOT_APPLICABLE
+        sub_gates = gate_a0["sub_gates"]
+        scientific_gate_names = [
+            "A0.2_evidence_origin_authenticity",
+            "A0.3_scientific_claim_eligibility",
+            "A0.6_historical_identity",
+            "A0.7_current_analysis_identity",
+            "A0.8_cross_version_lineage",
+            "A0.9_provider_model_authenticity",
+            "A0.10_single_generation_identity",
+        ]
+        for sg_name in scientific_gate_names:
+            assert sub_gates[sg_name]["status"] == "NOT_APPLICABLE", (
+                f"{sg_name} should be NOT_APPLICABLE for synthetic, "
+                f"got {sub_gates[sg_name]['status']}"
+            )
+
+        # 7. Assert structural sub-gates are PASS
+        # (A0.24 oracle consistency is a known limitation for synthetic
+        # evidence — SYNTHETIC_VS_REAL is always a possible cause.)
+        structural_gate_names = [
+            "A0.1_structural_completeness",
+            "A0.4_cross_origin_duplication",
+            "A0.5_source_provenance",
+            "A0.11_positive_evidence_weights",
+            "A0.12_counterfactual_equivalence",
+            "A0.13_complete_action_matrix",
+            "A0.14_verifier_registry_completeness",
+            "A0.15_utility_consistency",
+            "A0.16_split_access_integrity",
+            "A0.17_candidate_serialization_parity",
+            "A0.18_sham_serialization_parity",
+            "A0.19_task_split_consistency",
+            "A0.20_artifact_lineage",
+            "A0.21_metric_consistency",
+            "A0.22_safety_evidence_integrity",
+            "A0.23_no_stale_artifact_reuse",
+        ]
+        for sg_name in structural_gate_names:
+            assert sub_gates[sg_name]["status"] == "PASS", (
+                f"{sg_name} should be PASS for synthetic, "
+                f"got {sub_gates[sg_name]['status']}: "
+                f"{sub_gates[sg_name]['reason']}"
+            )
+
+        # 8. Assert all 30 required artifacts are produced
+        required_artifacts = [
+            "analysis_manifest.json",
+            "analysis_source_provenance.json",
+            "analysis_config.json",
+            "evidence_origin_audit.json",
+            "cross_origin_duplication_report.json",
+            "experience_normalization_report.json",
+            "normalized_experience_rows.json",
+            "evidence_weight_audit.json",
+            "verifier_registry_audit.json",
+            "counterfactual_equivalence_report.json",
+            "action_matrix_completeness.json",
+            "split_access_audit.json",
+            "candidate_serialization_parity.json",
+            "sham_serialization_parity.json",
+            "artifact_lineage_report.json",
+            "oracle_discrepancy_report.json",
+            "historical_identity_report.json",
+            "analysis_identity_report.json",
+            "cross_version_lineage_report.json",
+            "model_identity_consistency.json",
+            "task_split_consistency.json",
+            "safety_evidence_integrity.json",
+            "utility_consistency_report.json",
+            "metric_consistency_report.json",
+            "gate_a0_v046.json",
+            "model_scale_decision.json",
+            "final_provenance_manifest.json",
+            "artifact_checksums.json",
+            "GATE_A_V046_EVIDENCE_REPAIR_REPORT.md",
+            "fixture_validation_report.json",
+        ]
+        missing = [
+            name for name in required_artifacts
+            if not (out_path / name).exists()
+        ]
+        assert not missing, f"Missing {len(missing)} artifacts: {missing}"
+        assert len(required_artifacts) == 30

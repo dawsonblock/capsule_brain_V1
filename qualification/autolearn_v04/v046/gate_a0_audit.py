@@ -664,8 +664,9 @@ def evaluate_gate_a0(
     else:
         s = _status_from_report(artifact_lineage)
         n_artifacts = artifact_lineage.get("n_artifacts", 0)
-        n_valid = artifact_lineage.get("n_valid",
-                        artifact_lineage.get("n_with_lineage", 0))
+        n_valid = artifact_lineage.get("n_artifacts_valid",
+                        artifact_lineage.get("n_valid",
+                        artifact_lineage.get("n_with_lineage", 0)))
         if s not in (AuditStatus.PASS, AuditStatus.FAIL, AuditStatus.BLOCKED, AuditStatus.NOT_RUN):
             complete = artifact_lineage.get("complete", False)
             s = AuditStatus.PASS if complete and n_artifacts > 0 and n_valid == n_artifacts else AuditStatus.FAIL
