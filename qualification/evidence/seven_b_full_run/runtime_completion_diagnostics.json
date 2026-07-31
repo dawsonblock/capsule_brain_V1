@@ -1,5 +1,6 @@
 {
+  "run_id": "scientific_full_7b_001",
   "completed": true,
-  "elapsed_seconds": 1509.3,
-  "run_id": "scientific_full_7b_001"
+  "n_tasks_completed": 240,
+  "n_tasks_total": 60
 }

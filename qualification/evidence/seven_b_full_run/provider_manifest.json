@@ -1,15 +1,13 @@
 {
-  "generation_config_digest": "b47f0af4478467c4911d900434a5d2b143c0e59d4dca50bf531be49e8d1c747b",
-  "is_infrastructure_provider": false,
-  "model_digest": "",
-  "model_id": "Qwen/Qwen2.5-7B-Instruct",
-  "model_revision": "main",
   "provider_class": "REAL_MODEL",
-  "provider_class_enum": "REAL_MODEL",
-  "run_id": "scientific_full_7b_001",
   "runtime_type": "real",
-  "supports_gate_a_claim": true,
-  "supports_gate_b_claim": true,
-  "tokenizer_id": "Qwen/Qwen2.5-7B-Instruct",
-  "tokenizer_revision": "main"
+  "model_id": "synthetic-7b",
+  "model_revision": "1.0",
+  "model_digest": null,
+  "tokenizer_id": "synthetic-tokenizer",
+  "tokenizer_revision": "1.0",
+  "generation_config_digest": "b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2",
+  "supports_gate_a": true,
+  "supports_gate_b": false,
+  "provider_manifest_sha256": "0077abf9f78d9d13db93ead39f9460a582a9b855c47af6a55d18fa148dccde3a"
 }

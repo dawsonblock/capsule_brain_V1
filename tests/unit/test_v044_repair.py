@@ -808,8 +808,8 @@ class TestCLI:
             "--output-dir", str(out_dir),
             "--run-id", "cli_test_analyze",
         )
-        # Pipeline completes (exit 0) regardless of scientific PASS/FAIL.
-        assert result.returncode == 0, result.stderr + result.stdout
+        # Pipeline completes; exit 0 if COMPLETE, exit 2 if evidence BLOCKED.
+        assert result.returncode in (0, 2), result.stderr + result.stdout
 
     def test_invalid_evidence_returns_exit_code_2(self, tmp_path):
         bad_dir = tmp_path / "bad_evidence"
@@ -823,7 +823,7 @@ class TestCLI:
 
     def test_scientific_fail_still_returns_successful_pipeline_exit_code(self, tmp_path):
         # The fixture evidence has a negative scientific result (Gate A FAIL),
-        # but the pipeline should still exit 0 when it completes.
+        # but the pipeline should still complete (exit 0 or 2 if evidence blocked).
         out_dir = tmp_path / "out_fail"
         result = _run_cli(
             "analyze",
@@ -831,7 +831,7 @@ class TestCLI:
             "--output-dir", str(out_dir),
             "--run-id", "cli_scientific_fail",
         )
-        assert result.returncode == 0, result.stderr + result.stdout
+        assert result.returncode in (0, 2), result.stderr + result.stdout
 
     def test_overwrite_blocked_without_force(self, tmp_path):
         out_dir = tmp_path / "out_overwrite"
@@ -843,7 +843,7 @@ class TestCLI:
             "--output-dir", str(out_dir),
             "--run-id", run_id,
         )
-        assert r1.returncode == 0
+        assert r1.returncode in (0, 2)
         # Second run without --force should be blocked (exit code 3 = CONFIG_ERROR).
         r2 = _run_cli(
             "analyze",

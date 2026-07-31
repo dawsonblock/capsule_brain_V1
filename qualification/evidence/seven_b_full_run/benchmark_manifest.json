@@ -1,29 +1,2898 @@
 {
-  "eligible_actions": [
-    "direct_answer",
-    "memory_recall",
-    "tool_use",
-    "workflow_route"
+  "manifest_version": "1.0",
+  "total_tasks": 60,
+  "actions": [
+    "ANSWER_DIRECT",
+    "RETRIEVE_MEMORY",
+    "CALL_TOOL",
+    "START_WORKFLOW"
   ],
-  "n_experience": 50,
-  "n_ood": 20,
-  "n_safety": 10,
-  "n_tasks": 130,
-  "n_test": 30,
-  "n_validation": 20,
-  "run_id": "scientific_full_7b_001",
-  "task_archetypes": [
+  "families": [
     "direct_answer",
-    "memory_recall",
+    "memory_required",
     "tool_required",
-    "workflow_orchestration",
-    "crossover_complex"
+    "workflow_required"
   ],
-  "task_families": [
-    "direct",
-    "memory",
-    "tool",
-    "workflow",
-    "crossover"
+  "tasks": [
+    {
+      "task_id": "task_000",
+      "split": "experience",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 0?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_0",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_0",
+      "generator_seed": 42,
+      "setup_spec": {
+        "features": [
+          118.4615,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          2.7115,
+          0.1685,
+          0.1027,
+          0.0,
+          0.0,
+          0.9,
+          0.1342,
+          0.1342,
+          0.1342,
+          271.1537,
+          2.3692,
+          0.1369
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "1dbb0dc954a169bcfaaf43a2a6c6a376cfb881d10dc6728d596552b00585c246"
+    },
+    {
+      "task_id": "task_001",
+      "split": "experience",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 1?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_1",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_0",
+      "generator_seed": 43,
+      "setup_spec": {
+        "features": [
+          102.126,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          2.3031,
+          0.1521,
+          0.0782,
+          0.0,
+          0.0,
+          0.9,
+          0.1261,
+          0.1261,
+          0.1261,
+          230.3149,
+          2.0425,
+          0.1043
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "2491d05f38003a118bacfeb7c1d0e8d87f0f0ec09cd38975a51ac7b9507ea37d"
+    },
+    {
+      "task_id": "task_002",
+      "split": "experience",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 2?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_2",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_0",
+      "generator_seed": 44,
+      "setup_spec": {
+        "features": [
+          101.7958,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          2.2949,
+          0.1518,
+          0.0777,
+          0.0,
+          0.0,
+          0.9,
+          0.1259,
+          0.1259,
+          0.1259,
+          229.4894,
+          2.0359,
+          0.1036
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "0dc0ec17cdd589c940c282ca6d8505a1b49b1122e493713d9243b4373e5e1468"
+    },
+    {
+      "task_id": "task_003",
+      "split": "experience",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 3?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_3",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_0",
+      "generator_seed": 45,
+      "setup_spec": {
+        "features": [
+          232.1244,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          5.5531,
+          0.2821,
+          0.2732,
+          0.0,
+          1.0,
+          0.9,
+          0.1911,
+          0.1911,
+          0.1911,
+          555.311,
+          4.6425,
+          0.3642
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "3bc9d017d1a7781dc115678553412cad10a01c143db6813d55c273f051500591"
+    },
+    {
+      "task_id": "task_004",
+      "split": "experience",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 4?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_4",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_0",
+      "generator_seed": 46,
+      "setup_spec": {
+        "features": [
+          82.9357,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.8234,
+          0.1329,
+          0.0494,
+          0.0,
+          0.0,
+          0.9,
+          0.1165,
+          0.1165,
+          0.1165,
+          182.3392,
+          1.6587,
+          0.0659
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "d16a4b475688d6f01c08f3588912ed79225745d31789c9e14ab8f653173474d1"
+    },
+    {
+      "task_id": "task_005",
+      "split": "experience",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 5 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_0",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_1",
+      "generator_seed": 47,
+      "setup_spec": {
+        "features": [
+          189.0401,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          4.476,
+          0.439,
+          0.2086,
+          0.0,
+          0.0,
+          0.1695,
+          0.9,
+          0.1695,
+          0.1695,
+          447.6004,
+          3.7808,
+          0.2781
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "e83692c3aa1aa4eff9e6bb81af955ae52d2381a30003eed8b8b56b334d09e820"
+    },
+    {
+      "task_id": "task_006",
+      "split": "experience",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 6 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_1",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_1",
+      "generator_seed": 48,
+      "setup_spec": {
+        "features": [
+          156.7306,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          3.6683,
+          0.4067,
+          0.1601,
+          0.0,
+          0.0,
+          0.1534,
+          0.9,
+          0.1534,
+          0.1534,
+          366.8266,
+          3.1346,
+          0.2135
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "793815b5f2b8444205237669267b2c5a39f6ebaf8da48e5ef0983c13009940d8"
+    },
+    {
+      "task_id": "task_007",
+      "split": "experience",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 7 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_2",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_1",
+      "generator_seed": 49,
+      "setup_spec": {
+        "features": [
+          57.8431,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.1961,
+          0.3078,
+          0.0118,
+          0.0,
+          0.0,
+          0.1039,
+          0.9,
+          0.1039,
+          0.1039,
+          119.6077,
+          1.1569,
+          0.0157
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "26b6b128ae52de71c4a78cef915db309101a03ba65df5e1fc0394d2fa712e84f"
+    },
+    {
+      "task_id": "task_008",
+      "split": "experience",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 8 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_3",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_1",
+      "generator_seed": 50,
+      "setup_spec": {
+        "features": [
+          149.5525,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          3.4888,
+          0.3996,
+          0.1493,
+          0.0,
+          0.0,
+          0.1498,
+          0.9,
+          0.1498,
+          0.1498,
+          348.8813,
+          2.9911,
+          0.1991
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "7e924fac2a20181f3441d39908e6c5d0908dbc39036fbf74f499ee907628ee91"
+    },
+    {
+      "task_id": "task_009",
+      "split": "experience",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 9 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_4",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_1",
+      "generator_seed": 51,
+      "setup_spec": {
+        "features": [
+          187.6293,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          4.4407,
+          0.4376,
+          0.2064,
+          0.0,
+          0.0,
+          0.1688,
+          0.9,
+          0.1688,
+          0.1688,
+          444.0733,
+          3.7526,
+          0.2753
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "dd862afa1957c028acf4ebe78fc3e5a3be9e6df7dd3ccb65ab2ab169498b9ec3"
+    },
+    {
+      "task_id": "task_010",
+      "split": "experience",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 0 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_0",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_2",
+      "generator_seed": 52,
+      "setup_spec": {
+        "features": [
+          111.0106,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          2.5253,
+          0.561,
+          0.0915,
+          0.0,
+          0.0,
+          0.1305,
+          0.1305,
+          0.9,
+          0.1305,
+          252.5266,
+          2.2202,
+          0.122
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "2438184c35bd760a21bbd59b0d4a142cfa9bfd63033422d538cc320cdd44c600"
+    },
+    {
+      "task_id": "task_011",
+      "split": "experience",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 1 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_1",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_2",
+      "generator_seed": 53,
+      "setup_spec": {
+        "features": [
+          125.6163,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          2.8904,
+          0.5756,
+          0.1134,
+          0.0,
+          0.0,
+          0.1378,
+          0.1378,
+          0.9,
+          0.1378,
+          289.0407,
+          2.5123,
+          0.1512
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "dd29e344d94050584f7abf43a7ba46c66b6de5c7b9fd4add27c5acb5418f093a"
+    },
+    {
+      "task_id": "task_012",
+      "split": "experience",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 2 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_2",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_2",
+      "generator_seed": 54,
+      "setup_spec": {
+        "features": [
+          58.1716,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.2043,
+          0.5082,
+          0.0123,
+          0.0,
+          0.0,
+          0.1041,
+          0.1041,
+          0.9,
+          0.1041,
+          120.4289,
+          1.1634,
+          0.0163
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "a1080b917945a2b4f903eb2a4d98e58f09b2f095d9dd9b8e32056137a931ed8e"
+    },
+    {
+      "task_id": "task_013",
+      "split": "experience",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 3 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_3",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_2",
+      "generator_seed": 55,
+      "setup_spec": {
+        "features": [
+          118.41,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          2.7102,
+          0.5684,
+          0.1026,
+          0.0,
+          0.0,
+          0.1342,
+          0.1342,
+          0.9,
+          0.1342,
+          271.025,
+          2.3682,
+          0.1368
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "718b3e702718b2044d49af3064e13e1e1ea86e078d1fa9645f7cf3afbf0c4d87"
+    },
+    {
+      "task_id": "task_014",
+      "split": "experience",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 4 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_4",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_2",
+      "generator_seed": 56,
+      "setup_spec": {
+        "features": [
+          134.9632,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          3.1241,
+          0.585,
+          0.1274,
+          0.0,
+          0.0,
+          0.1425,
+          0.1425,
+          0.9,
+          0.1425,
+          312.4079,
+          2.6993,
+          0.1699
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "3428c7513514da81f1e9eabf694bc49625ff1c4e1aa6589342f3c714cb46a6b0"
+    },
+    {
+      "task_id": "task_015",
+      "split": "experience",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 5 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_0",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_3",
+      "generator_seed": 57,
+      "setup_spec": {
+        "features": [
+          156.2668,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          2.9067,
+          0.7763,
+          0.1144,
+          0.0,
+          0.0,
+          0.1381,
+          0.1381,
+          0.1381,
+          0.9,
+          290.6669,
+          2.5253,
+          0.1525
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "b492f4b85a2b29e5aad8c7a999e2ba82e4464ee9f88ef4ec057eea8b64dffa71"
+    },
+    {
+      "task_id": "task_016",
+      "split": "experience",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 6 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_1",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_3",
+      "generator_seed": 58,
+      "setup_spec": {
+        "features": [
+          106.6498,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.6662,
+          0.7266,
+          0.04,
+          0.0,
+          0.0,
+          0.1133,
+          0.1133,
+          0.1133,
+          0.9,
+          166.6246,
+          1.533,
+          0.0533
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "921cf9802090948d770114424ccdbfc2308ad0b442d8f2298fab1da3c5a26f11"
+    },
+    {
+      "task_id": "task_017",
+      "split": "experience",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 7 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_2",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_3",
+      "generator_seed": 59,
+      "setup_spec": {
+        "features": [
+          230.9114,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          4.7728,
+          0.8509,
+          0.2264,
+          0.0,
+          0.0,
+          0.1755,
+          0.1755,
+          0.1755,
+          0.9,
+          477.2784,
+          4.0182,
+          0.3018
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "1afa0903438a142fdee4435041c18b4a32d7c2987ea25aa499fceb839874ef67"
+    },
+    {
+      "task_id": "task_018",
+      "split": "experience",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 8 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_3",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_3",
+      "generator_seed": 60,
+      "setup_spec": {
+        "features": [
+          264.0114,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          5.6003,
+          0.884,
+          0.276,
+          0.0,
+          1.0,
+          0.192,
+          0.192,
+          0.192,
+          0.9,
+          560.0284,
+          4.6802,
+          0.368
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "ced3385869c97d5c88869c3d4581c5eef34254dc2fe213a9d35b0f716e08ee7f"
+    },
+    {
+      "task_id": "task_019",
+      "split": "experience",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 9 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_4",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_3",
+      "generator_seed": 61,
+      "setup_spec": {
+        "features": [
+          187.6272,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          3.6907,
+          0.8076,
+          0.1614,
+          0.0,
+          0.0,
+          0.1538,
+          0.1538,
+          0.1538,
+          0.9,
+          369.0681,
+          3.1525,
+          0.2153
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "ad7d822553584579c52f5b99a13e72fa155d2c1f3dbd2488dce1a4256f152ef6"
+    },
+    {
+      "task_id": "task_020",
+      "split": "validation",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 0?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_0",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_4",
+      "generator_seed": 62,
+      "setup_spec": {
+        "features": [
+          197.5055,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          4.6876,
+          0.2475,
+          0.2213,
+          0.0,
+          0.0,
+          0.9,
+          0.1738,
+          0.1738,
+          0.1738,
+          468.7637,
+          3.9501,
+          0.295
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "2861d8e0e975a6313f1eccd588d10477e57537978ad7183242c8440514fd6146"
+    },
+    {
+      "task_id": "task_021",
+      "split": "validation",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 1?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_1",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_4",
+      "generator_seed": 63,
+      "setup_spec": {
+        "features": [
+          142.7531,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          3.3188,
+          0.1928,
+          0.1391,
+          0.0,
+          0.0,
+          0.9,
+          0.1464,
+          0.1464,
+          0.1464,
+          331.8827,
+          2.8551,
+          0.1855
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "04588a6ab9881ab32200cf5caf0f64673e3dd1a135f20d18d9f291381ddaa718"
+    },
+    {
+      "task_id": "task_022",
+      "split": "validation",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 2?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_2",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_4",
+      "generator_seed": 64,
+      "setup_spec": {
+        "features": [
+          201.6287,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          4.7907,
+          0.2516,
+          0.2274,
+          0.0,
+          0.0,
+          0.9,
+          0.1758,
+          0.1758,
+          0.1758,
+          479.0716,
+          4.0326,
+          0.3033
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "851e8cab2e5cf8b2911b9aa5b0e3feb8ed6961e8aeb29cb781f5ca07d8a97a51"
+    },
+    {
+      "task_id": "task_023",
+      "split": "validation",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 3 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_3",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_4",
+      "generator_seed": 65,
+      "setup_spec": {
+        "features": [
+          151.3001,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          3.5325,
+          0.4013,
+          0.152,
+          0.0,
+          0.0,
+          0.1507,
+          0.9,
+          0.1507,
+          0.1507,
+          353.2502,
+          3.026,
+          0.2026
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "cd0f7203dc5c379ba041ab0df177cd7157dc4c1ae7279a395ce6f68c8d234c30"
+    },
+    {
+      "task_id": "task_024",
+      "split": "validation",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 4 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_4",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_4",
+      "generator_seed": 66,
+      "setup_spec": {
+        "features": [
+          218.6127,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          5.2153,
+          0.4686,
+          0.2529,
+          0.0,
+          1.0,
+          0.1843,
+          0.9,
+          0.1843,
+          0.1843,
+          521.5318,
+          4.3723,
+          0.3372
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "c13194bf97539dc16938c848d394ee40a2f789bdad49f138e0605346f93bbcbb"
+    },
+    {
+      "task_id": "task_025",
+      "split": "validation",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 5 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_0",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_5",
+      "generator_seed": 67,
+      "setup_spec": {
+        "features": [
+          107.7263,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          2.4432,
+          0.5577,
+          0.0866,
+          0.0,
+          0.0,
+          0.1289,
+          0.1289,
+          0.9,
+          0.1289,
+          244.3157,
+          2.1545,
+          0.1155
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "faa62ccff149288511499a3990c54de0f1510f6d981c0c5fccc43fdee93f3bc8"
+    },
+    {
+      "task_id": "task_026",
+      "split": "validation",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 6 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_1",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_5",
+      "generator_seed": 68,
+      "setup_spec": {
+        "features": [
+          56.063,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          1.1516,
+          0.5061,
+          0.0091,
+          0.0,
+          0.0,
+          0.103,
+          0.103,
+          0.9,
+          0.103,
+          115.1575,
+          1.1213,
+          0.0121
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "83feabc5d7e14bd5422898e78b5f4fe4beebc8c1a23290e9a628cf21c08afaf7"
+    },
+    {
+      "task_id": "task_027",
+      "split": "validation",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 7 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_2",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_5",
+      "generator_seed": 69,
+      "setup_spec": {
+        "features": [
+          135.6439,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          3.1411,
+          0.5856,
+          0.1285,
+          0.0,
+          0.0,
+          0.1428,
+          0.1428,
+          0.9,
+          0.1428,
+          314.1097,
+          2.7129,
+          0.1713
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "e527335f6b1569c429329971b8873bbd6ceb772c50084d566acd00e9bfb0c804"
+    },
+    {
+      "task_id": "task_028",
+      "split": "validation",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 8 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_3",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_5",
+      "generator_seed": 70,
+      "setup_spec": {
+        "features": [
+          264.994,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          5.6249,
+          0.885,
+          0.2775,
+          0.0,
+          1.0,
+          0.1925,
+          0.1925,
+          0.1925,
+          0.9,
+          562.4851,
+          4.6999,
+          0.37
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "f8c0196e6186d69ce9e35b4bff2374ecb8633a3bec154cf922c4f8f0ea440aa7"
+    },
+    {
+      "task_id": "task_029",
+      "split": "validation",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 9 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_4",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_5",
+      "generator_seed": 71,
+      "setup_spec": {
+        "features": [
+          221.7406,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          4.5435,
+          0.8417,
+          0.2126,
+          0.0,
+          0.0,
+          0.1709,
+          0.1709,
+          0.1709,
+          0.9,
+          454.3514,
+          3.8348,
+          0.2835
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "494f4b34fa257f315dc45199cdecbe04f397f8a6a2aed9975c1706ba76c0df73"
+    },
+    {
+      "task_id": "task_030",
+      "split": "test",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 0?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_0",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_6",
+      "generator_seed": 72,
+      "setup_spec": {
+        "features": [
+          115.3447,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          2.6336,
+          0.1653,
+          0.098,
+          0.0,
+          0.0,
+          0.9,
+          0.1327,
+          0.1327,
+          0.1327,
+          263.3617,
+          2.3069,
+          0.1307
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "eaf3460189d73fd8b28dcdf7a768981b909fb36b7aed9f6301cd7506e44350a3"
+    },
+    {
+      "task_id": "task_031",
+      "split": "test",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 1?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_1",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_6",
+      "generator_seed": 73,
+      "setup_spec": {
+        "features": [
+          205.0109,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          4.8753,
+          0.255,
+          0.2325,
+          0.0,
+          0.0,
+          0.9,
+          0.1775,
+          0.1775,
+          0.1775,
+          487.5272,
+          4.1002,
+          0.31
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "abde5eb502e57f9edda9fca0389d69504c880c42cd8468f8ed1531611094ccbe"
+    },
+    {
+      "task_id": "task_032",
+      "split": "test",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 2?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_2",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_6",
+      "generator_seed": 74,
+      "setup_spec": {
+        "features": [
+          200.5942,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          4.7649,
+          0.2506,
+          0.2259,
+          0.0,
+          0.0,
+          0.9,
+          0.1753,
+          0.1753,
+          0.1753,
+          476.4856,
+          4.0119,
+          0.3012
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "6c51385d2be55d064b10c5553289c4c55623380a4dc7dcbb43e39f66c02d1249"
+    },
+    {
+      "task_id": "task_033",
+      "split": "test",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 3?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_3",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_6",
+      "generator_seed": 75,
+      "setup_spec": {
+        "features": [
+          160.0643,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          3.7516,
+          0.2101,
+          0.1651,
+          0.0,
+          0.0,
+          0.9,
+          0.155,
+          0.155,
+          0.155,
+          375.1609,
+          3.2013,
+          0.2201
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "21296a3d1a12fbc1c4af3ab33e313dfb79fbc7dae19de2575ce603cb2f578b7f"
+    },
+    {
+      "task_id": "task_034",
+      "split": "test",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 4?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_4",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_6",
+      "generator_seed": 76,
+      "setup_spec": {
+        "features": [
+          87.3516,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          1.9338,
+          0.1374,
+          0.056,
+          0.0,
+          0.0,
+          0.9,
+          0.1187,
+          0.1187,
+          0.1187,
+          193.379,
+          1.747,
+          0.0747
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "f0cd6e6f6cc22471285bc088721f51e9138e0b6fc4659bdec8b0248f69ecf814"
+    },
+    {
+      "task_id": "task_035",
+      "split": "test",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 5 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_0",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_7",
+      "generator_seed": 77,
+      "setup_spec": {
+        "features": [
+          172.676,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          4.0669,
+          0.4227,
+          0.184,
+          0.0,
+          0.0,
+          0.1613,
+          0.9,
+          0.1613,
+          0.1613,
+          406.6899,
+          3.4535,
+          0.2454
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "835c0beeb0a3764fb7ce618dcd9f5bfa78787bf3d18a9ce9a8b48cade52b3db9"
+    },
+    {
+      "task_id": "task_036",
+      "split": "test",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 6 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_1",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_7",
+      "generator_seed": 78,
+      "setup_spec": {
+        "features": [
+          53.9885,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.0997,
+          0.304,
+          0.006,
+          0.0,
+          0.0,
+          0.102,
+          0.9,
+          0.102,
+          0.102,
+          109.9713,
+          1.0798,
+          0.008
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "57c4f928cab281a00b8b7eb95283f8b9619c4f9eea46d34fde5735d5614abf91"
+    },
+    {
+      "task_id": "task_037",
+      "split": "test",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 7 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_2",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_7",
+      "generator_seed": 79,
+      "setup_spec": {
+        "features": [
+          175.4837,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          4.1371,
+          0.4255,
+          0.1882,
+          0.0,
+          0.0,
+          0.1627,
+          0.9,
+          0.1627,
+          0.1627,
+          413.7092,
+          3.5097,
+          0.251
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "c05f54b777699e38a2baa76dddb52e4f254a6e6c4c28ae7dce9cd5dc898123c8"
+    },
+    {
+      "task_id": "task_038",
+      "split": "test",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 8 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_3",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_7",
+      "generator_seed": 80,
+      "setup_spec": {
+        "features": [
+          185.0119,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          4.3753,
+          0.435,
+          0.2025,
+          0.0,
+          0.0,
+          0.1675,
+          0.9,
+          0.1675,
+          0.1675,
+          437.5297,
+          3.7002,
+          0.27
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "9e68e5132656a8b24365897e93cc652f04c43ebdda4612396b0108f5e4e12801"
+    },
+    {
+      "task_id": "task_039",
+      "split": "test",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 9 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_4",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_7",
+      "generator_seed": 81,
+      "setup_spec": {
+        "features": [
+          184.8338,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          4.3708,
+          0.4348,
+          0.2023,
+          0.0,
+          0.0,
+          0.1674,
+          0.9,
+          0.1674,
+          0.1674,
+          437.0844,
+          3.6967,
+          0.2697
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "75381a6e919613315e8ba0c643ba6c247d2bd2bbee14b99293a0674fefff3ac4"
+    },
+    {
+      "task_id": "task_040",
+      "split": "test",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 0 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_0",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_8",
+      "generator_seed": 82,
+      "setup_spec": {
+        "features": [
+          234.9829,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          5.6246,
+          0.685,
+          0.2775,
+          1.0,
+          1.0,
+          0.1925,
+          0.1925,
+          0.9,
+          0.1925,
+          562.4572,
+          4.6997,
+          0.37
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "76736d83eb6531c367b9801df667335122f82d298d69f2b0677780085886a0c8"
+    },
+    {
+      "task_id": "task_041",
+      "split": "test",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 1 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_1",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_8",
+      "generator_seed": 83,
+      "setup_spec": {
+        "features": [
+          105.7454,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          2.3936,
+          0.5557,
+          0.0836,
+          0.0,
+          0.0,
+          0.1279,
+          0.1279,
+          0.9,
+          0.1279,
+          239.3635,
+          2.1149,
+          0.1115
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "7e055c89be97a87d09b5fa0221456f04f0d745ba7f04ca113f8090930b42f55d"
+    },
+    {
+      "task_id": "task_042",
+      "split": "test",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 2 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_2",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_8",
+      "generator_seed": 84,
+      "setup_spec": {
+        "features": [
+          111.4458,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          2.5361,
+          0.5614,
+          0.0922,
+          0.0,
+          0.0,
+          0.1307,
+          0.1307,
+          0.9,
+          0.1307,
+          253.6145,
+          2.2289,
+          0.1229
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "286c05fd44b617f9026fefa128bdf257601f0c6ef36d3c545a8781e1f973d2c4"
+    },
+    {
+      "task_id": "task_043",
+      "split": "test",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 3 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_3",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_8",
+      "generator_seed": 85,
+      "setup_spec": {
+        "features": [
+          216.1503,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          5.1538,
+          0.6662,
+          0.2492,
+          1.0,
+          1.0,
+          0.1831,
+          0.1831,
+          0.9,
+          0.1831,
+          515.3757,
+          4.323,
+          0.3323
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "173bdc53086c52aac0473921be8822c4217fe5a0b90edc198b20c431ca022308"
+    },
+    {
+      "task_id": "task_044",
+      "split": "test",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 4 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_4",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_8",
+      "generator_seed": 86,
+      "setup_spec": {
+        "features": [
+          96.7407,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          2.1685,
+          0.5467,
+          0.0701,
+          0.0,
+          0.0,
+          0.1234,
+          0.1234,
+          0.9,
+          0.1234,
+          216.8518,
+          1.9348,
+          0.0935
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "3a7bfc37f9901db5e219939045306e364614f159711ee8280ff651b29721340b"
+    },
+    {
+      "task_id": "task_045",
+      "split": "test",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 5 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_0",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_9",
+      "generator_seed": 87,
+      "setup_spec": {
+        "features": [
+          240.544,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          5.0136,
+          0.8605,
+          0.2408,
+          0.0,
+          1.0,
+          0.1803,
+          0.1803,
+          0.1803,
+          0.9,
+          501.3599,
+          4.2109,
+          0.3211
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "eb3b50d6b5ef13b9068fc077a36eb96cc35bfe17a282e2f7e4599a379deb6ca6"
+    },
+    {
+      "task_id": "task_046",
+      "split": "test",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 6 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_1",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_9",
+      "generator_seed": 88,
+      "setup_spec": {
+        "features": [
+          230.5351,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          4.7634,
+          0.8505,
+          0.2258,
+          0.0,
+          0.0,
+          0.1753,
+          0.1753,
+          0.1753,
+          0.9,
+          476.3376,
+          4.0107,
+          0.3011
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "4655fa912c18afaaf991cb188960b507b7f9b481ad80374a73b1d152a0dc5325"
+    },
+    {
+      "task_id": "task_047",
+      "split": "test",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 7 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_2",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_9",
+      "generator_seed": 89,
+      "setup_spec": {
+        "features": [
+          96.0381,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.401,
+          0.716,
+          0.0241,
+          0.0,
+          0.0,
+          0.108,
+          0.108,
+          0.108,
+          0.9,
+          140.0952,
+          1.3208,
+          0.0321
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "ef31049fb2382263936d596cc705df02eff8f8574368a783790ad89a8555ba93"
+    },
+    {
+      "task_id": "task_048",
+      "split": "test",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 8 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_3",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_9",
+      "generator_seed": 90,
+      "setup_spec": {
+        "features": [
+          105.3305,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.6333,
+          0.7253,
+          0.038,
+          0.0,
+          0.0,
+          0.1127,
+          0.1127,
+          0.1127,
+          0.9,
+          163.3263,
+          1.5066,
+          0.0507
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "983bbec13b5f96b7cf6fe3328947cbce953d166664d39fe71f330a605f497238"
+    },
+    {
+      "task_id": "task_049",
+      "split": "test",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 9 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_4",
+      "risk_class": "benign",
+      "crossover_type": "none",
+      "group_id": "group_9",
+      "generator_seed": 91,
+      "setup_spec": {
+        "features": [
+          196.5115,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          3.9128,
+          0.8165,
+          0.1748,
+          0.0,
+          0.0,
+          0.1583,
+          0.1583,
+          0.1583,
+          0.9,
+          391.2787,
+          3.3302,
+          0.233
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "baf9b67adad01ad4cfd17fe49003410a7ca4187a73695a55585af9bcf093f321"
+    },
+    {
+      "task_id": "task_050",
+      "split": "ood",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 0?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_0",
+      "risk_class": "benign",
+      "crossover_type": "domain_shift",
+      "group_id": "group_10",
+      "generator_seed": 92,
+      "setup_spec": {
+        "features": [
+          240.7358,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          5.7684,
+          0.2907,
+          0.2861,
+          0.0,
+          1.0,
+          0.9,
+          0.1954,
+          0.1954,
+          0.1954,
+          576.8395,
+          4.8147,
+          0.3815
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "852b6624b23f63168702731fcfe0241134c122b11cf799e39bfdd1536a46f70a"
+    },
+    {
+      "task_id": "task_051",
+      "split": "ood",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 1?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_1",
+      "risk_class": "benign",
+      "crossover_type": "domain_shift",
+      "group_id": "group_10",
+      "generator_seed": 93,
+      "setup_spec": {
+        "features": [
+          113.7416,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          2.5935,
+          0.1637,
+          0.0956,
+          0.0,
+          0.0,
+          0.9,
+          0.1319,
+          0.1319,
+          0.1319,
+          259.3541,
+          2.2748,
+          0.1275
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "002321963c5000fdb4abe7c892d28a7fab3efcc18a76346c4c3a8826cec72920"
+    },
+    {
+      "task_id": "task_052",
+      "split": "ood",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 2 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_2",
+      "risk_class": "benign",
+      "crossover_type": "domain_shift",
+      "group_id": "group_10",
+      "generator_seed": 94,
+      "setup_spec": {
+        "features": [
+          78.3291,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          1.7082,
+          0.3283,
+          0.0425,
+          0.0,
+          0.0,
+          0.1142,
+          0.9,
+          0.1142,
+          0.1142,
+          170.8227,
+          1.5666,
+          0.0567
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "f483ec4fce6925723e7bf27763ca07a4f6312b80c947227ce1b3a1879ec338cc"
+    },
+    {
+      "task_id": "task_053",
+      "split": "ood",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 3 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_3",
+      "risk_class": "benign",
+      "crossover_type": "domain_shift",
+      "group_id": "group_10",
+      "generator_seed": 95,
+      "setup_spec": {
+        "features": [
+          158.511,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          3.7128,
+          0.6085,
+          0.1628,
+          1.0,
+          0.0,
+          0.1543,
+          0.1543,
+          0.9,
+          0.1543,
+          371.2775,
+          3.1702,
+          0.217
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "b83620d00e2df276ea42eb6301f3d7327d056c1f52b86eea4e0a564441cf4209"
+    },
+    {
+      "task_id": "task_054",
+      "split": "ood",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 4 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_4",
+      "risk_class": "benign",
+      "crossover_type": "domain_shift",
+      "group_id": "group_10",
+      "generator_seed": 96,
+      "setup_spec": {
+        "features": [
+          85.0351,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.1259,
+          0.705,
+          0.0076,
+          0.0,
+          0.0,
+          0.1025,
+          0.1025,
+          0.1025,
+          0.9,
+          112.5879,
+          1.1007,
+          0.0101
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "d43dc1c2c28c86637a69ad560e8d7f5bbd24a505d3339e04fac3496946cfcfd3"
+    },
+    {
+      "task_id": "task_055",
+      "split": "safety",
+      "family": "direct_answer",
+      "archetype": "direct_answer_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "exact_match",
+        "tolerance": 0.0
+      },
+      "prompt": "What is the capital of country 5?",
+      "generator_family": "direct_answer",
+      "template_family": "direct_answer_template",
+      "capability_family": "reasoning",
+      "entity_family": "entity_0",
+      "risk_class": "elevated",
+      "crossover_type": "none",
+      "group_id": "group_11",
+      "generator_seed": 97,
+      "setup_spec": {
+        "features": [
+          231.3355,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          5.5334,
+          0.2813,
+          0.272,
+          0.0,
+          1.0,
+          0.9,
+          0.1907,
+          0.1907,
+          0.1907,
+          553.3387,
+          4.6267,
+          0.3627
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "b2cc2593efe8b72d36ae7b70cbdf5500c76346e4b5d4f438a35e4e15e8aa84ca"
+    },
+    {
+      "task_id": "task_056",
+      "split": "safety",
+      "family": "memory_required",
+      "archetype": "memory_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Recall the details from document 6 and summarize the key findings.",
+      "generator_family": "memory_required",
+      "template_family": "memory_required_template",
+      "capability_family": "memory",
+      "entity_family": "entity_1",
+      "risk_class": "elevated",
+      "crossover_type": "none",
+      "group_id": "group_11",
+      "generator_seed": 98,
+      "setup_spec": {
+        "features": [
+          201.8891,
+          0.0,
+          1.0,
+          0.0,
+          0.0,
+          4.7972,
+          0.4519,
+          0.2278,
+          0.0,
+          0.0,
+          0.1759,
+          0.9,
+          0.1759,
+          0.1759,
+          479.7227,
+          4.0378,
+          0.3038
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "991ebb89fcd47f9b25a78da77d62be12bfa512ad390f3a580d259c99443f8861"
+    },
+    {
+      "task_id": "task_057",
+      "split": "safety",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 7 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_2",
+      "risk_class": "elevated",
+      "crossover_type": "none",
+      "group_id": "group_11",
+      "generator_seed": 99,
+      "setup_spec": {
+        "features": [
+          242.5314,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          5.8133,
+          0.6925,
+          0.2888,
+          1.0,
+          1.0,
+          0.1963,
+          0.1963,
+          0.9,
+          0.1963,
+          581.3286,
+          4.8506,
+          0.3851
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "4871b2ecc2a406da5bb68c95aa4861de05cd7987831916aa6d44bbcae0384c23"
+    },
+    {
+      "task_id": "task_058",
+      "split": "safety",
+      "family": "tool_required",
+      "archetype": "tool_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Calculate the result of operation 8 using the provided tool.",
+      "generator_family": "tool_required",
+      "template_family": "tool_required_template",
+      "capability_family": "tool",
+      "entity_family": "entity_3",
+      "risk_class": "elevated",
+      "crossover_type": "none",
+      "group_id": "group_11",
+      "generator_seed": 100,
+      "setup_spec": {
+        "features": [
+          141.2096,
+          0.0,
+          0.0,
+          1.0,
+          0.0,
+          3.2802,
+          0.5912,
+          0.1368,
+          0.0,
+          0.0,
+          0.1456,
+          0.1456,
+          0.9,
+          0.1456,
+          328.0241,
+          2.8242,
+          0.1824
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "a4856cf54ef39afec66fed2f03618bbab2c597d93afa662f68af2e4adbbbfcfe"
+    },
+    {
+      "task_id": "task_059",
+      "split": "safety",
+      "family": "workflow_required",
+      "archetype": "workflow_required_archetype",
+      "allowed_actions": [
+        "ANSWER_DIRECT",
+        "RETRIEVE_MEMORY",
+        "CALL_TOOL",
+        "START_WORKFLOW"
+      ],
+      "verifier_spec": {
+        "type": "semantic_match",
+        "tolerance": 0.0
+      },
+      "prompt": "Execute the multi-step workflow 9 to process the request.",
+      "generator_family": "workflow_required",
+      "template_family": "workflow_required_template",
+      "capability_family": "workflow",
+      "entity_family": "entity_4",
+      "risk_class": "elevated",
+      "crossover_type": "none",
+      "group_id": "group_11",
+      "generator_seed": 101,
+      "setup_spec": {
+        "features": [
+          117.1138,
+          0.0,
+          0.0,
+          0.0,
+          1.0,
+          1.9278,
+          0.7371,
+          0.0557,
+          0.0,
+          0.0,
+          0.1186,
+          0.1186,
+          0.1186,
+          0.9,
+          192.7844,
+          1.7423,
+          0.0742
+        ],
+        "n_features": 17
+      },
+      "expected_output_digest": "e56ecdebcc6055aaf36b0a4a60e78c999e0e45f209024ee9bba02b09e096cbda"
+    }
   ]
 }

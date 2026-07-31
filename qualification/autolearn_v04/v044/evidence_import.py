@@ -60,12 +60,14 @@ REQUIRED_FILES: tuple[str, ...] = (
     "oracle_results.json",
     "gate_a_results.json",
     "ood_results.json",
-    "safety_results.json",
     "coverage_results.json",
     "runtime_completion_diagnostics.json",
     "source_provenance.json",
     "artifact_checksums.json",
 )
+
+# Safety results may be .json (summary) or .jsonl (task-level).
+SAFETY_RESULTS_VARIANTS = ("safety_results.json", "safety_results.jsonl")
 
 
 # ---------------------------------------------------------------------------
@@ -165,6 +167,10 @@ def _validate_package(evidence_dir: Path) -> dict[str, Any]:
         fpath = evidence_dir / fname
         if not fpath.exists() or not fpath.is_file():
             missing.append(fname)
+    # Safety results may be .json or .jsonl — check variants.
+    safety_present = any((evidence_dir / v).exists() for v in SAFETY_RESULTS_VARIANTS)
+    if not safety_present:
+        missing.append("safety_results.json or safety_results.jsonl")
     if missing:
         errors.append(f"Missing required evidence files: {', '.join(missing)}")
         return {
@@ -192,6 +198,19 @@ def _validate_package(evidence_dir: Path) -> dict[str, Any]:
         if fname in ("EVIDENCE_MANIFEST.json", "artifact_checksums.json"):
             continue
         fpath = evidence_dir / fname
+        if not fpath.exists():
+            # Try safety_results variant.
+            if fname == "safety_results.json":
+                for v in SAFETY_RESULTS_VARIANTS:
+                    vp = evidence_dir / v
+                    if vp.exists():
+                        fpath = vp
+                        fname = v
+                        break
+                else:
+                    continue
+            else:
+                continue
         recorded = checksum_registry.get(fname)
         try:
             recomputed = _sha256_file(fpath)

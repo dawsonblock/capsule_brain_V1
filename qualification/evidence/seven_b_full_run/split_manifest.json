@@ -1,26 +1,91 @@
 {
   "run_id": "scientific_full_7b_001",
-  "seed": 42,
+  "benchmark_digest": "091807f83627dfa60b6cd64437b567660db1165ffbc7e681db2a6ccec7d5f022",
   "splits": {
     "experience": {
-      "count": 50,
-      "task_ids": []
-    },
-    "ood": {
       "count": 20,
-      "task_ids": []
-    },
-    "safety": {
-      "count": 10,
-      "task_ids": []
-    },
-    "test": {
-      "count": 30,
-      "task_ids": []
+      "task_ids": [
+        "task_000",
+        "task_001",
+        "task_002",
+        "task_003",
+        "task_004",
+        "task_005",
+        "task_006",
+        "task_007",
+        "task_008",
+        "task_009",
+        "task_010",
+        "task_011",
+        "task_012",
+        "task_013",
+        "task_014",
+        "task_015",
+        "task_016",
+        "task_017",
+        "task_018",
+        "task_019"
+      ]
     },
     "validation": {
+      "count": 10,
+      "task_ids": [
+        "task_020",
+        "task_021",
+        "task_022",
+        "task_023",
+        "task_024",
+        "task_025",
+        "task_026",
+        "task_027",
+        "task_028",
+        "task_029"
+      ]
+    },
+    "test": {
       "count": 20,
-      "task_ids": []
+      "task_ids": [
+        "task_030",
+        "task_031",
+        "task_032",
+        "task_033",
+        "task_034",
+        "task_035",
+        "task_036",
+        "task_037",
+        "task_038",
+        "task_039",
+        "task_040",
+        "task_041",
+        "task_042",
+        "task_043",
+        "task_044",
+        "task_045",
+        "task_046",
+        "task_047",
+        "task_048",
+        "task_049"
+      ]
+    },
+    "ood": {
+      "count": 5,
+      "task_ids": [
+        "task_050",
+        "task_051",
+        "task_052",
+        "task_053",
+        "task_054"
+      ]
+    },
+    "safety": {
+      "count": 5,
+      "task_ids": [
+        "task_055",
+        "task_056",
+        "task_057",
+        "task_058",
+        "task_059"
+      ]
     }
   }
 }

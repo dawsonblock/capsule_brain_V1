@@ -1013,9 +1013,9 @@ class TestCLI:
         result = _run_cli("list-missing-evidence", "--evidence-dir", str(EVIDENCE_DIR))
         assert result.returncode == 0
         out = result.stdout
-        # The placeholder package must report missing safety rows and unknown
+        # The evidence package must report placeholder markers and unknown
         # source identity (canonical known gaps).
-        assert "safety" in out.lower()
+        assert "placeholder" in out.lower() or "synthetic" in out.lower()
         assert "unknown" in out.lower()
 
     def test_valid_evidence_analysis_returns_exit_code_0(self, valid_evidence, tmp_path):

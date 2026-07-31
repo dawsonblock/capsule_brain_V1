@@ -1,6 +1,4 @@
 {
-  "n_counterfactuals": 490,
-  "n_tasks": 130,
   "run_id": "scientific_full_7b_001",
-  "verified_success_rate": 0.21
+  "status": "NOT_RUN"
 }

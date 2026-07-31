@@ -1,6 +1,160 @@
 {
-  "mean_utility": 5.112,
-  "n_tasks": 30,
   "policy_id": "oracle",
-  "run_id": "scientific_full_7b_001"
+  "run_id": "scientific_full_7b_001",
+  "split": "test",
+  "mean_utility": 9.006105,
+  "mean_utility_full_precision": 9.006105,
+  "mean_utility_display": 9.0061,
+  "median_utility": 0.0,
+  "task_count": 20,
+  "task_rows": [
+    {
+      "task_id": "task_030",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 8.8267,
+      "success": true,
+      "family": "direct_answer"
+    },
+    {
+      "task_id": "task_031",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 9.2751,
+      "success": true,
+      "family": "direct_answer"
+    },
+    {
+      "task_id": "task_032",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 9.253,
+      "success": true,
+      "family": "direct_answer"
+    },
+    {
+      "task_id": "task_033",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 9.0503,
+      "success": true,
+      "family": "direct_answer"
+    },
+    {
+      "task_id": "task_034",
+      "selected_action": "ANSWER_DIRECT",
+      "selected_utility": 8.6868,
+      "success": true,
+      "family": "direct_answer"
+    },
+    {
+      "task_id": "task_035",
+      "selected_action": "RETRIEVE_MEMORY",
+      "selected_utility": 9.1134,
+      "success": true,
+      "family": "memory_required"
+    },
+    {
+      "task_id": "task_036",
+      "selected_action": "RETRIEVE_MEMORY",
+      "selected_utility": 8.5199,
+      "success": true,
+      "family": "memory_required"
+    },
+    {
+      "task_id": "task_037",
+      "selected_action": "RETRIEVE_MEMORY",
+      "selected_utility": 9.1274,
+      "success": true,
+      "family": "memory_required"
+    },
+    {
+      "task_id": "task_038",
+      "selected_action": "RETRIEVE_MEMORY",
+      "selected_utility": 9.1751,
+      "success": true,
+      "family": "memory_required"
+    },
+    {
+      "task_id": "task_039",
+      "selected_action": "RETRIEVE_MEMORY",
+      "selected_utility": 9.1742,
+      "success": true,
+      "family": "memory_required"
+    },
+    {
+      "task_id": "task_040",
+      "selected_action": "CALL_TOOL",
+      "selected_utility": 9.4249,
+      "success": true,
+      "family": "tool_required"
+    },
+    {
+      "task_id": "task_041",
+      "selected_action": "CALL_TOOL",
+      "selected_utility": 8.7787,
+      "success": true,
+      "family": "tool_required"
+    },
+    {
+      "task_id": "task_042",
+      "selected_action": "CALL_TOOL",
+      "selected_utility": 8.8072,
+      "success": true,
+      "family": "tool_required"
+    },
+    {
+      "task_id": "task_043",
+      "selected_action": "CALL_TOOL",
+      "selected_utility": 9.3308,
+      "success": true,
+      "family": "tool_required"
+    },
+    {
+      "task_id": "task_044",
+      "selected_action": "CALL_TOOL",
+      "selected_utility": 8.7337,
+      "success": true,
+      "family": "tool_required"
+    },
+    {
+      "task_id": "task_045",
+      "selected_action": "START_WORKFLOW",
+      "selected_utility": 9.3027,
+      "success": true,
+      "family": "workflow_required"
+    },
+    {
+      "task_id": "task_046",
+      "selected_action": "START_WORKFLOW",
+      "selected_utility": 9.2527,
+      "success": true,
+      "family": "workflow_required"
+    },
+    {
+      "task_id": "task_047",
+      "selected_action": "START_WORKFLOW",
+      "selected_utility": 8.5802,
+      "success": true,
+      "family": "workflow_required"
+    },
+    {
+      "task_id": "task_048",
+      "selected_action": "START_WORKFLOW",
+      "selected_utility": 8.6267,
+      "success": true,
+      "family": "workflow_required"
+    },
+    {
+      "task_id": "task_049",
+      "selected_action": "START_WORKFLOW",
+      "selected_utility": 9.0826,
+      "success": true,
+      "family": "workflow_required"
+    }
+  ],
+  "verified_success_rate": 1.0,
+  "wins": 0,
+  "ties": 0,
+  "losses": 0,
+  "mean_regret": 0.0,
+  "action_distribution": {},
+  "task_ids_digest": "fc564ffac19a60068a7366abe1102d89b2bfe246e06723386606427d1c4ca86a",
+  "utility_version": "normalized_v1"
 }

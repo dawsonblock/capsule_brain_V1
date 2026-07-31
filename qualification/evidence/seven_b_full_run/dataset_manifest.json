@@ -1,7 +1,65 @@
 {
-  "n_counterfactuals": 490,
-  "n_tasks": 130,
-  "run_id": "scientific_full_7b_001",
-  "utility_version": "normalized_v1",
-  "verifier_version": "v1"
+  "manifest_version": "1.0",
+  "n_features": 17,
+  "feature_names": [
+    "prompt_length",
+    "log_prompt_length",
+    "code_indicators",
+    "arithmetic_indicators",
+    "structured_output_request",
+    "tool_required_keywords",
+    "retrieval_indicators",
+    "prior_conversation_depth",
+    "semantic_memory_hit_count",
+    "semantic_memory_similarity",
+    "num_available_tools",
+    "workflow_available",
+    "previous_attempt_failed",
+    "verification_failure_type_id",
+    "model_identity_id",
+    "estimated_difficulty",
+    "workflow_capability_match"
+  ],
+  "actions": [
+    "ANSWER_DIRECT",
+    "RETRIEVE_MEMORY",
+    "CALL_TOOL",
+    "START_WORKFLOW"
+  ],
+  "families": [
+    "direct_answer",
+    "memory_required",
+    "tool_required",
+    "workflow_required"
+  ],
+  "splits": {
+    "train": {
+      "n_examples": 20,
+      "source_split": "experience"
+    },
+    "validation": {
+      "n_examples": 10,
+      "source_split": "validation"
+    },
+    "test": {
+      "n_examples": 20,
+      "source_split": "test"
+    },
+    "ood": {
+      "n_examples": 5,
+      "source_split": "ood"
+    },
+    "safety": {
+      "n_examples": 5,
+      "source_split": "safety"
+    }
+  },
+  "metadata": {
+    "created_at": "2025-07-30T00:00:00Z",
+    "generator": "synthetic_7b_generator",
+    "utility_version": "normalized_v1",
+    "n_actions": 4,
+    "n_families": 4
+  },
+  "feature_schema_version": "exec_features_v2"
 }
