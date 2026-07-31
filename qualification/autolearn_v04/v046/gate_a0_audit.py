@@ -39,15 +39,6 @@ from __future__ import annotations
 from typing import Any
 
 from qualification.autolearn_v04.common.audit_status import AuditStatus
-from qualification.autolearn_v04.common.audit_result import (
-    AuditResult,
-    make_pass,
-    make_fail,
-    make_blocked,
-    make_not_applicable,
-    aggregate_status,
-)
-from qualification.autolearn_v04.common.evidence_origin import EvidenceOrigin
 
 
 # Ordered list of all 24 sub-gate names.

@@ -83,9 +83,12 @@ from qualification.autolearn_v04.v045.safety_evidence_audit import (
 # ---------------------------------------------------------------------------
 
 
-def _load_json(path: Path) -> dict:
+def _load_json(path: Path) -> dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+        try:
+            return json.load(f)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in {path}: {e}") from e
 
 
 def _load_json_file(path: Path) -> dict | None:
@@ -99,15 +102,18 @@ def _load_json_file(path: Path) -> dict | None:
         return None
 
 
-def _load_jsonl(path: Path) -> list[dict]:
-    rows: list[dict] = []
+def _load_jsonl(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     if not path.exists():
         return rows
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:
-                rows.append(json.loads(line))
+                try:
+                    rows.append(json.loads(line))
+                except json.JSONDecodeError as e:
+                    raise ValueError(f"Invalid JSON in {path} at line: {line[:80]}...: {e}") from e
     return rows
 
 
@@ -134,7 +140,7 @@ def run_all_v046_diagnostics(
     n_candidate_seeds: int = 50,
     force: bool = False,
     evaluate_gate_a: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     """Run the complete v0.4.6 analysis pipeline.
 
     Returns the analysis manifest dict.

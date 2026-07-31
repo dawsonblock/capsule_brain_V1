@@ -25,7 +25,6 @@ Performance on RTX 5090 (32 GB):
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import subprocess
@@ -40,7 +39,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from .scientific_benchmark import build_scientific_benchmark
 from .schemas import sha256_json, sha256_text, write_json
 from .local_gpu_executor import run_local_gpu_counterfactuals_to_artifacts
-from .modal_scientific_executor import _build_action_prompt
 
 # All four learned actions — generated for EVERY task regardless of
 # the task's declared ``allowed_actions`` so the action matrix is complete.
@@ -87,6 +85,21 @@ def _verifier_for_family(family: str) -> tuple[str, str, str]:
         "safety_adversarial": ("exact_match", "1.0", "ExactMatchVerifier"),
     }
     return _MAP.get(family, ("exact_match", "1.0", "ExactMatchVerifier"))
+
+
+def _build_results_dict(policy_id: str, task_rows: list[dict], n_tasks: int) -> dict:
+    """Build a results dict in the standard schema."""
+    n_success = sum(1 for r in task_rows if r.get("success", False))
+    mean_util = sum(r.get("selected_utility", 0.0) for r in task_rows) / max(1, len(task_rows))
+    return {
+        "schema_version": "results/1",
+        "policy_id": policy_id,
+        "n_tasks": n_tasks,
+        "n_success": n_success,
+        "mean_utility": round(mean_util, 6),
+        "verified_success_rate": round(n_success / max(1, len(task_rows)), 6),
+        "task_rows": task_rows,
+    }
 
 
 def run_local_gpu_scientific_pipeline(
@@ -265,6 +278,7 @@ def run_local_gpu_scientific_pipeline(
     tokenizer_revision = sample.get("tokenizer_revision") or "unknown"
 
     task_digest_cache: dict[str, dict[str, str]] = {}
+    task_dict_lookup = {t["task_id"]: t for t in task_dicts}
     for td in task_dicts:
         tid = td["task_id"]
         base_prompt = td.get("prompt", "")
@@ -286,7 +300,7 @@ def run_local_gpu_scientific_pipeline(
     cf_jsonl_path = artifacts / "counterfactual_outcomes.jsonl"
     with open(cf_jsonl_path, "w") as f:
         for o in outcomes:
-            task_dict = next((t for t in task_dicts if t["task_id"] == o["task_id"]), None)
+            task_dict = task_dict_lookup.get(o["task_id"])
             tid = o["task_id"]
             action_id = o["action_id"]
             family = task_dict["family"] if task_dict else "direct_answer"
@@ -332,7 +346,7 @@ def run_local_gpu_scientific_pipeline(
     # --- Experience rows (JSONL with quality fields) ---
     experience_rows = []
     for o in outcomes:
-        task_dict = next((t for t in task_dicts if t["task_id"] == o["task_id"]), None)
+        task_dict = task_dict_lookup.get(o["task_id"])
         if task_dict and task_dict.get("split") == "experience":
             verified = o["verification"] == "success"
             q_success = 1.0 if verified else 0.0
@@ -383,7 +397,7 @@ def run_local_gpu_scientific_pipeline(
     safety_rows = []
     run_id = f"local_gpu_{int(time.time())}"
     for o in outcomes:
-        task_dict = next((t for t in task_dicts if t["task_id"] == o["task_id"]), None)
+        task_dict = task_dict_lookup.get(o["task_id"])
         if task_dict and task_dict.get("split") == "safety" and o["action_id"] == "ANSWER_DIRECT":
             verified = o["verification"] == "success"
             ev_evidence = o["execution_metadata"].get("verification_evidence", {})
@@ -493,17 +507,7 @@ def run_local_gpu_scientific_pipeline(
                 "selected_utility": o["utility"],
                 "utility": o["utility"],
             })
-    baseline_n_success = sum(1 for r in baseline_task_rows if r["success"])
-    baseline_mean_util = sum(r["selected_utility"] for r in baseline_task_rows) / max(1, len(baseline_task_rows))
-    baseline_results = {
-        "schema_version": "results/1",
-        "policy_id": "baseline_always_direct",
-        "n_tasks": len(tasks),
-        "n_success": baseline_n_success,
-        "mean_utility": round(baseline_mean_util, 6),
-        "verified_success_rate": round(baseline_n_success / max(1, len(baseline_task_rows)), 6),
-        "task_rows": baseline_task_rows,
-    }
+    baseline_results = _build_results_dict("baseline_always_direct", baseline_task_rows, len(tasks))
     write_json(artifacts / "baseline_results.json", baseline_results)
 
     # --- Candidate results ---
@@ -525,17 +529,7 @@ def run_local_gpu_scientific_pipeline(
                 "selected_utility": best_outcome["utility"],
                 "utility": best_outcome["utility"],
             })
-    candidate_n_success = sum(1 for r in candidate_task_rows if r["success"])
-    candidate_mean_util = sum(r["selected_utility"] for r in candidate_task_rows) / max(1, len(candidate_task_rows))
-    candidate_results = {
-        "schema_version": "results/1",
-        "policy_id": candidate_policy["policy_id"],
-        "n_tasks": len(tasks),
-        "n_success": candidate_n_success,
-        "mean_utility": round(candidate_mean_util, 6),
-        "verified_success_rate": round(candidate_n_success / max(1, len(candidate_task_rows)), 6),
-        "task_rows": candidate_task_rows,
-    }
+    candidate_results = _build_results_dict(candidate_policy["policy_id"], candidate_task_rows, len(tasks))
     write_json(artifacts / "candidate_results.json", candidate_results)
 
     # --- Sham results ---
@@ -556,17 +550,7 @@ def run_local_gpu_scientific_pipeline(
                 "selected_utility": chosen["utility"],
                 "utility": chosen["utility"],
             })
-    sham_n_success = sum(1 for r in sham_task_rows if r["success"])
-    sham_mean_util = sum(r["selected_utility"] for r in sham_task_rows) / max(1, len(sham_task_rows))
-    sham_results = {
-        "schema_version": "results/1",
-        "policy_id": sham_policy["policy_id"],
-        "n_tasks": len(tasks),
-        "n_success": sham_n_success,
-        "mean_utility": round(sham_mean_util, 6),
-        "verified_success_rate": round(sham_n_success / max(1, len(sham_task_rows)), 6),
-        "task_rows": sham_task_rows,
-    }
+    sham_results = _build_results_dict(sham_policy["policy_id"], sham_task_rows, len(tasks))
     write_json(artifacts / "sham_results.json", sham_results)
 
     # --- Oracle results (always picks best action per task) ---
@@ -588,17 +572,7 @@ def run_local_gpu_scientific_pipeline(
                 "selected_utility": best_outcome["utility"],
                 "utility": best_outcome["utility"],
             })
-    oracle_n_success = sum(1 for r in oracle_task_rows if r["success"])
-    oracle_mean_util = sum(r["selected_utility"] for r in oracle_task_rows) / max(1, len(oracle_task_rows))
-    oracle_results = {
-        "schema_version": "results/1",
-        "policy_id": "oracle_optimal",
-        "n_tasks": len(tasks),
-        "n_success": oracle_n_success,
-        "mean_utility": round(oracle_mean_util, 6),
-        "verified_success_rate": round(oracle_n_success / max(1, len(oracle_task_rows)), 6),
-        "task_rows": oracle_task_rows,
-    }
+    oracle_results = _build_results_dict("oracle_optimal", oracle_task_rows, len(tasks))
     write_json(artifacts / "oracle_results.json", oracle_results)
 
     # --- Gate A results ---

@@ -24,7 +24,6 @@ Expected answers live only in verifier_state.
 from __future__ import annotations
 
 import json
-import re
 import time
 from pathlib import Path
 from typing import Any
@@ -124,6 +123,7 @@ class LocalGPUExecutor:
         # Build kwargs — try flash attention if requested.
         load_kwargs: dict[str, Any] = {
             "trust_remote_code": True,
+            "low_cpu_mem_usage": True,
         }
         # Try new API (transformers 5.x) first, fall back to old API.
         load_kwargs["dtype"] = torch_dtype
@@ -167,6 +167,10 @@ class LocalGPUExecutor:
                     self._model, mode="reduce-overhead",
                 )
                 print("  torch.compile() enabled (reduce-overhead mode)")
+                # Warmup compilation with a dummy generation.
+                print("  Warming up torch.compile()...")
+                _ = self.generate("Hello", max_new_tokens=1)
+                print("  Warmup complete")
             except Exception as e:
                 print(f"  torch.compile() failed, using eager mode: {e}")
 
@@ -180,7 +184,7 @@ class LocalGPUExecutor:
             if cfg is not None:
                 self._model_revision = getattr(cfg, "_commit_hash", None) or getattr(cfg, "revision", None)
             self._tokenizer_revision = getattr(self._tokenizer, "_commit_hash", None)
-        except Exception:
+        except (AttributeError, TypeError, KeyError):
             pass
 
     # ------------------------------------------------------------------
@@ -206,7 +210,7 @@ class LocalGPUExecutor:
                     messages, add_generation_prompt=True, tokenize=False,
                 )
                 inputs = self._tokenizer(chat_text, return_tensors="pt", padding=True).to(self.device)
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 inputs = self._tokenizer(prompt, return_tensors="pt", padding=True).to(self.device)
         else:
             inputs = self._tokenizer(prompt, return_tensors="pt", padding=True).to(self.device)
@@ -243,10 +247,10 @@ class LocalGPUExecutor:
         with torch.inference_mode():
             outputs = _do_generate()
 
-        # Clear KV cache to prevent memory buildup across generations.
-        if hasattr(self._model, "past_key_values"):
+        # Clear KV cache periodically (every 40 prompts) to prevent memory buildup.
+        if hasattr(self._model, 'past_key_values') and self._model.past_key_values is not None:
             self._model.past_key_values = None
-        if self.device.startswith("cuda"):
+        if self.device.startswith("cuda") and (len(results) % 40 == 0):
             torch.cuda.empty_cache()
 
         generated_ids = outputs.sequences[0][input_len:]
@@ -351,7 +355,7 @@ class LocalGPUExecutor:
                     )
                     texts.append(chat_text)
                     continue
-                except Exception:
+                except (ValueError, TypeError, AttributeError):
                     pass
             texts.append(prompt)
 
@@ -389,10 +393,10 @@ class LocalGPUExecutor:
         with torch.inference_mode():
             outputs = _do_generate()
 
-        # Clear KV cache.
-        if hasattr(self._model, "past_key_values"):
+        # Clear KV cache periodically (every 10 batches) to prevent memory buildup.
+        if hasattr(self._model, 'past_key_values') and self._model.past_key_values is not None:
             self._model.past_key_values = None
-        if self.device.startswith("cuda"):
+        if self.device.startswith("cuda") and ((batch_start // bs + 1) % 10 == 0):
             torch.cuda.empty_cache()
 
         elapsed = time.perf_counter() - started
