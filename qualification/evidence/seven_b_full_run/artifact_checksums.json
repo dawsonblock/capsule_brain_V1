@@ -1,0 +1,20 @@
+{
+  "baseline_results.json": "de7a16bee88bd217c7537fd92a02c32d03367233fad4691d82ca391a78c1583c",
+  "benchmark_manifest.json": "b921d771aa2231112540fa998e0170992cdf65dc6c962d47d17f967f046b9332",
+  "candidate_policy.json": "5aece2e8ca0a52a7dc3197ee9d3dceeac815924647d0cbbf0b33af981153a5d6",
+  "candidate_results.json": "26b631847497bb0ee58c4caa2b40856a8dc911d4f50439ed3d5c6a7e2ceed4da",
+  "counterfactual_outcomes.jsonl": "31e405ce83d75eb91e528f415164586686952c523e3441fd80bffbdb354874f9",
+  "coverage_results.json": "948717a01f8eac06ecf99ac95b2a4db708fcfd1368afa834f26d1b21d2d8fbd9",
+  "dataset_manifest.json": "c6eee5aec511175a2756533692656b42f84e236e72ccb565929ab37e535d8325",
+  "executive_experiences.jsonl": "6944d3cd321975721e22c0253f9dff0b2c061fbad494a4042d4e48ee3531c8d5",
+  "gate_a_results.json": "6882f807a4e43f54b96fae22dac9a6815eb34f0266b8939805474868cd004fc7",
+  "ood_results.json": "d505bbc768dc047fa782895d1a7e83f2a71ab796a20c01154d48775bbcc5d61b",
+  "oracle_results.json": "9f5efea063ea29237a32df9ee5f7443597f60ffd64c249f8f7be7c1157209f4d",
+  "provider_manifest.json": "b7ca6b9f1f0e460d45abc42ba1d52d18ab3da19cbab364311f854838013dd2db",
+  "runtime_completion_diagnostics.json": "cd6564e389b73230e7850c73e6f389cee9bed31d77c4af3c170ae34f6a9086e7",
+  "safety_results.json": "60cd381f3d29e5817e6d8feff1bba51033635e6f3ee073e9d7cc6ea540646803",
+  "sham_policy.json": "678d12a5326461e3d6072bbb2a4bc7bfb77f545b1f9a6f9d314b58a25f76d56b",
+  "sham_results.json": "6e5aa18796871dcc8e2fa29470a13cfc7d176f82cb0906c2eb5bb70c777613f3",
+  "source_provenance.json": "5fdb7cd0726cd1ae83b2c6cd77f6aeedb06a30801b5c170d0431193e114eb04c",
+  "split_manifest.json": "8a04ec7ece2ed54ac6de83b11ef04385d68097da3a2da6a577debb00bff3c787"
+}

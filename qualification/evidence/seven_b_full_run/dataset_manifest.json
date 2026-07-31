@@ -1,0 +1,7 @@
+{
+  "n_counterfactuals": 490,
+  "n_tasks": 130,
+  "run_id": "scientific_full_7b_001",
+  "utility_version": "normalized_v1",
+  "verifier_version": "v1"
+}

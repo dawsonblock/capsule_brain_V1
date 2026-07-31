@@ -1,0 +1,7 @@
+{
+  "mean_utility": 5.069,
+  "n_tasks": 30,
+  "policy_id": "sham_permuted",
+  "run_id": "scientific_full_7b_001",
+  "verified_success_rate": 0.21
+}

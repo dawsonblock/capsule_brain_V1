@@ -1,0 +1,15 @@
+{
+  "generation_config_digest": "b47f0af4478467c4911d900434a5d2b143c0e59d4dca50bf531be49e8d1c747b",
+  "is_infrastructure_provider": false,
+  "model_digest": "",
+  "model_id": "Qwen/Qwen2.5-7B-Instruct",
+  "model_revision": "main",
+  "provider_class": "REAL_MODEL",
+  "provider_class_enum": "REAL_MODEL",
+  "run_id": "scientific_full_7b_001",
+  "runtime_type": "real",
+  "supports_gate_a_claim": true,
+  "supports_gate_b_claim": true,
+  "tokenizer_id": "Qwen/Qwen2.5-7B-Instruct",
+  "tokenizer_revision": "main"
+}

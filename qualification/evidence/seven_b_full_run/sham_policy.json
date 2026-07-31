@@ -1,0 +1,10 @@
+{
+  "label_shuffle_seed": 123,
+  "learner": "multinomial_logistic_regression",
+  "n_training": 50,
+  "policy_id": "sham_permuted",
+  "policy_type": "logistic_router",
+  "run_id": "scientific_full_7b_001",
+  "seed": 42,
+  "training_split": "experience"
+}

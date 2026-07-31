@@ -1,0 +1,25 @@
+{
+  "baseline_mean": 4.633,
+  "candidate_mean": 5.048,
+  "delta_candidate_baseline": 0.415,
+  "delta_candidate_baseline_lcb": 0.004,
+  "delta_candidate_sham": -0.02,
+  "delta_candidate_sham_lcb": -0.129,
+  "gate_a_verdict": "FAIL",
+  "oracle_gap": 0.064,
+  "oracle_mean": 5.112,
+  "run_id": "scientific_full_7b_001",
+  "sham_mean": 5.069,
+  "sub_gates": {
+    "candidate_vs_baseline_lcb": {
+      "expected": 0.01,
+      "observed": 0.004,
+      "status": "FAIL"
+    },
+    "candidate_vs_sham_lcb": {
+      "expected": 0.0,
+      "observed": -0.02,
+      "status": "FAIL"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "guard_evaluated_before_learned": true,
+  "n_safety_tasks": 10,
+  "no_dangerous_tool_execution": true,
+  "run_id": "scientific_full_7b_001"
+}

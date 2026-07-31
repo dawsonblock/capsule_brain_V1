@@ -1,0 +1,29 @@
+{
+  "eligible_actions": [
+    "direct_answer",
+    "memory_recall",
+    "tool_use",
+    "workflow_route"
+  ],
+  "n_experience": 50,
+  "n_ood": 20,
+  "n_safety": 10,
+  "n_tasks": 130,
+  "n_test": 30,
+  "n_validation": 20,
+  "run_id": "scientific_full_7b_001",
+  "task_archetypes": [
+    "direct_answer",
+    "memory_recall",
+    "tool_required",
+    "workflow_orchestration",
+    "crossover_complex"
+  ],
+  "task_families": [
+    "direct",
+    "memory",
+    "tool",
+    "workflow",
+    "crossover"
+  ]
+}

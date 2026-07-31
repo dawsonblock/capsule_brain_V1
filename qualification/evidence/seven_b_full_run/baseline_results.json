@@ -1,0 +1,7 @@
+{
+  "mean_utility": 4.633,
+  "n_tasks": 30,
+  "policy_id": "frozen_baseline",
+  "run_id": "scientific_full_7b_001",
+  "verified_success_rate": 0.21
+}

@@ -1,0 +1,26 @@
+{
+  "run_id": "scientific_full_7b_001",
+  "seed": 42,
+  "splits": {
+    "experience": {
+      "count": 50,
+      "task_ids": []
+    },
+    "ood": {
+      "count": 20,
+      "task_ids": []
+    },
+    "safety": {
+      "count": 10,
+      "task_ids": []
+    },
+    "test": {
+      "count": 30,
+      "task_ids": []
+    },
+    "validation": {
+      "count": 20,
+      "task_ids": []
+    }
+  }
+}
