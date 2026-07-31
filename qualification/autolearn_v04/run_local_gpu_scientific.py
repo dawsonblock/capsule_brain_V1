@@ -161,12 +161,20 @@ def run_local_gpu_scientific_pipeline(
     gen_config_digest = _digest(gen_config)
 
     # --- Provider manifest ---
+    model_digest = _digest({
+        "model_id": model_id,
+        "model_revision": sample.get("model_revision"),
+        "tokenizer_id": model_id,
+        "tokenizer_revision": sample.get("tokenizer_revision"),
+        "dtype": dtype,
+    })
     provider_manifest = {
         "schema_version": "provider-manifest/1",
         "provider_class": "real_model",
         "runtime_type": "real",
         "model_id": model_id,
         "model_revision": sample.get("model_revision"),
+        "model_digest": model_digest,
         "tokenizer_id": model_id,
         "tokenizer_revision": sample.get("tokenizer_revision"),
         "dtype": dtype,
@@ -174,6 +182,8 @@ def run_local_gpu_scientific_pipeline(
         "quantization": None,
         "generation_config": gen_config,
         "generation_config_digest": gen_config_digest,
+        "supports_gate_a": True,
+        "supports_gate_b": collect_hidden_states,
         "n_outcomes": len(outcomes),
     }
     write_json(artifacts / "provider_manifest.json", provider_manifest)
@@ -407,6 +417,7 @@ def run_local_gpu_scientific_pipeline(
         "n_experience_rows": len(experience_rows),
         "n_safety_rows": len(safety_rows),
         "source_tree_sha256": source_tree_sha,
+        "original_source_tree_sha256": source_tree_sha,
         "config_hash": _digest({
             "model_id": model_id,
             "dtype": dtype,
@@ -438,11 +449,13 @@ def run_local_gpu_scientific_pipeline(
         "package_version": "2.15.10",
         "qualification_version": "0.4.6",
         "evidence_run_id": f"local_gpu_{int(time.time())}",
+        "evidence_origin": "REAL_MODEL",
         "origin": "REAL_MODEL",
         "provider_class": "real_model",
         "runtime_type": "real",
         "model_id": model_id,
         "model_revision": sample.get("model_revision"),
+        "model_digest": model_digest,
         "tokenizer_id": model_id,
         "tokenizer_revision": sample.get("tokenizer_revision"),
         "dtype": dtype,
