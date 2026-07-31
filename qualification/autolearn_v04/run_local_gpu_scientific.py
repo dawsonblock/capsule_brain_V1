@@ -327,7 +327,7 @@ def run_local_gpu_scientific_pipeline(
                 "utility_config_digest": utility_config_digest,
                 "model_revision": model_revision,
                 "tokenizer_revision": tokenizer_revision,
-                "verifier_version": verifier_version,
+                "verifier_version": v_ver,
                 # --- Verifier identity fields (for A0.14) ---
                 "verifier_name": v_name,
                 "verifier_class": v_class,

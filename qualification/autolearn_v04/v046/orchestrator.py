@@ -199,7 +199,7 @@ def run_all_v046_diagnostics(
 
     # === Stage 2: Audit evidence origin ===
     print("[2/25] Auditing evidence origin...")
-    evidence_origin = audit_evidence_origin(str(ev_path))
+    evidence_origin = audit_evidence_origin(str(ev_path)) or {}
     _write("evidence_origin_audit.json", evidence_origin)
 
     origin_str = str(evidence_origin.get("origin", "")).upper()
@@ -542,14 +542,15 @@ def run_all_v046_diagnostics(
 
     # === Stage 21: Evaluate Gate A0 ===
     print("[21/25] Evaluating Gate A0...")
+    _pm = provider_manifest or {}
     provider_validation = {
-        "status": "PASS" if provider_manifest.get("provider_class") == "REAL_MODEL" else "FAIL",
-        "provider_class": provider_manifest.get("provider_class", ""),
-        "runtime_type": provider_manifest.get("runtime_type", ""),
-        "model_id": provider_manifest.get("model_id", ""),
-        "tokenizer_id": provider_manifest.get("tokenizer_id", ""),
-        "model_digest": provider_manifest.get("model_digest"),
-        "reason": f"provider_class={provider_manifest.get('provider_class', '')}, model_id={provider_manifest.get('model_id', '')}",
+        "status": "PASS" if _pm.get("provider_class") == "REAL_MODEL" else "FAIL",
+        "provider_class": _pm.get("provider_class", ""),
+        "runtime_type": _pm.get("runtime_type", ""),
+        "model_id": _pm.get("model_id", ""),
+        "tokenizer_id": _pm.get("tokenizer_id", ""),
+        "model_digest": _pm.get("model_digest"),
+        "reason": f"provider_class={_pm.get('provider_class', '')}, model_id={_pm.get('model_id', '')}",
     }
 
     # Build model identity from provider manifest and counterfactual outcomes
@@ -638,7 +639,7 @@ def run_all_v046_diagnostics(
 
     # === Stage 22: Make scale decision ===
     print("[22/25] Making scale decision...")
-    gate_a0_status = gate_a0.get("status", "BLOCKED")
+    gate_a0_status = (gate_a0 or {}).get("status", "BLOCKED")
 
     if evaluate_gate_a and gate_a0_status == "PASS" and origin_str == "REAL_MODEL":
         # Run full Gate A evaluation for scale-up decisions
@@ -652,6 +653,11 @@ def run_all_v046_diagnostics(
         except Exception as e:
             print(f"  Gate A evaluation failed: {e}")
             gate_a_status = "BLOCKED"
+            _write("gate_a_evaluation.json", {
+                "status": "BLOCKED",
+                "error": str(e),
+                "reason": "Gate A evaluation crashed",
+            })
     elif gate_a0_status == "PASS" and origin_str == "REAL_MODEL":
         gate_a_status = "PASS"
     else:
