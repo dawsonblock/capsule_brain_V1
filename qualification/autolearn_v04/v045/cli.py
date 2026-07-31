@@ -219,31 +219,40 @@ def _cmd_verify_output(args) -> int:
 
 
 def _cmd_create_evidence(args) -> int:
+    from qualification.autolearn_v04.v045.create_evidence_package import create_evidence_package
+
     source_path = Path(args.source_run_dir)
     if not source_path.exists():
         print(f"Source run directory does not exist: {source_path}", file=sys.stderr)
         return int(ExitCode.CONFIG_ERROR)
 
     print(f"Creating evidence package from: {source_path}")
-    print("This command requires the actual Modal artifact directory.")
-    print("If the source directory is incomplete, the command will report missing files.")
+    print(f"Output: {args.output_dir}")
+    print(f"Run ID: {args.run_id}")
 
-    # Check for required source files
-    required = [
-        "counterfactual_outcomes.jsonl", "executive_experiences.jsonl",
-        "candidate_policy.json", "sham_policy.json",
-        "benchmark_manifest.json", "split_manifest.json",
-        "provider_manifest.json", "source_provenance.json",
-    ]
-    missing = [f for f in required if not (source_path / f).exists()]
-    if missing:
-        print(f"\nMissing required source files:")
-        for m in missing:
-            print(f"  - {m}")
+    result = create_evidence_package(
+        source_run_dir=args.source_run_dir,
+        output_dir=args.output_dir,
+        run_id=args.run_id,
+    )
+
+    status = result.get("status", "FAIL")
+    if status == "PASS":
+        print(f"\nEvidence package created successfully:")
+        print(f"  Counterfactual rows: {result.get('n_counterfactual_rows', 0)}")
+        print(f"  Tasks: {result.get('n_tasks', 0)}")
+        print(f"  Safety rows: {result.get('n_safety_rows', 0)}")
+        print(f"  Eval results: {result.get('n_eval_results', 0)}")
+        print(f"  Lineage entries: {result.get('lineage_entries', 0)}")
+        return 0
+    else:
+        reason = result.get("reason", "unknown")
+        print(f"\nEvidence package creation failed: {reason}")
+        if result.get("missing_files"):
+            print("Missing files:")
+            for f in result["missing_files"]:
+                print(f"  - {f}")
         return 2
-
-    print("All required source files present. Evidence package creation not yet implemented.")
-    return int(ExitCode.CONFIG_ERROR)
 
 
 def _cmd_create_pilot(args) -> int:
