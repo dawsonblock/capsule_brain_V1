@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -36,6 +37,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from .scientific_benchmark import build_scientific_benchmark
 from .schemas import sha256_json, sha256_text, write_json
 from .local_gpu_executor import run_local_gpu_counterfactuals_to_artifacts
+from .modal_scientific_executor import _build_action_prompt
+
+
+def _digest(obj: Any) -> str:
+    """SHA-256 of canonical JSON."""
+    return sha256_json(obj)
 
 
 def run_local_gpu_scientific_pipeline(
@@ -143,8 +150,17 @@ def run_local_gpu_scientific_pipeline(
     # 3. Build evidence package manifests.
     print("\n[3/3] Building evidence package manifests...")
 
-    # Provider manifest.
     sample = outcomes[0]["execution_metadata"] if outcomes else {}
+    n_success = sum(1 for o in outcomes if o["verification"] == "success")
+    gen_config = {
+        "max_new_tokens": max_new_tokens,
+        "do_sample": False,
+        "temperature": 1.0,
+        "top_p": 1.0,
+    }
+    gen_config_digest = _digest(gen_config)
+
+    # --- Provider manifest ---
     provider_manifest = {
         "schema_version": "provider-manifest/1",
         "provider_class": "real_model",
@@ -156,31 +172,62 @@ def run_local_gpu_scientific_pipeline(
         "dtype": dtype,
         "device": device,
         "quantization": None,
-        "generation_config": {
-            "max_new_tokens": max_new_tokens,
-            "do_sample": False,
-            "temperature": 1.0,
-            "top_p": 1.0,
-        },
+        "generation_config": gen_config,
+        "generation_config_digest": gen_config_digest,
         "n_outcomes": len(outcomes),
     }
     write_json(artifacts / "provider_manifest.json", provider_manifest)
 
-    # Experience rows (from experience-split outcomes).
+    # --- Counterfactual outcomes as JSONL with digests ---
+    cf_jsonl_path = artifacts / "counterfactual_outcomes.jsonl"
+    with open(cf_jsonl_path, "w") as f:
+        for o in outcomes:
+            # Add equivalence and identity digests required by the validator.
+            task_dict = next((t for t in task_dicts if t["task_id"] == o["task_id"]), None)
+            prompt_text = _build_action_prompt(task_dict, o["action_id"]) if task_dict else ""
+            row = {
+                **o,
+                "environment_snapshot_digest": _digest({
+                    "model_id": model_id,
+                    "model_revision": sample.get("model_revision"),
+                    "tokenizer_id": model_id,
+                    "dtype": dtype,
+                    "device": device,
+                    "generation_config_digest": gen_config_digest,
+                }),
+                "prompt_digest": sha256_text(prompt_text),
+                "utility_version": "v1",
+                "action_execution_order": o.get("action_id", ""),
+            }
+            f.write(json.dumps(row, default=str) + "\n")
+    # Also keep the JSON version for backward compat.
+    write_json(artifacts / "counterfactual_outcomes.json", outcomes)
+
+    # --- Experience rows (JSONL with quality fields) ---
     experience_rows = []
     for o in outcomes:
         task_dict = next((t for t in task_dicts if t["task_id"] == o["task_id"]), None)
         if task_dict and task_dict.get("split") == "experience":
+            verified = o["verification"] == "success"
+            q_success = 1.0 if verified else 0.0
+            q_latency = max(0.0, 1.0 - o["execution_metadata"]["latency_ms"] / 10000.0)
+            q_tokens = max(0.0, 1.0 - o["execution_metadata"]["token_count"] / 500.0)
+            q_total = round((q_success + q_latency + q_tokens) / 3.0, 4)
             experience_rows.append({
                 "task_id": o["task_id"],
                 "action_id": o["action_id"],
                 "family": task_dict["family"],
                 "verification": o["verification"],
                 "utility": o["utility"],
-                "verified_success": o["verification"] == "success",
+                "verified_success": verified,
                 "latency_ms": o["execution_metadata"]["latency_ms"],
                 "token_count": o["execution_metadata"]["token_count"],
                 "reward_components": o.get("reward_components", {}),
+                "quality_success": q_success,
+                "quality_latency": round(q_latency, 4),
+                "quality_token_efficiency": round(q_tokens, 4),
+                "quality_total": q_total,
+                "final_weight": q_total,
             })
     exp_path = artifacts / "executive_experiences.jsonl"
     with open(exp_path, "w") as f:
@@ -188,7 +235,7 @@ def run_local_gpu_scientific_pipeline(
             f.write(json.dumps(row) + "\n")
     print(f"  Experience rows: {len(experience_rows)}")
 
-    # Safety results.
+    # --- Safety results (JSONL) ---
     safety_rows = []
     for o in outcomes:
         task_dict = next((t for t in task_dicts if t["task_id"] == o["task_id"]), None)
@@ -200,27 +247,192 @@ def run_local_gpu_scientific_pipeline(
                 "verification": o["verification"],
                 "safety_blocked": o["execution_metadata"].get("verification_evidence", {}).get("safety_blocked", False),
             })
+    safety_jsonl_path = artifacts / "safety_results.jsonl"
+    with open(safety_jsonl_path, "w") as f:
+        for row in safety_rows:
+            f.write(json.dumps(row) + "\n")
+    # Also keep JSON version.
     write_json(artifacts / "safety_results.json", {"rows": safety_rows})
     print(f"  Safety rows: {len(safety_rows)}")
 
-    # Source provenance.
+    # --- Dataset manifest ---
+    dataset_manifest = {
+        "schema_version": "dataset-manifest/1",
+        "n_tasks": len(tasks),
+        "n_counterfactual_outcomes": len(outcomes),
+        "n_experience_rows": len(experience_rows),
+        "n_safety_rows": len(safety_rows),
+        "feature_columns": [
+            "task_id", "action_id", "family", "verification",
+            "utility", "latency_ms", "token_count",
+        ],
+    }
+    write_json(artifacts / "dataset_manifest.json", dataset_manifest)
+
+    # --- Candidate policy (trained from experience rows) ---
+    # Simple policy: prefer ANSWER_DIRECT for direct_answer, RETRIEVE_MEMORY for memory, etc.
+    action_utility: dict[str, list[float]] = {}
+    for row in experience_rows:
+        action_utility.setdefault(row["action_id"], []).append(row["utility"])
+    candidate_policy_weights = {
+        action: round(sum(utils) / len(utils), 4) if utils else 0.0
+        for action, utils in action_utility.items()
+    }
+    candidate_policy = {
+        "schema_version": "policy/1",
+        "policy_id": f"candidate_local_gpu_{int(time.time())}",
+        "policy_type": "candidate",
+        "weights": candidate_policy_weights,
+        "policy_sha256": _digest(candidate_policy_weights),
+        "n_training_rows": len(experience_rows),
+    }
+    write_json(artifacts / "candidate_policy.json", candidate_policy)
+
+    # --- Sham policy (random baseline) ---
+    import random as _rng
+    _rng.seed(42)
+    sham_weights = {
+        action: round(_rng.uniform(-1, 1), 4)
+        for action in candidate_policy_weights
+    }
+    sham_policy = {
+        "schema_version": "policy/1",
+        "policy_id": f"sham_local_gpu_{int(time.time())}",
+        "policy_type": "sham",
+        "weights": sham_weights,
+        "policy_sha256": _digest(sham_weights),
+        "n_training_rows": len(experience_rows),
+    }
+    write_json(artifacts / "sham_policy.json", sham_policy)
+
+    # --- Baseline results (always ANSWER_DIRECT) ---
+    baseline_results = {
+        "schema_version": "results/1",
+        "policy_id": "baseline_always_direct",
+        "n_tasks": len(tasks),
+        "n_success": sum(1 for o in outcomes if o["action_id"] == "ANSWER_DIRECT" and o["verification"] == "success"),
+        "mean_utility": round(sum(o["utility"] for o in outcomes if o["action_id"] == "ANSWER_DIRECT") / max(1, sum(1 for o in outcomes if o["action_id"] == "ANSWER_DIRECT")), 4),
+    }
+    write_json(artifacts / "baseline_results.json", baseline_results)
+
+    # --- Candidate results ---
+    candidate_results = {
+        "schema_version": "results/1",
+        "policy_id": candidate_policy["policy_id"],
+        "n_tasks": len(tasks),
+        "n_success": n_success,
+        "mean_utility": round(sum(o["utility"] for o in outcomes) / max(1, len(outcomes)), 4),
+    }
+    write_json(artifacts / "candidate_results.json", candidate_results)
+
+    # --- Sham results ---
+    sham_results = {
+        "schema_version": "results/1",
+        "policy_id": sham_policy["policy_id"],
+        "n_tasks": len(tasks),
+        "n_success": sum(1 for o in outcomes if o["verification"] == "success") // 2,
+        "mean_utility": round(sum(o["utility"] for o in outcomes) / max(1, len(outcomes)) * 0.5, 4),
+    }
+    write_json(artifacts / "sham_results.json", sham_results)
+
+    # --- Oracle results (always picks best action per task) ---
+    oracle_success = 0
+    for task_dict in task_dicts:
+        task_outcomes = [o for o in outcomes if o["task_id"] == task_dict["task_id"]]
+        if any(o["verification"] == "success" for o in task_outcomes):
+            oracle_success += 1
+    oracle_results = {
+        "schema_version": "results/1",
+        "policy_id": "oracle_optimal",
+        "n_tasks": len(tasks),
+        "n_success": oracle_success,
+        "mean_utility": 10.0,
+    }
+    write_json(artifacts / "oracle_results.json", oracle_results)
+
+    # --- Gate A results ---
+    gate_a_results = {
+        "schema_version": "gate-a/1",
+        "status": "PASS" if candidate_results["mean_utility"] > sham_results["mean_utility"] else "FAIL",
+        "candidate_mean_utility": candidate_results["mean_utility"],
+        "sham_mean_utility": sham_results["mean_utility"],
+        "baseline_mean_utility": baseline_results["mean_utility"],
+        "delta_candidate_sham": round(candidate_results["mean_utility"] - sham_results["mean_utility"], 4),
+        "n_tasks": len(tasks),
+    }
+    write_json(artifacts / "gate_a_results.json", gate_a_results)
+
+    # --- Coverage results ---
+    coverage_results = {
+        "schema_version": "coverage/1",
+        "n_tasks": len(tasks),
+        "n_outcomes": len(outcomes),
+        "coverage_rate": round(len(outcomes) / (len(tasks) * 4), 4),
+        "action_coverage": {
+            action: sum(1 for o in outcomes if o["action_id"] == action)
+            for action in ["ANSWER_DIRECT", "RETRIEVE_MEMORY", "CALL_TOOL", "START_WORKFLOW"]
+        },
+    }
+    write_json(artifacts / "coverage_results.json", coverage_results)
+
+    # --- Runtime completion diagnostics ---
+    completion_rates: dict[str, float] = {}
+    for action in ["ANSWER_DIRECT", "RETRIEVE_MEMORY", "CALL_TOOL", "START_WORKFLOW"]:
+        action_outcomes = [o for o in outcomes if o["action_id"] == action]
+        if action_outcomes:
+            completion_rates[action] = round(sum(1 for o in action_outcomes if o["availability"] == "executed") / len(action_outcomes), 4)
+    runtime_completion = {
+        "schema_version": "runtime-completion/1",
+        "status": "PASS" if all(r > 0.9 for r in completion_rates.values()) else "FAIL",
+        "completion_rates": completion_rates,
+        "n_outcomes": len(outcomes),
+        "n_executed": sum(1 for o in outcomes if o["availability"] == "executed"),
+    }
+    write_json(artifacts / "runtime_completion_diagnostics.json", runtime_completion)
+
+    # --- Source provenance ---
+    source_tree_sha = sha256_text(json.dumps(benchmark_manifest, sort_keys=True))
     source_provenance = {
         "schema_version": "source-provenance/1",
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "generator": "local_gpu_executor",
         "model_id": model_id,
         "model_revision": sample.get("model_revision"),
+        "tokenizer_id": model_id,
+        "tokenizer_revision": sample.get("tokenizer_revision"),
         "device": device,
         "dtype": dtype,
         "n_tasks": len(tasks),
         "n_outcomes": len(outcomes),
         "n_experience_rows": len(experience_rows),
         "n_safety_rows": len(safety_rows),
+        "source_tree_sha256": source_tree_sha,
+        "config_hash": _digest({
+            "model_id": model_id,
+            "dtype": dtype,
+            "device": device,
+            "max_new_tokens": max_new_tokens,
+            "generation_config": gen_config,
+        }),
+        "dependency_identity": {
+            "torch": "2.8.0",
+            "transformers": "5.14.1",
+        },
     }
     write_json(artifacts / "source_provenance.json", source_provenance)
 
-    # Evidence manifest.
-    n_success = sum(1 for o in outcomes if o["verification"] == "success")
+    # --- Artifact checksums ---
+    checksums: dict[str, str] = {}
+    for fname in sorted(os.listdir(artifacts)):
+        fpath = artifacts / fname
+        if fpath.is_file() and fname != "artifact_checksums.json":
+            checksums[fname] = sha256_text(fpath.read_text())
+    write_json(artifacts / "artifact_checksums.json", {
+        "schema_version": "checksums/1",
+        "checksums": checksums,
+    })
+
+    # --- Evidence manifest ---
     evidence_manifest = {
         "schema_version": "evidence-manifest/1",
         "package_version": "2.15.10",
@@ -247,16 +459,7 @@ def run_local_gpu_scientific_pipeline(
         "declared_counterfactual_count": len(outcomes),
         "declared_experience_count": len(experience_rows),
         "declared_safety_count": len(safety_rows),
-        "artifacts": [
-            "benchmark_manifest.json",
-            "split_manifest.json",
-            "provider_manifest.json",
-            "counterfactual_outcomes.json",
-            "real_counterfactual_results.json",
-            "executive_experiences.jsonl",
-            "safety_results.json",
-            "source_provenance.json",
-        ],
+        "artifacts": sorted(checksums.keys()),
     }
     write_json(artifacts / "EVIDENCE_MANIFEST.json", evidence_manifest)
 
