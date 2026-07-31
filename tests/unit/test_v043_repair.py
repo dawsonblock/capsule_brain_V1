@@ -474,6 +474,78 @@ class TestCanonicalEvaluator:
         )
         assert abs(result["recovered_headroom_fraction"] - 0.5) < 1e-9
 
+    def test_headroom_7b_spec_values(self):
+        """Spec: R_sham ≈ -0.0316 for candidate=5.048, sham=5.069, oracle=5.701.
+
+        The spec uses rounded delta (-0.020) giving -0.0316.
+        The exact formula gives (5.048-5.069)/(5.701-5.069) = -0.021/0.632 ≈ -0.0332.
+        Both are negative and small, confirming the candidate fails to recover headroom.
+        """
+        result = compute_headroom_metrics(
+            candidate_mean=5.048,
+            reference_mean=5.069,
+            oracle_mean=5.701,
+            n_tasks=130,
+            reference_policy_id="sham",
+            candidate_policy_id="candidate_executed",
+        )
+        frac = result["recovered_headroom_fraction"]
+        pct = result["recovered_headroom_percent"]
+        # Must be negative (candidate worse than sham).
+        assert frac < 0, f"Expected negative fraction, got {frac}"
+        # Must be close to -0.03 (spec says -0.0316, exact is -0.0332).
+        assert -0.05 < frac < -0.01, f"Expected fraction near -0.03, got {frac}"
+        # Percent must be fraction * 100.
+        assert abs(pct - frac * 100) < 1e-9
+        # Fraction and percent must not be confused.
+        assert frac != pct
+        # Required fields present.
+        assert "numerator" in result
+        assert "denominator" in result
+        assert "recovered_headroom_fraction" in result
+        assert "recovered_headroom_percent" in result
+
+    def test_headroom_fraction_and_percent_not_confused(self):
+        """Spec: fraction and percentage cannot be confused."""
+        result = compute_headroom_metrics(
+            candidate_mean=6.0,
+            reference_mean=5.0,
+            oracle_mean=10.0,
+            n_tasks=10,
+        )
+        frac = result["recovered_headroom_fraction"]
+        pct = result["recovered_headroom_percent"]
+        assert abs(frac - 0.2) < 1e-9
+        assert abs(pct - 20.0) < 1e-9
+        assert frac != pct
+
+    def test_headroom_nonpositive_denominator_returns_none(self):
+        """Spec: nonpositive denominator returns None."""
+        # oracle == reference → denominator = 0
+        r1 = compute_headroom_metrics(5.0, 5.0, 5.0, n_tasks=10)
+        assert r1["recovered_headroom_fraction"] is None
+        # oracle < reference → denominator < 0
+        r2 = compute_headroom_metrics(5.0, 5.0, 4.0, n_tasks=10)
+        assert r2["recovered_headroom_fraction"] is None
+
+    def test_headroom_task_level_ratios_not_averaged(self):
+        """Spec: task-level ratios are not averaged.
+
+        The canonical formula uses AGGREGATE means, not mean of task-level ratios.
+        """
+        # If we have 2 tasks:
+        # Task 1: candidate=10, sham=0, oracle=10 → task ratio = 1.0
+        # Task 2: candidate=0, sham=0, oracle=0   → task ratio = undefined (0/0)
+        # Aggregate: candidate_mean=5, sham_mean=0, oracle_mean=5 → R = 5/5 = 1.0
+        # Averaging task ratios would give 0.5 (excluding undefined) or fail.
+        result = compute_headroom_metrics(
+            candidate_mean=5.0,
+            reference_mean=0.0,
+            oracle_mean=5.0,
+            n_tasks=2,
+        )
+        assert abs(result["recovered_headroom_fraction"] - 1.0) < 1e-9
+
     def test_candidate_executed_has_headroom_vs_reference(self, mini_run):
         results = evaluate_all_policies(mini_run, seed=DEFAULT_SEED)
         ce = results["candidate_executed"]

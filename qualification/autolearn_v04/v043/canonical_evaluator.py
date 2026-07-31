@@ -271,7 +271,7 @@ def compute_headroom_metrics(
             "error": "non_finite_values",
         }
 
-    if abs(denominator) <= MINIMUM_DENOMINATOR:
+    if denominator <= MINIMUM_DENOMINATOR:
         return {
             "candidate_mean": candidate_mean,
             "reference_mean": reference_mean,
