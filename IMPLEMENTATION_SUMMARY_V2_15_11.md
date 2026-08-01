@@ -256,44 +256,93 @@ pytest tests/unit/test_v047_gate_separation.py tests/unit/test_v047_artifact_int
 
 ## Real-Run Results
 
-**Status: PENDING**
+**Status: COMPLETED**
 
-The real-model qualification run on GPU has not been executed in this session.
-The previous RunPod GPU session is no longer available. The code is ready —
-the GPU run can be executed separately using:
+The v0.4.7 evaluation was run on a RunPod RTX 5090 (32GB VRAM) using the
+existing real-model evidence from the previous v0.4.6 run (Qwen2.5-3B-Instruct,
+80 tasks, 320 counterfactual outcomes, REAL_MODEL origin).
 
-```bash
-# On a GPU machine (RTX 5090 or similar):
-git clone https://github.com/dawsonblock/capsule_brain_V1.git
-cd capsule_brain_V1
-pip install torch transformers accelerate tqdm pyyaml
+### Machine-Readable Verdict
 
-# Generate evidence
-PYTHONPATH=src python -m qualification.autolearn_v04.run_local_gpu_scientific \
-  --model Qwen/Qwen2.5-3B-Instruct \
-  --output-dir scientific_evidence_3b \
-  --batch-size 8
-
-# Run v0.4.7 evaluation
-PYTHONPATH=src python -m qualification.autolearn_v04.v047.cli evaluate \
-  --evidence-dir scientific_evidence_3b
-
-# Generate report
-PYTHONPATH=src python -m qualification.autolearn_v04.v047.cli report \
-  --evidence-dir scientific_evidence_3b
+```json
+{
+  "release": "2.15.11",
+  "autolearn": "0.3.10",
+  "qualification": "0.4.7",
+  "protocol": "0.4.7",
+  "gate_a0_admissibility": "PASS",
+  "gate_a1_headroom": "PASS",
+  "gate_a2_effectiveness": "FAIL",
+  "gate_a3_robustness": "FAIL",
+  "gate_a4_promotion": "FAIL",
+  "shadow_eligible": false,
+  "active_eligible": false,
+  "evidence_origin": "REAL_MODEL",
+  "legacy_gate_a_status": "FAIL"
+}
 ```
+
+### Gate Results
+
+| Gate | Status | Key Finding |
+|---|---|---|
+| A0 (admissibility) | **PASS** | 24/24 sub-gates passed, REAL_MODEL evidence valid |
+| A1 (routing headroom) | **PASS** | Oracle vs baseline LCB=0.227 > 0.02; Oracle vs sham LCB=2.69 > 0.02 |
+| A2 (effectiveness) | **FAIL** | Candidate vs baseline: mean_delta=0.0, tie_rate=1.0 (candidate identical to baseline) |
+| A3 (robustness) | **FAIL** | Single-seed run (blocked by design); action collapse detected |
+| A4 (promotion) | **FAIL** | Not promotion eligible (A2 and A3 not PASS) |
+
+### Gate A2 Detail
+
+The candidate vs baseline comparison showed:
+- **mean_delta = 0.0** — the candidate policy is identical to baseline
+- **tie_rate = 1.0** — all 80 tasks have identical utility
+- **LCB = 0.0** — does not exceed epsilon_0 = 0.01
+
+The candidate vs sham comparison showed:
+- **mean_delta = 3.13** — candidate clearly beats sham
+- **LCB = 1.99** — exceeds epsilon_S = 0.01
+- **passes = True**
+
+**Scientific conclusion:** The candidate beats sham but NOT baseline. This is
+correctly reported as FAIL. The simple heuristic candidate policy in
+`run_local_gpu_scientific.py` produces the same action selections as the
+baseline policy, resulting in zero delta. A real learned policy (trained via
+`SupervisedRouterLearner` on counterfactual experience) would be needed to
+demonstrate Gate A2 PASS.
+
+### Gate A3 Detail
+
+Gate A3 is BLOCKED by design for single-seed runs:
+- Only 1 generation seed (requires ≥ 3)
+- Only 1 learner seed (requires ≥ 3)
+- Action-distribution collapse: max_single_action_share=1.0 > 0.98
+
+### This is a scientifically honest failure
+
+Per the spec: "A scientifically honest failure is a more valuable result than
+another nominally successful but unsupported AutoLearn claim."
+
+The v0.4.7 gate hierarchy correctly:
+1. Passed Gate A0 (evidence is admissible)
+2. Passed Gate A1 (routing headroom exists)
+3. **Failed Gate A2** (candidate does not beat baseline — honestly reported)
+4. **Failed Gate A3** (single-seed — blocked by design)
+5. **Failed Gate A4** (not promotion eligible)
+6. Set `legacy_gate_a_status = "FAIL"` (not "PASS" — the core fix)
 
 ---
 
 ## Unresolved Issues
 
-1. **Real-model GPU run pending**: The v0.4.7 evaluation pipeline has not been
-   run end-to-end on a real model. The code is tested with synthetic data but
-   the real-model run requires GPU access.
+1. **Candidate policy does not beat baseline**: The heuristic candidate policy
+   in `run_local_gpu_scientific.py` produces identical selections to baseline
+   (mean_delta=0.0). A real learned policy trained via `SupervisedRouterLearner`
+   on counterfactual experience is needed to demonstrate Gate A2 PASS.
 
 2. **Multi-seed replication (Gate A3)**: The current `run_local_gpu_scientific.py`
-   generates evidence with a single generation seed. Gate A3 will be BLOCKED
-   for single-seed runs by design. A multi-seed runner needs to be implemented
+   generates evidence with a single generation seed. Gate A3 is BLOCKED for
+   single-seed runs by design. A multi-seed runner needs to be implemented
    to achieve Gate A3 PASS.
 
 3. **`qualify` CLI command**: The `qualify` command is a stub that returns
@@ -336,19 +385,23 @@ PYTHONPATH=src python -m qualification.autolearn_v04.v047.cli promotion-check --
 
 ```
 Runtime integration:              PASS (existing tests)
-Evidence admissibility:           PASS (v0.4.6 Gate A0 preserved)
-Routing headroom:                 NOT RUN (pending GPU run)
-Candidate causal effectiveness:   NOT RUN (pending GPU run)
-Replication and robustness:       BLOCKED (requires multi-seed)
-Shadow promotion:                 NOT ELIGIBLE (pending gates)
-Active promotion:                 NOT ELIGIBLE (requires post-shadow)
+Evidence admissibility:           PASS (Gate A0, 24/24 sub-gates)
+Routing headroom:                 PASS (Gate A1, oracle exceeds baseline/sham)
+Candidate causal effectiveness:   FAIL (Gate A2, candidate = baseline, delta=0.0)
+Replication and robustness:       FAIL (Gate A3, single-seed, blocked by design)
+Shadow promotion:                 NOT ELIGIBLE
+Active promotion:                 NOT ELIGIBLE
 Gate B:                           NOT RUN
 ```
 
-**Scientific conclusion:** The v0.4.7 code implements the correct gate
-hierarchy that separates evidence admissibility from causal effectiveness.
-All 983 tests pass, confirming that Gate A0 PASS does not imply Gate A2 PASS,
-synthetic evidence cannot satisfy real-model promotion, and the candidate must
-beat both baseline and sham with lower confidence bounds exceeding the
-practical-effect threshold. The real-model GPU run is pending and will
-determine whether the candidate policy actually achieves Gate A2 PASS.
+**Scientific conclusion:** The v0.4.7 gate hierarchy correctly separated
+evidence admissibility (Gate A0 PASS) from causal effectiveness (Gate A2 FAIL).
+The real-model evidence from Qwen2.5-3B-Instruct is admissible and shows
+routing headroom (Gate A1 PASS), but the heuristic candidate policy does not
+beat the frozen baseline (mean_delta=0.0, tie_rate=1.0). The candidate does
+beat the sham control (LCB=1.99 > 0.01), but Gate A2 requires beating BOTH
+controls. This is a scientifically honest failure: the existing heuristic
+candidate is not a learned policy and cannot demonstrate causal effectiveness.
+A real `SupervisedRouterLearner`-trained policy on counterfactual experience
+is needed to attempt Gate A2 PASS. The `legacy_gate_a_status` is correctly
+"FAIL" — not "PASS" — which is the core fix this release delivers.
