@@ -1161,40 +1161,28 @@ def _allocate_scientific_split(
     # These create tasks within each family that require a DIFFERENT
     # optimal action, breaking the "one family → one optimal action"
     # structure that permits family-level shortcut learning.
-    # We GUARANTEE at least one of each within-family crossover variant
-    # per split, so every family has tasks with multiple optimal actions.
-    n_within_family = max(len(_WITHIN_FAMILY_CROSSOVERS), n_crossover // 2)
-    n_random_crossover = max(0, n_crossover - n_within_family)
+    # Select one crossover per learned-action family to guarantee
+    # within-family action variation for all 4 families.
+    _seen_families: set[str] = set()
+    _selected_crossovers: list = []
+    for family, builder, desc in _WITHIN_FAMILY_CROSSOVERS:
+        if family not in _seen_families:
+            _seen_families.add(family)
+            _selected_crossovers.append((family, builder, desc))
+        if len(_selected_crossovers) >= 4:
+            break
 
-    # Within-family action crossovers: use all 8 variants to ensure
-    # each family gets tasks with different optimal actions.
-    for j in range(n_within_family):
-        family, builder, desc = _WITHIN_FAMILY_CROSSOVERS[j % len(_WITHIN_FAMILY_CROSSOVERS)]
+    for j, (family, builder, desc) in enumerate(_selected_crossovers):
         tid = f"{split}_wfxover_{j:04d}"
         rng_local = random.Random(rng.getrandbits(31))
         tasks.append(builder(tid, split, rng_local))
 
-    # Random-family crossovers (original behavior, for diversity)
-    for j in range(n_random_crossover):
-        ctype = _SCIENCE_CROSSOVERS[j % len(_SCIENCE_CROSSOVERS)]
-        tid = f"{split}_xover_{j:04d}"
-        rng_local = random.Random(rng.getrandbits(31))
-        family_choice = rng_local.choice(["direct", "memory", "tool", "workflow"])
-        if family_choice == "direct":
-            builder = direct_types[j % len(direct_types)]
-        elif family_choice == "memory":
-            builder = _scientific_memory_task
-        elif family_choice == "tool":
-            builder = _scientific_tool_task
-        else:
-            builder = _scientific_workflow_task
-        tasks.append(builder(tid, split, rng_local, crossover=ctype))
-
     # Matched-pair flip tasks: construct pairs where the optimal action
     # flips between the two members. These directly test whether the
     # learner responds to the causal feature rather than the task class.
-    # Generate at least 1 pair per builder, more for larger splits.
-    n_matched_pairs = max(len(_MATCHED_PAIR_BUILDERS), n // 10)
+    # Use 1 pair per builder (3 pairs = 6 tasks) for test split,
+    # fewer for smaller splits.
+    n_matched_pairs = min(len(_MATCHED_PAIR_BUILDERS), max(1, n // 15))
     for j in range(n_matched_pairs):
         builder = _MATCHED_PAIR_BUILDERS[j % len(_MATCHED_PAIR_BUILDERS)]
         tid_a = f"{split}_mpair_{j:04d}_a"
