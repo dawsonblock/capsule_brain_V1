@@ -102,6 +102,7 @@ def run_v047_evaluation(
 
     def _write(name: str, data: Any) -> None:
         p = out_path / name
+        p.parent.mkdir(parents=True, exist_ok=True)
         if isinstance(data, str):
             p.write_text(data, encoding="utf-8")
         else:
