@@ -586,8 +586,17 @@ def run_local_gpu_scientific_pipeline(
     # --- Feature-family diagnostic classifier ---
     # Train a diagnostic classifier g(h(x))→family to check if family
     # identity is still predictable from the prompt-only features.
-    # If family accuracy is very high, the features still leak family
-    # identity and the benchmark permits shortcut learning.
+    #
+    # Metrics:
+    #   A_family     = cross-validated accuracy of g(h(x))→family
+    #   A_majority   = majority-class baseline accuracy
+    #   excess       = A_family - A_majority
+    #   L_F          = (A_family - A_majority) / (1 - A_majority)
+    #                  (normalized lift: fraction of possible improvement over chance)
+    #
+    # Pass criterion: excess < delta_F (default 0.10)
+    # This means family predictability must not exceed majority-class
+    # baseline by more than 10 percentage points.
     from collections import Counter
     all_task_dicts_for_diag = [t for t in task_dicts if t.get("split") in ("experience", "validation", "test")]
     diag_features: list[list[float]] = []
@@ -597,7 +606,6 @@ def run_local_gpu_scientific_pipeline(
         fv = extractor.extract(state)
         diag_features.append(fv.as_list())
         diag_labels.append(td.get("family", "unknown"))
-    # Simple nearest-centroid classifier for family prediction.
     from sklearn.neighbors import NearestCentroid
     from sklearn.model_selection import cross_val_score
     import numpy as _np
@@ -605,24 +613,40 @@ def run_local_gpu_scientific_pipeline(
     y = _np.array(diag_labels)
     family_counts = Counter(diag_labels)
     n_families = len(family_counts)
-    if n_families > 1 and len(diag_features) > n_families * 2:
+    n_samples = len(diag_labels)
+    # Majority-class baseline
+    a_majority = max(family_counts.values()) / n_samples if n_samples > 0 else 0.0
+    delta_f_threshold = 0.10  # max acceptable excess over majority baseline
+    if n_families > 1 and n_samples > n_families * 2:
         clf = NearestCentroid()
-        scores = cross_val_score(clf, X, y, cv=min(5, len(diag_features) // n_families))
-        family_predictability = float(scores.mean())
+        scores = cross_val_score(clf, X, y, cv=min(5, n_samples // n_families))
+        a_family = float(scores.mean())
     else:
-        family_predictability = 1.0  # can't evaluate, assume worst
+        a_family = 1.0  # can't evaluate, assume worst
+    excess = a_family - a_majority
+    l_f = excess / (1.0 - a_majority) if (1.0 - a_majority) > 0 else 1.0
+    leakage_verdict = "LEAKAGE_DETECTED" if excess >= delta_f_threshold else "OK"
     diagnostic = {
-        "schema_version": "feature-diagnostic/1",
-        "family_predictability_accuracy": round(family_predictability, 4),
+        "schema_version": "feature-diagnostic/2",
+        "a_family": round(a_family, 4),
+        "a_majority": round(a_majority, 4),
+        "excess": round(excess, 4),
+        "l_f_normalized_lift": round(l_f, 4),
+        "delta_f_threshold": delta_f_threshold,
         "n_families": n_families,
         "family_counts": dict(family_counts),
-        "n_samples": len(diag_features),
-        "verdict": "LEAKAGE_DETECTED" if family_predictability > 0.8 else "OK",
-        "threshold": 0.8,
-        "note": "If family_predictability > 0.8, features still encode family identity.",
+        "n_samples": n_samples,
+        "verdict": leakage_verdict,
+        "note": (
+            "A_family = diagnostic classifier accuracy. "
+            "A_majority = majority-class baseline. "
+            "excess = A_family - A_majority. "
+            "L_F = (A_family - A_majority)/(1 - A_majority) = normalized lift. "
+            f"Pass if excess < {delta_f_threshold}."
+        ),
     }
     write_json(artifacts / "feature_family_diagnostic.json", diagnostic)
-    print(f"  Feature-family diagnostic: accuracy={family_predictability:.3f} ({diagnostic['verdict']})")
+    print(f"  Feature-family diagnostic: A_family={a_family:.3f}, A_majority={a_majority:.3f}, excess={excess:.3f}, L_F={l_f:.3f} ({leakage_verdict})")
 
     # --- Proper label permutation sham ---
     # Build the true label vector from training examples, then permute
@@ -863,10 +887,26 @@ def run_local_gpu_scientific_pipeline(
     write_json(artifacts / "leave_family_out_results.json", leave_family_out_results)
 
     # --- Matched-pair flip accuracy test ---
-    # Construct matched pairs (x, x') where the optimal action flips.
-    # Measure: does the policy pick DIFFERENT actions for x vs x'?
-    # A family lookup policy picks the same action for both (flip accuracy = 0).
-    # A genuine state-conditioned policy responds to the causal feature.
+    # Construct matched pairs (x_i, x_i') where the optimal action flips.
+    # Measure:
+    #   A_flip = (1/N) Σ 1[π(x_i) = a*(x_i) AND π(x_i') = a*(x_i')]
+    # Both sides must be CORRECT — not merely different.
+    # Also report raw switch rate (did policy pick different actions at all),
+    # because a policy that randomly flips shouldn't look intelligent.
+
+    # Map verifier type → optimal action name.
+    _VERIFIER_TO_OPTIMAL_ACTION = {
+        "direct_exact": "ANSWER_DIRECT",
+        "memory_secret": "RETRIEVE_MEMORY",
+        "tool_output": "CALL_TOOL",
+        "workflow_acceptance": "START_WORKFLOW",
+        "safety_preempt": "ANSWER_DIRECT",
+    }
+
+    def _optimal_action(task_dict: dict) -> str:
+        vtype = task_dict.get("verifier_spec", {}).get("type", "")
+        return _VERIFIER_TO_OPTIMAL_ACTION.get(vtype, "ANSWER_DIRECT")
+
     matched_pair_results: list[dict] = []
     # Find matched pairs in the test split by pair_id
     test_pairs: dict[str, list[dict]] = {}
@@ -877,7 +917,8 @@ def run_local_gpu_scientific_pipeline(
             test_pairs.setdefault(pair_id, []).append(td)
 
     n_pairs_total = 0
-    n_pairs_flipped_correctly = 0
+    n_both_correct = 0
+    n_switched = 0  # raw switch rate: policy picked different actions
     for pair_id, pair_tasks in test_pairs.items():
         if len(pair_tasks) != 2:
             continue
@@ -893,38 +934,54 @@ def run_local_gpu_scientific_pipeline(
                 decisions[td["task_id"]] = decision.action.value
             except Exception:
                 decisions[td["task_id"]] = "ANSWER_DIRECT"
-        # Check if the policy picked DIFFERENT actions for the pair
         action_a = decisions[task_a["task_id"]]
         action_b = decisions[task_b["task_id"]]
-        flipped = action_a != action_b
-        if flipped:
-            n_pairs_flipped_correctly += 1
-        # Also check what the optimal actions are (from verifier type)
-        opt_a = task_a.get("verifier_spec", {}).get("type", "")
-        opt_b = task_b.get("verifier_spec", {}).get("type", "")
+        opt_a = _optimal_action(task_a)
+        opt_b = _optimal_action(task_b)
+        # Both-correct: policy picked the optimal action for BOTH sides
+        a_correct = (action_a == opt_a)
+        b_correct = (action_b == opt_b)
+        both_correct = a_correct and b_correct
+        # Raw switch: policy picked different actions (regardless of correctness)
+        switched = (action_a != action_b)
+        if both_correct:
+            n_both_correct += 1
+        if switched:
+            n_switched += 1
         matched_pair_results.append({
             "pair_id": pair_id,
             "task_a_id": task_a["task_id"],
             "task_b_id": task_b["task_id"],
             "action_a": action_a,
             "action_b": action_b,
-            "optimal_a_type": opt_a,
-            "optimal_b_type": opt_b,
-            "policy_flipped": flipped,
+            "optimal_a": opt_a,
+            "optimal_b": opt_b,
+            "a_correct": a_correct,
+            "b_correct": b_correct,
+            "both_correct": both_correct,
+            "switched": switched,
         })
 
-    flip_accuracy = n_pairs_flipped_correctly / n_pairs_total if n_pairs_total > 0 else 0.0
+    flip_accuracy = n_both_correct / n_pairs_total if n_pairs_total > 0 else 0.0
+    switch_rate = n_switched / n_pairs_total if n_pairs_total > 0 else 0.0
     flip_summary = {
         "n_pairs": n_pairs_total,
-        "n_flipped_correctly": n_pairs_flipped_correctly,
+        "n_both_correct": n_both_correct,
         "flip_accuracy": round(flip_accuracy, 4),
+        "n_switched": n_switched,
+        "switch_rate": round(switch_rate, 4),
         "verdict": "PASS" if flip_accuracy > 0.5 else "FAIL",
         "threshold": 0.5,
-        "note": "A family lookup policy picks the same action for both pair members (flip=0). A genuine state-conditioned policy responds to the causal feature.",
+        "note": (
+            "A_flip = (1/N) Σ 1[π(x_i)=a*(x_i) AND π(x_i')=a*(x_i')]. "
+            "Both sides must be CORRECT, not merely different. "
+            "switch_rate is reported separately: a random policy that flips "
+            "should not appear intelligent."
+        ),
         "pairs": matched_pair_results,
     }
     write_json(artifacts / "matched_pair_flip_results.json", flip_summary)
-    print(f"  Matched-pair flip: {n_pairs_flipped_correctly}/{n_pairs_total} = {flip_accuracy:.3f} ({flip_summary['verdict']})")
+    print(f"  Matched-pair flip: both_correct={n_both_correct}/{n_pairs_total}={flip_accuracy:.3f}, switch_rate={switch_rate:.3f} ({flip_summary['verdict']})")
 
     # --- Learner-seed replication for Gate A3 ---
     # Generation is deterministic (greedy decoding), so we have 1 generation
@@ -1266,6 +1323,110 @@ def run_local_gpu_scientific_pipeline(
         "dependency_identity": dep_identity,
     }
     write_json(artifacts / "source_provenance.json", source_provenance)
+
+    # --- Build 20 experiment manifest (frozen benchmark) ---
+    # Hash the benchmark, splits, verifier, reward function, sham
+    # construction, statistical gates, and seeds into a single
+    # experiment manifest. This freezes the measurement instrument
+    # so that learner changes can be evaluated against a fixed target.
+    experiment_manifest = {
+        "schema_version": "experiment-manifest/1",
+        "build_version": "20",
+        "frozen_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "commit_sha": commit_sha,
+        # Benchmark configuration (frozen)
+        "benchmark": {
+            "task_seed": 42,
+            "n_experience": n_experience,
+            "n_validation": n_validation,
+            "n_test": n_test,
+            "n_ood": n_ood,
+            "n_safety": n_safety,
+            "crossover_fraction": 0.25,
+            "n_within_family_crossovers": 8,
+            "n_matched_pair_builders": 3,
+            "families": ["direct_answer", "memory_required", "tool_required", "workflow_required", "safety_adversarial"],
+            "actions": list(_ALL_ACTIONS),
+        },
+        # Split configuration (frozen)
+        "splits": {
+            "experience": n_experience,
+            "validation": n_validation,
+            "test": n_test,
+            "ood": n_ood,
+            "safety": n_safety,
+        },
+        # Verifier configuration (frozen)
+        "verifier": {
+            "types": ["direct_exact", "memory_secret", "tool_output", "workflow_acceptance", "safety_preempt"],
+            "verifier_state_hidden_from_model": True,
+        },
+        # Reward / utility function (frozen)
+        "reward": {
+            "success_utility": 1.0,
+            "failure_utility": -1.0,
+            "latency_penalty": 0.0,
+            "token_penalty": 0.0,
+        },
+        # Sham construction (frozen)
+        "sham": {
+            "primary": "stratified_label_permutation_by_family",
+            "controls": ["random_matched", "feature_permutation", "family_only"],
+            "permutation_seed": 42,
+        },
+        # Statistical gates (frozen)
+        "gates": {
+            "gate_a1": {
+                "oracle_vs_baseline_min_effect": 0.02,
+                "oracle_vs_sham_min_effect": 0.02,
+                "confidence_level": 0.95,
+            },
+            "gate_a2": {
+                "candidate_vs_baseline_min_effect": 0.05,  # epsilon_0
+                "candidate_vs_sham_min_effect": 0.02,      # epsilon_S
+                "confidence_level": 0.95,
+                "matched_pair_flip_threshold": 0.5,
+            },
+            "gate_a3": {
+                "min_replication_pass_rate": 0.78,
+                "catastrophic_effect_floor": -0.02,
+                "min_learner_seeds": 3,
+                "generation_deterministic": True,
+            },
+            "gate_a4": {
+                "initial_mode": "SHADOW",
+                "active_eligible": False,
+            },
+        },
+        # Feature diagnostic (frozen)
+        "feature_diagnostic": {
+            "delta_f_threshold": 0.10,
+            "classifier": "nearest_centroid",
+            "cv_folds": 5,
+        },
+        # Seeds (frozen)
+        "seeds": {
+            "task_seed": 42,
+            "generation_seed": 101,
+            "learner_seeds": [11, 22, 33],
+            "sham_permutation_seed": 42,
+            "bootstrap_seed": 42,
+        },
+        # Model configuration (frozen for this build)
+        "model": {
+            "model_id": model_id,
+            "dtype": dtype,
+            "device": device,
+            "max_new_tokens": max_new_tokens,
+            "do_sample": False,
+            "temperature": 0.0,
+        },
+    }
+    # Compute manifest hash
+    manifest_hash = sha256_text(json.dumps(experiment_manifest, sort_keys=True, default=str))
+    experiment_manifest["manifest_sha256"] = manifest_hash
+    write_json(artifacts / "experiment_manifest.json", experiment_manifest)
+    print(f"  Experiment manifest: {manifest_hash[:16]}... (Build 20 frozen)")
 
     # --- Artifact checksums ---
     checksums: dict[str, str] = {}
