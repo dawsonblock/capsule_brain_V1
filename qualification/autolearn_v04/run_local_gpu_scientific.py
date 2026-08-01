@@ -613,8 +613,24 @@ def run_local_gpu_scientific_pipeline(
         if seed_task_rows:
             seed_mean = sum(r["utility"] for r in seed_task_rows) / len(seed_task_rows)
             # Baseline mean for comparison (same test split).
-            base_test_rows = [r for r in baseline_task_rows if r["task_id"] in test_task_ids]
-            base_mean = sum(r["utility"] for r in base_test_rows) / len(base_test_rows) if base_test_rows else 0.0
+            # Compute directly from outcomes using BaselinePolicyV3.
+            base_test_utils = []
+            baseline_v3_temp = BaselinePolicyV3(extractor=extractor)
+            for task_dict in task_dicts:
+                if task_dict["task_id"] not in test_task_ids:
+                    continue
+                tid = task_dict["task_id"]
+                state = _make_state(task_dict)
+                allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
+                try:
+                    decision = baseline_v3_temp.select_action(state, allowed_actions=allowed)
+                    selected_action = decision.action.value
+                except Exception:
+                    selected_action = "ANSWER_DIRECT"
+                task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == selected_action]
+                if task_outcomes:
+                    base_test_utils.append(task_outcomes[0]["utility"])
+            base_mean = sum(base_test_utils) / len(base_test_utils) if base_test_utils else 0.0
             delta = seed_mean - base_mean
             replicate_results.append({
                 "generation_seed": generation_seed,
