@@ -545,6 +545,338 @@ _SCIENCE_CROSSOVERS = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Within-family action crossover tasks
+#
+# These tasks have the prompt structure of one family but require a DIFFERENT
+# action to succeed. This breaks the "one family → one optimal action"
+# structure that permits family-level shortcut learning.
+#
+# For each family F_k, there exist tasks x_i, x_j ∈ F_k where a*(x_i) ≠ a*(x_j).
+# ---------------------------------------------------------------------------
+
+
+def _direct_answer_needs_memory_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Direct-answer prompt structure, but the answer is stored in memory.
+
+    The prompt looks like a simple question, but the answer is only available
+    through the memory service. RETRIEVE_MEMORY is optimal, not ANSWER_DIRECT.
+    This creates within-family action variation in the direct_answer family.
+    """
+    secret = f"SECRET-{_hex(rng)}"
+    key = f"vault_{_hex(rng, 4)}"
+    # Prompt looks like a direct question but references a stored key
+    prompt = (
+        f"What is the verified value stored under key '{key}'? "
+        f"Output JSON: {{\"result\": \"<value>\"}}"
+    )
+    kind = "direct_needs_memory"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="direct_answer",  # surface form is direct_answer
+        archetype=_archetype("direct_answer", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"secret": secret, "key": key, "crossover": "direct_needs_memory"},
+        verifier_spec={"type": "memory_secret", "expected_secret": secret},
+        expected_output_digest=sha256_text(secret),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="direct_needs_memory",
+        group_id=_group_id("direct_answer", split, kind, entity_seed),
+        template_family="direct_memory_crossover",
+        generator_family="direct_mem_xover_v04",
+        entity_family=f"dmem_{entity_seed & 0xFF}",
+        capability_family="memory_retrieval",
+    )
+
+
+def _direct_answer_needs_tool_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Direct-answer prompt structure, but the answer requires a tool call.
+
+    The prompt looks like a simple question, but the answer is only available
+    through a tool. CALL_TOOL is optimal, not ANSWER_DIRECT.
+    """
+    expected = f"RT-{_hex(rng)}"
+    tool_name = f"data_tool_{_hex(rng, 4)}"
+    prompt = (
+        f"What is the current reading from {tool_name}? "
+        f"Output JSON: {{\"result\": \"<value>\"}}"
+    )
+    kind = "direct_needs_tool"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="direct_answer",  # surface form is direct_answer
+        archetype=_archetype("direct_answer", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"tool_name": tool_name, "expected_tool_output": expected, "crossover": "direct_needs_tool"},
+        verifier_spec={
+            "type": "tool_output",
+            "expected_tool_output": expected,
+            "tool_name": tool_name,
+            "expected_invocation_count": 1,
+        },
+        expected_output_digest=sha256_text(expected),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="direct_needs_tool",
+        group_id=_group_id("direct_answer", split, kind, entity_seed),
+        template_family="direct_tool_crossover",
+        generator_family="direct_tool_xover_v04",
+        entity_family=f"dtool_{entity_seed & 0xFF}",
+        capability_family="tool_invocation",
+    )
+
+
+def _memory_required_direct_ok_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Memory-required prompt structure, but the answer is derivable from the prompt.
+
+    The prompt mentions a key and retrieval, but the stored value is also
+    embedded in the prompt context. ANSWER_DIRECT can succeed.
+    This creates within-family action variation in the memory_required family.
+    """
+    secret = f"VAL-{rng.randint(1000, 9999)}"
+    key = f"vault_{_hex(rng, 4)}"
+    # The secret is mentioned in the prompt itself, so direct answer works
+    prompt = (
+        f"The memory service stores '{secret}' under key '{key}'. "
+        f"Retrieve it and output JSON: {{\"result\": \"<value>\"}}"
+    )
+    kind = "memory_direct_ok"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="memory_required",  # surface form is memory_required
+        archetype=_archetype("memory_required", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"secret": secret, "key": key, "crossover": "memory_direct_ok"},
+        verifier_spec={"type": "direct_exact", "expected_value": secret},
+        expected_output_digest=sha256_text(secret),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="memory_direct_ok",
+        group_id=_group_id("memory_required", split, kind, entity_seed),
+        template_family="memory_direct_crossover",
+        generator_family="mem_direct_xover_v04",
+        entity_family=f"mdir_{entity_seed & 0xFF}",
+        capability_family="direct_reasoning",
+    )
+
+
+def _memory_required_needs_tool_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Memory-required prompt structure, but the stored value needs tool processing.
+
+    The prompt asks to retrieve a key, but the stored value must be processed
+    by a tool to get the final answer. CALL_TOOL is optimal.
+    """
+    raw_value = f"RAW-{_hex(rng)}"
+    expected = f"RT-{_hex(rng)}"
+    key = f"vault_{_hex(rng, 4)}"
+    tool_name = f"process_tool_{_hex(rng, 4)}"
+    prompt = (
+        f"Retrieve the value under key '{key}' and process it through {tool_name} "
+        f"to get the final result. Output JSON: {{\"result\": \"<value>\"}}"
+    )
+    kind = "memory_needs_tool"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="memory_required",  # surface form is memory_required
+        archetype=_archetype("memory_required", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={
+            "secret": raw_value,
+            "key": key,
+            "tool_name": tool_name,
+            "expected_tool_output": expected,
+            "crossover": "memory_needs_tool",
+        },
+        verifier_spec={
+            "type": "tool_output",
+            "expected_tool_output": expected,
+            "tool_name": tool_name,
+            "expected_invocation_count": 1,
+        },
+        expected_output_digest=sha256_text(expected),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="memory_needs_tool",
+        group_id=_group_id("memory_required", split, kind, entity_seed),
+        template_family="memory_tool_crossover",
+        generator_family="mem_tool_xover_v04",
+        entity_family=f"mtool_{entity_seed & 0xFF}",
+        capability_family="tool_invocation",
+    )
+
+
+def _tool_required_direct_ok_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Tool-required prompt structure, but the answer is derivable from the prompt.
+
+    The prompt mentions a tool, but the expected output is also embedded in
+    the prompt. ANSWER_DIRECT can succeed.
+    """
+    expected = f"DATA-{rng.randint(1000, 9999)}"
+    tool_name = f"data_tool_{_hex(rng, 4)}"
+    # The expected value is in the prompt, so direct answer works
+    prompt = (
+        f"The tool {tool_name} currently returns the value '{expected}'. "
+        f"Use it to fetch the reading and output JSON: {{\"result\": \"<value>\"}}"
+    )
+    kind = "tool_direct_ok"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="tool_required",  # surface form is tool_required
+        archetype=_archetype("tool_required", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"tool_name": tool_name, "expected_tool_output": expected, "crossover": "tool_direct_ok"},
+        verifier_spec={"type": "direct_exact", "expected_value": expected},
+        expected_output_digest=sha256_text(expected),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="tool_direct_ok",
+        group_id=_group_id("tool_required", split, kind, entity_seed),
+        template_family="tool_direct_crossover",
+        generator_family="tool_direct_xover_v04",
+        entity_family=f"tdir_{entity_seed & 0xFF}",
+        capability_family="direct_reasoning",
+    )
+
+
+def _tool_required_needs_memory_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Tool-required prompt structure, but the answer is in memory.
+
+    The prompt mentions a tool, but the actual answer is stored in memory.
+    RETRIEVE_MEMORY is optimal.
+    """
+    secret = f"SECRET-{_hex(rng)}"
+    key = f"vault_{_hex(rng, 4)}"
+    tool_name = f"data_tool_{_hex(rng, 4)}"
+    prompt = (
+        f"The tool {tool_name} requires a stored credential under key '{key}' "
+        f"to operate. Retrieve the credential and output it as JSON: "
+        f"{{\"result\": \"<value>\"}}"
+    )
+    kind = "tool_needs_memory"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="tool_required",  # surface form is tool_required
+        archetype=_archetype("tool_required", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"secret": secret, "key": key, "tool_name": tool_name, "crossover": "tool_needs_memory"},
+        verifier_spec={"type": "memory_secret", "expected_secret": secret},
+        expected_output_digest=sha256_text(secret),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="tool_needs_memory",
+        group_id=_group_id("tool_required", split, kind, entity_seed),
+        template_family="tool_memory_crossover",
+        generator_family="tool_mem_xover_v04",
+        entity_family=f"tmem_{entity_seed & 0xFF}",
+        capability_family="memory_retrieval",
+    )
+
+
+def _workflow_required_direct_ok_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Workflow-required prompt structure, but the answer is a simple constant.
+
+    The prompt asks for code, but the expected output is a simple value that
+    can be stated directly. ANSWER_DIRECT can succeed.
+    """
+    value = rng.randint(1, 100)
+    prompt = (
+        f"Write a Python function called 'compute' that returns {value}. "
+        f"Alternatively, just state the return value. "
+        f"Output JSON: {{\"result\": <number>}}"
+    )
+    kind = "workflow_direct_ok"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="workflow_required",  # surface form is workflow_required
+        archetype=_archetype("workflow_required", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"crossover": "workflow_direct_ok"},
+        verifier_spec={"type": "direct_exact", "expected_value": str(value)},
+        expected_output_digest=sha256_text(str(value)),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="workflow_direct_ok",
+        group_id=_group_id("workflow_required", split, kind, entity_seed),
+        template_family="workflow_direct_crossover",
+        generator_family="wf_direct_xover_v04",
+        entity_family=f"wdir_{entity_seed & 0xFF}",
+        capability_family="direct_reasoning",
+    )
+
+
+def _workflow_required_needs_memory_task(tid: str, split: str, rng: random.Random, *, crossover: str = "") -> BenchmarkTask:
+    """Workflow-required prompt structure, but the answer is in memory.
+
+    The prompt asks for code, but the function must return a stored secret.
+    RETRIEVE_MEMORY is needed to get the secret value.
+    """
+    secret = f"SECRET-{_hex(rng)}"
+    key = f"vault_{_hex(rng, 4)}"
+    prompt = (
+        f"Write a Python function called 'compute' that returns the value "
+        f"stored under key '{key}'. The function must pass an acceptance test. "
+        f"Output the result as JSON: {{\"result\": \"<value>\"}}"
+    )
+    kind = "workflow_needs_memory"
+    entity_seed = rng.getrandbits(31)
+    return BenchmarkTask(
+        task_id=tid,
+        family="workflow_required",  # surface form is workflow_required
+        archetype=_archetype("workflow_required", split, kind),
+        split=split,
+        prompt=prompt,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"secret": secret, "key": key, "crossover": "workflow_needs_memory"},
+        verifier_spec={"type": "memory_secret", "expected_secret": secret},
+        expected_output_digest=sha256_text(secret),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="workflow_needs_memory",
+        group_id=_group_id("workflow_required", split, kind, entity_seed),
+        template_family="workflow_memory_crossover",
+        generator_family="wf_mem_xover_v04",
+        entity_family=f"wmem_{entity_seed & 0xFF}",
+        capability_family="memory_retrieval",
+    )
+
+
+# Within-family crossover builders: each creates tasks in a family that
+# require a DIFFERENT optimal action than the family's natural action.
+_WITHIN_FAMILY_CROSSOVERS = [
+    # (family, builder, description)
+    ("direct_answer", _direct_answer_needs_memory_task, "direct→memory"),
+    ("direct_answer", _direct_answer_needs_tool_task, "direct→tool"),
+    ("memory_required", _memory_required_direct_ok_task, "memory→direct"),
+    ("memory_required", _memory_required_needs_tool_task, "memory→tool"),
+    ("tool_required", _tool_required_direct_ok_task, "tool→direct"),
+    ("tool_required", _tool_required_needs_memory_task, "tool→memory"),
+    ("workflow_required", _workflow_required_direct_ok_task, "workflow→direct"),
+    ("workflow_required", _workflow_required_needs_memory_task, "workflow→memory"),
+]
+
+
 def _allocate_scientific_split(
     split: str,
     n: int,
@@ -602,8 +934,25 @@ def _allocate_scientific_split(
         rng_local = random.Random(rng.getrandbits(31))
         tasks.append(_scientific_workflow_task(tid, split, rng_local))
 
-    # Crossover tasks.
-    for j in range(n_crossover):
+    # Crossover tasks: WITHIN-FAMILY action variation.
+    # These create tasks within each family that require a DIFFERENT
+    # optimal action, breaking the "one family → one optimal action"
+    # structure that permits family-level shortcut learning.
+    # We GUARANTEE at least one of each within-family crossover variant
+    # per split, so every family has tasks with multiple optimal actions.
+    n_within_family = max(len(_WITHIN_FAMILY_CROSSOVERS), n_crossover // 2)
+    n_random_crossover = max(0, n_crossover - n_within_family)
+
+    # Within-family action crossovers: use all 8 variants to ensure
+    # each family gets tasks with different optimal actions.
+    for j in range(n_within_family):
+        family, builder, desc = _WITHIN_FAMILY_CROSSOVERS[j % len(_WITHIN_FAMILY_CROSSOVERS)]
+        tid = f"{split}_wfxover_{j:04d}"
+        rng_local = random.Random(rng.getrandbits(31))
+        tasks.append(builder(tid, split, rng_local))
+
+    # Random-family crossovers (original behavior, for diversity)
+    for j in range(n_random_crossover):
         ctype = _SCIENCE_CROSSOVERS[j % len(_SCIENCE_CROSSOVERS)]
         tid = f"{split}_xover_{j:04d}"
         rng_local = random.Random(rng.getrandbits(31))
