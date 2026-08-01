@@ -164,8 +164,8 @@ def run_local_gpu_scientific_pipeline(
 
     benchmark_manifest = {
         "schema_version": "scientific-benchmark/1",
-        "package_version": "2.15.10",
-        "qualification_version": "0.4.6",
+        "package_version": "2.15.11",
+        "qualification_version": "0.4.7",
         "model_id": model_id,
         "provider_class": "real_model",
         "runtime_type": "real",
@@ -651,8 +651,8 @@ def run_local_gpu_scientific_pipeline(
         "commit_sha": commit_sha,
         "original_commit_sha": commit_sha,
         # Version identity for historical identity validator.
-        "original_package_version": "2.15.10",
-        "original_qualification_version": "0.4.6",
+        "original_package_version": "2.15.11",
+        "original_qualification_version": "0.4.7",
         "provider_model_identity": model_id,
         "dependency_identity": {
             "torch": "2.8.0",
@@ -731,10 +731,10 @@ def run_local_gpu_scientific_pipeline(
     # --- Evidence manifest ---
     evidence_manifest = {
         "schema_version": "evidence-manifest/1",
-        "package_version": "2.15.10",
-        "qualification_version": "0.4.6",
-        "original_package_version": "2.15.10",
-        "original_qualification_version": "0.4.6",
+        "package_version": "2.15.11",
+        "qualification_version": "0.4.7",
+        "original_package_version": "2.15.11",
+        "original_qualification_version": "0.4.7",
         "evidence_run_id": f"local_gpu_{int(time.time())}",
         "evidence_origin": "REAL_MODEL",
         "origin": "REAL_MODEL",

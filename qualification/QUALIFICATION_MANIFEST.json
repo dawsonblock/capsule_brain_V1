@@ -1,7 +1,7 @@
 {
-  "package_version": "2.15.10",
+  "package_version": "2.15.11",
   "active_qualification": "autolearn_v04",
-  "qualification_version": "0.4.6",
-  "active_analysis": "v046",
+  "qualification_version": "0.4.7",
+  "active_analysis": "v047",
   "status": "current"
 }

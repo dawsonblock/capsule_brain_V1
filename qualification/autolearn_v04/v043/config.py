@@ -4,9 +4,9 @@ from __future__ import annotations
 # ---------------------------------------------------------------------------
 # Version
 # ---------------------------------------------------------------------------
-PACKAGE_VERSION = "2.15.10"
+PACKAGE_VERSION = "2.15.11"
 AUTOLEARN_VERSION = "0.3.8"
-QUALIFICATION_VERSION = "0.4.6"
+QUALIFICATION_VERSION = "0.4.7"
 
 # ---------------------------------------------------------------------------
 # Recovered-headroom calculation

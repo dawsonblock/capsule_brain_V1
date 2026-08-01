@@ -113,13 +113,13 @@ def tmp_evidence(evidence_dir, tmp_path):
 
 class TestVersionIdentity:
     def test_package_version(self):
-        assert PACKAGE_VERSION == "2.15.10"
+        assert PACKAGE_VERSION == "2.15.11"
 
     def test_autolearn_version(self):
-        assert AUTOLEARN_VERSION == "0.3.9"
+        assert AUTOLEARN_VERSION == "0.3.10"
 
     def test_qualification_version(self):
-        assert AUTOLEARN_QUALIFICATION_VERSION == "0.4.6"
+        assert AUTOLEARN_QUALIFICATION_VERSION == "0.4.7"
 
     def test_qualification_manifest_versions(self):
         manifest_path = REPO_ROOT / "qualification" / "QUALIFICATION_MANIFEST.json"
@@ -149,7 +149,7 @@ class TestVersionIdentity:
         # Parse the quoted value.
         pyproject_version = version_line.split("=", 1)[1].strip().strip('"').strip("'")
         assert pyproject_version == PACKAGE_VERSION
-        assert pyproject_version == "2.15.10"
+        assert pyproject_version == "2.15.11"
         # Manifest matches too.
         manifest_path = REPO_ROOT / "qualification" / "QUALIFICATION_MANIFEST.json"
         with open(manifest_path) as f:

@@ -25,8 +25,8 @@ from capsule_brain.version import (
 )
 
 # Expected identity for the current analysis build.
-EXPECTED_PACKAGE_VERSION = "2.15.10"
-EXPECTED_QUALIFICATION_VERSION = "0.4.6"
+EXPECTED_PACKAGE_VERSION = "2.15.11"
+EXPECTED_QUALIFICATION_VERSION = "0.4.7"
 
 
 def _is_nonempty_str(value: Any) -> bool:
