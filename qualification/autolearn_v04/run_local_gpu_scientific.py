@@ -1171,6 +1171,117 @@ def run_local_gpu_scientific_pipeline(
     write_json(artifacts / "sham_results.json", sham_results)
     print(f"  Sham (D_test): {len(sham_task_rows)} rows, mean_util={sham_results['mean_utility']:.4f}")
 
+    # --- P9: Evaluate ALL sham variants on D_test ---
+    # The candidate must beat the STRONGEST sham (max utility).
+    all_sham_results: dict[str, dict] = {"primary_permuted": sham_results}
+    for sham_name, sham_obj in sham_variants.items():
+        s_rows = _eval_policy_on_test(sham_obj, extractor, f"sham_{sham_name}")
+        s_res = _build_results_dict(f"sham_{sham_name}", s_rows, len(test_task_dicts))
+        all_sham_results[sham_name] = s_res
+        write_json(artifacts / f"sham_{sham_name}_results.json", s_res)
+        print(f"  Sham-{sham_name} (D_test): {len(s_rows)} rows, mean_util={s_res['mean_utility']:.4f}")
+
+    # Family-only sham: always predict majority action per family.
+    family_only_test_utils = []
+    for task_dict in test_task_dicts:
+        tid = task_dict["task_id"]
+        fam = task_dict.get("family", "direct_answer")
+        action_str = family_majority_action.get(fam, "ANSWER_DIRECT")
+        s_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == action_str]
+        if s_outcomes:
+            family_only_test_utils.append(s_outcomes[0]["utility"])
+    family_only_mean = sum(family_only_test_utils) / len(family_only_test_utils) if family_only_test_utils else 0.0
+    family_only_res = {"policy_id": "sham_family_only", "mean_utility": family_only_mean, "n_tasks": len(family_only_test_utils)}
+    all_sham_results["family_only"] = family_only_res
+    write_json(artifacts / "sham_family_only_results.json", family_only_res)
+    print(f"  Sham-family_only (D_test): mean_util={family_only_mean:.4f}")
+
+    # Find the strongest sham (max mean utility).
+    strongest_sham_name = max(all_sham_results, key=lambda k: all_sham_results[k].get("mean_utility", -999))
+    strongest_sham_util = all_sham_results[strongest_sham_name].get("mean_utility", -999)
+    print(f"  Strongest sham: {strongest_sham_name} (mean_util={strongest_sham_util:.4f})")
+    write_json(artifacts / "all_sham_results.json", {
+        "schema_version": "all-sham/1",
+        "all_shams": {k: {"mean_utility": v.get("mean_utility", 0), "n_tasks": v.get("n_tasks", 0)} for k, v in all_sham_results.items()},
+        "strongest_sham": strongest_sham_name,
+        "strongest_sham_mean_utility": strongest_sham_util,
+        "candidate_mean_utility": candidate_results["mean_utility"],
+        "candidate_beats_strongest": candidate_results["mean_utility"] > strongest_sham_util,
+    })
+
+    # --- P10: Permutation distribution (K=100) ---
+    # Generate K independent label permutations, train sham, evaluate on test.
+    # Compute permutation p-value:
+    #   p_perm = (1 + #{U(S_k) >= U(C)}) / (K + 1)
+    K_PERMUTATIONS = 100
+    perm_sham_utils: list[float] = []
+    import random as _perm_rng
+    _perm_rng_obj = _perm_rng.Random(42)
+    for k in range(K_PERMUTATIONS):
+        # Permute labels stratified by family.
+        perm_labels = [ex.best_action for ex, _ in candidate_examples_with_family]
+        for fam, indices in family_groups.items():
+            labels = [perm_labels[i] for i in indices]
+            _perm_rng_obj.shuffle(labels)
+            for i, label in zip(indices, labels):
+                perm_labels[i] = label
+        # Build training examples.
+        perm_train = []
+        for i, (ex, fam) in enumerate(candidate_examples_with_family):
+            perm_train.append(TrainingExample(
+                features=ex.features,
+                best_action=perm_labels[i],
+                utility_margin=ex.utility_margin,
+                weight=ex.weight,
+            ))
+        # Train sham.
+        perm_l = SupervisedRouterLearner(LearnerConfig())
+        perm_p, _ = perm_l.train(
+            perm_train, sham_val_examples[:len(perm_train)] if sham_val_examples else perm_train,
+            policy_id=f"sham_perm_{k}",
+            training_data_digest=_digest([ex.features for ex in perm_train]),
+        )
+        # Evaluate on test.
+        perm_test_utils = []
+        for task_dict in test_task_dicts:
+            tid = task_dict["task_id"]
+            state = _make_state(task_dict)
+            allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
+            try:
+                decision = perm_p.select_action(state, extractor=extractor, allowed_actions=allowed)
+                p_action = decision.action.value
+            except Exception:
+                p_action = "ANSWER_DIRECT"
+            p_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == p_action]
+            if p_outcomes:
+                perm_test_utils.append(p_outcomes[0]["utility"])
+        perm_mean = sum(perm_test_utils) / len(perm_test_utils) if perm_test_utils else 0.0
+        perm_sham_utils.append(perm_mean)
+    # Permutation p-value.
+    cand_test_mean = candidate_results["mean_utility"]
+    n_perm_ge = sum(1 for u in perm_sham_utils if u >= cand_test_mean)
+    p_perm = (1 + n_perm_ge) / (K_PERMUTATIONS + 1)
+    perm_distribution = {
+        "schema_version": "permutation-distribution/1",
+        "K": K_PERMUTATIONS,
+        "candidate_mean_utility": round(cand_test_mean, 6),
+        "permutation_sham_mean_utilities": [round(u, 6) for u in perm_sham_utils],
+        "permutation_sham_mean": round(sum(perm_sham_utils) / len(perm_sham_utils), 6),
+        "permutation_sham_std": round(_np.std(perm_sham_utils), 6) if perm_sham_utils else 0.0,
+        "n_perm_ge_candidate": n_perm_ge,
+        "p_perm": round(p_perm, 6),
+        "verdict": "PASS" if p_perm < 0.05 else "FAIL",
+        "threshold": 0.05,
+        "note": (
+            "p_perm = (1 + #{U(S_k) >= U(C)}) / (K+1). "
+            "A candidate that is merely exploiting noise should have "
+            "p_perm >= 0.05 (it is not better than random label shuffles). "
+            "A genuine causal policy should have p_perm < 0.05."
+        ),
+    }
+    write_json(artifacts / "permutation_distribution.json", perm_distribution)
+    print(f"  Permutation distribution: K={K_PERMUTATIONS}, p_perm={p_perm:.4f} ({perm_distribution['verdict']})")
+
     # --- Oracle results (always picks best action per task) on D_test ---
     oracle_task_rows = []
     for task_dict in test_task_dicts:
@@ -1415,6 +1526,8 @@ def run_local_gpu_scientific_pipeline(
             "primary": "stratified_label_permutation_by_family",
             "controls": ["random_matched", "feature_permutation", "family_only"],
             "permutation_seed": 42,
+            "permutation_distribution_K": 100,
+            "strongest_sham_comparison": True,
         },
         # Statistical gates (frozen)
         "gates": {

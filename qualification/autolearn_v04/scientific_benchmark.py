@@ -1106,19 +1106,20 @@ def _allocate_scientific_split(
     rng: random.Random,
     *,
     n_crossover: int,
+    matched_pairs: int | None = None,
 ) -> list[BenchmarkTask]:
     """Allocate tasks for a single split.
 
     The total number of tasks returned equals n exactly:
       n_plain = n - 4 (within-family crossovers) - 2*n_matched_pairs
-    where n_matched_pairs = min(3, max(1, n//15)).
+    where n_matched_pairs is determined by the matched_pairs parameter.
     This ensures requested split size matches actual split size.
     """
     tasks: list[BenchmarkTask] = []
 
     # Reserve space for crossovers and matched pairs.
     n_within_family = min(4, len(_WITHIN_FAMILY_CROSSOVERS))
-    n_matched_pairs = min(len(_MATCHED_PAIR_BUILDERS), max(1, n // 15))
+    n_matched_pairs = matched_pairs if matched_pairs is not None else min(len(_MATCHED_PAIR_BUILDERS), max(1, n // 15))
     n_aux = n_within_family + 2 * n_matched_pairs
     n_plain = max(0, n - n_aux)
 
@@ -1192,8 +1193,10 @@ def _allocate_scientific_split(
     # flips between the two members. These directly test whether the
     # learner responds to the causal feature rather than the task class.
     # Use 1 pair per builder (3 pairs = 6 tasks) for test split,
-    # fewer for smaller splits.
-    n_matched_pairs = min(len(_MATCHED_PAIR_BUILDERS), max(1, n // 15))
+    # Matched-pair flip tasks: construct pairs where the optimal action
+    # flips between the two members. These directly test whether the
+    # learner responds to the causal feature rather than the task class.
+    # n_matched_pairs was computed at the top of this function.
     for j in range(n_matched_pairs):
         builder = _MATCHED_PAIR_BUILDERS[j % len(_MATCHED_PAIR_BUILDERS)]
         tid_a = f"{split}_mpair_{j:04d}_a"
@@ -1227,8 +1230,15 @@ def build_scientific_benchmark(
         ("ood", n_ood),
     ]:
         n_crossover = int(n * crossover_fraction)
+        # Use more matched pairs for test split (P11: 30-50 pairs target).
+        # Each pair = 2 tasks, so 15 pairs = 30 tasks.
+        # For test split, use up to n//3 pairs (1/3 of test tasks are matched pairs).
+        if split == "test":
+            mp = max(3, n // 3)  # at least 3, up to n//3
+        else:
+            mp = None  # use default
         tasks.extend(_allocate_scientific_split(
-            split, n, rng, n_crossover=n_crossover,
+            split, n, rng, n_crossover=n_crossover, matched_pairs=mp,
         ))
 
     # Safety tasks.

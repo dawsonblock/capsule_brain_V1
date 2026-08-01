@@ -503,6 +503,22 @@ def _cmd_evaluate(args) -> int:
         with open(mp_path) as f:
             matched_pair_flip = _json.load(f)
 
+    # Load all-sham results if available (P9).
+    all_sham_results = None
+    as_path = Path(args.evidence_dir) / "all_sham_results.json"
+    if as_path.exists():
+        import json as _json2
+        with open(as_path) as f:
+            all_sham_results = _json2.load(f)
+
+    # Load permutation distribution if available (P10).
+    permutation_test = None
+    pd_path = Path(args.evidence_dir) / "permutation_distribution.json"
+    if pd_path.exists():
+        import json as _json3
+        with open(pd_path) as f:
+            permutation_test = _json3.load(f)
+
     a2_result = evaluate_gate_a2(
         candidate_results=candidate_results,
         baseline_results=baseline_results,
@@ -510,6 +526,8 @@ def _cmd_evaluate(args) -> int:
         config=config.gate_a2,
         statistics_config=config.statistics,
         matched_pair_flip=matched_pair_flip,
+        all_sham_results=all_sham_results,
+        permutation_test=permutation_test,
     )
 
     # --- Family evaluation ---

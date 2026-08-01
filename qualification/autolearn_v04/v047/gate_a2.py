@@ -61,6 +61,8 @@ def evaluate_gate_a2(
     config: GateA2Config,
     statistics_config: StatisticsConfig,
     matched_pair_flip: dict | None = None,
+    all_sham_results: dict | None = None,
+    permutation_test: dict | None = None,
 ) -> GateA2Result:
     """Evaluate candidate causal effectiveness.
 
@@ -68,9 +70,11 @@ def evaluate_gate_a2(
       - LCB(delta_candidate_vs_baseline) > epsilon_0
       - LCB(delta_candidate_vs_sham) > epsilon_S
 
-    Additionally, if matched-pair flip data is provided, the candidate
-    must achieve flip accuracy > 0.5 (the policy must pick different
-    actions for matched pairs where the optimal route flips).
+    Additionally:
+      - If matched-pair flip data is provided, flip_accuracy > 0.5
+      - If all-sham results are provided, candidate must beat the
+        STRONGEST sham (max utility across all sham variants)
+      - If permutation test is provided, p_perm < 0.05
 
     Do NOT permit a zero or positive point estimate to pass when the
     lower confidence bound does not exceed the threshold.
@@ -140,11 +144,40 @@ def evaluate_gate_a2(
                 f"does not exceed threshold {flip_threshold:.4f}"
             )
 
+    # P9: Strongest sham check — candidate must beat the strongest sham.
+    strongest_sham_data: dict = {}
+    strongest_sham_ok = True
+    if all_sham_results is not None:
+        strongest_sham_data = all_sham_results
+        strongest_name = all_sham_results.get("strongest_sham", "")
+        strongest_util = all_sham_results.get("strongest_sham_mean_utility", -999)
+        cand_util = all_sham_results.get("candidate_mean_utility", -999)
+        strongest_sham_ok = cand_util > strongest_util
+        if not strongest_sham_ok:
+            reasons.append(
+                f"candidate_mean_utility {cand_util:.6f} does not exceed "
+                f"strongest sham ({strongest_name}) utility {strongest_util:.6f}"
+            )
+
+    # P10: Permutation test check — p_perm < 0.05.
+    perm_data: dict = {}
+    perm_ok = True
+    if permutation_test is not None:
+        perm_data = permutation_test
+        p_perm = permutation_test.get("p_perm", 1.0)
+        perm_threshold = permutation_test.get("threshold", 0.05)
+        perm_ok = p_perm < perm_threshold
+        if not perm_ok:
+            reasons.append(
+                f"permutation p-value {p_perm:.6f} does not meet "
+                f"threshold < {perm_threshold}"
+            )
+
     # Gate passes only when all comparisons pass.
     if not cand_vs_base_rows and not cand_vs_sham_rows:
         status = AuditStatus.BLOCKED.value
         reasons.append("no paired task rows available for candidate comparisons")
-    elif cb_result.passes and cs_result.passes and flip_ok:
+    elif cb_result.passes and cs_result.passes and flip_ok and strongest_sham_ok and perm_ok:
         status = AuditStatus.PASS.value
     else:
         status = AuditStatus.FAIL.value
@@ -153,7 +186,9 @@ def evaluate_gate_a2(
         status=status,
         candidate_vs_baseline=cb_result.to_dict(),
         candidate_vs_sham=cs_result.to_dict(),
+        candidate_vs_strongest_sham=strongest_sham_data,
         matched_pair_flip=flip_data,
+        permutation_test=perm_data,
         reasons=reasons,
     )
 

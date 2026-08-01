@@ -85,7 +85,9 @@ class GateA2Result:
     status: str = AuditStatus.NOT_RUN.value
     candidate_vs_baseline: dict[str, Any] = field(default_factory=dict)
     candidate_vs_sham: dict[str, Any] = field(default_factory=dict)
+    candidate_vs_strongest_sham: dict[str, Any] = field(default_factory=dict)
     matched_pair_flip: dict[str, Any] = field(default_factory=dict)
+    permutation_test: dict[str, Any] = field(default_factory=dict)
     reasons: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
