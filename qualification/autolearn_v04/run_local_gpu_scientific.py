@@ -870,6 +870,52 @@ def run_local_gpu_scientific_pipeline(
     }
     write_json(artifacts / "EVIDENCE_MANIFEST.json", evidence_manifest)
 
+    # --- v0.4.7 compatibility: write uppercase manifest files and policy subdirs ---
+    # The v0.4.7 CLI expects files in a specific layout.
+    for src_name, dst_name in [
+        ("benchmark_manifest.json", "BENCHMARK_MANIFEST.json"),
+        ("split_manifest.json", "SPLIT_MANIFEST.json"),
+        ("provider_manifest.json", "PROVIDER_MANIFEST.json"),
+        ("source_provenance.json", "SOURCE_MANIFEST.json"),
+    ]:
+        src_p = artifacts / src_name
+        if src_p.exists():
+            write_json(artifacts / dst_name, json.loads(src_p.read_text()))
+
+    # Write RUN_MANIFEST.json
+    run_manifest_v047 = {
+        "run_id": f"local_gpu_{int(time.time())}",
+        "evidence_origin": "REAL_MODEL",
+        "protocol_version": "0.4.7",
+        "package_version": "2.15.11",
+        "model_id": model_id,
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    write_json(artifacts / "RUN_MANIFEST.json", run_manifest_v047)
+
+    # Write policy results in subdirectories
+    for policy_name, results_obj in [
+        ("CANDIDATE_POLICY", candidate_results),
+        ("BASELINE_POLICY", baseline_results),
+        ("SHAM_POLICY", sham_results),
+        ("ORACLE_POLICY", oracle_results),
+    ]:
+        policy_dir = artifacts / policy_name
+        policy_dir.mkdir(parents=True, exist_ok=True)
+        write_json(policy_dir / "evaluation_results.json", results_obj)
+
+    # Write counterfactual outcomes as JSONL (uppercase)
+    cf_path = artifacts / "COUNTERFACTUAL_OUTCOMES.jsonl"
+    with open(cf_path, "w") as f:
+        for o in outcomes:
+            f.write(json.dumps(o, default=str) + "\n")
+
+    # Write safety experiences as JSONL
+    safety_path = artifacts / "SAFETY_EXPERIENCES.jsonl"
+    with open(safety_path, "w") as f:
+        for row in safety_rows:
+            f.write(json.dumps(row, default=str) + "\n")
+
     elapsed = time.time() - start_time
 
     # Final summary.
