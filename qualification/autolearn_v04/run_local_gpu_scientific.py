@@ -546,10 +546,14 @@ def run_local_gpu_scientific_pipeline(
 
     # Learner seeds for replication (Gate A3 requires >= 3).
     learner_seeds = [11, 22, 33]
-    # Generation seeds: since we use greedy decoding (do_sample=False),
-    # the generation is deterministic regardless of seed. We list 3 seeds
-    # to honestly represent that the result is stable across seeds.
-    generation_seeds = [101, 202, 303]
+    # Generation: greedy decoding (do_sample=False) is deterministic, so
+    # there is effectively 1 generation replicate. We do NOT manufacture
+    # fake generation seed diversity. Gate A3 must honestly report:
+    #   generation_deterministic = true
+    #   generation_replicates = 1
+    # Learner replication uses perturbed weight initialization to test
+    # training robustness across 3 independent learner seeds.
+    generation_seed = 101  # single deterministic generation run
 
     # Train candidate with SupervisedRouterLearner (primary seed).
     learner = SupervisedRouterLearner(LearnerConfig())
@@ -565,95 +569,125 @@ def run_local_gpu_scientific_pipeline(
     write_json(artifacts / "candidate_policy.json", candidate_policy)
     print(f"  Candidate trained: train_acc={candidate_metrics.train_accuracy:.3f} val_acc={candidate_metrics.validation_accuracy:.3f}")
 
-    # --- Multi-seed replication for Gate A3 ---
-    # Train candidate with each learner seed and evaluate on test split.
-    # The learner uses full-batch GD (deterministic), so we add small
-    # random perturbations to the initial weights based on the seed to
-    # test robustness of the learning process.
-    # Generation seeds: greedy decoding is deterministic, so all generation
-    # seeds produce identical results. We include multiple generation seeds
-    # to honestly represent that the result is stable across seeds.
-    import random as _seed_rng
-    replicate_results = []
-    test_task_ids = {t["task_id"] for t in task_dicts if t.get("split") == "test"}
+    # --- Proper label permutation sham ---
+    # Build the true label vector from training examples, then permute
+    # across ALL examples (stratified by family) to preserve marginal
+    # label statistics while destroying state-target association.
+    import random as _sham_rng
+    _sham_rng_obj = _sham_rng.Random(42)
 
-    # Pre-compute baseline test mean once (same for all replicates).
-    base_test_utils = []
-    baseline_v3_temp = BaselinePolicyV3(extractor=extractor)
-    for task_dict in task_dicts:
-        if task_dict["task_id"] not in test_task_ids:
+    # Collect (example, family) pairs for stratified permutation.
+    candidate_examples_with_family: list[tuple[TrainingExample, str]] = []
+    for tid in exp_task_ids:
+        task_dict = task_dict_lookup.get(tid)
+        if not task_dict:
             continue
-        tid = task_dict["task_id"]
-        state = _make_state(task_dict)
-        allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
+        task_outcomes = [o for o in outcomes if o["task_id"] == tid]
+        if len(task_outcomes) < 2:
+            continue
+        sorted_outcomes = sorted(task_outcomes, key=lambda o: o["utility"], reverse=True)
+        best = sorted_outcomes[0]
+        second = sorted_outcomes[1]
         try:
-            decision = baseline_v3_temp.select_action(state, allowed_actions=allowed)
-            selected_action = decision.action.value
-        except Exception:
-            selected_action = "ANSWER_DIRECT"
-        task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == selected_action]
-        if task_outcomes:
-            base_test_utils.append(task_outcomes[0]["utility"])
-    base_mean = sum(base_test_utils) / len(base_test_utils) if base_test_utils else 0.0
+            best_action = Action(best["action_id"])
+        except ValueError:
+            continue
+        if best_action not in Action.learned():
+            continue
+        state = _make_state(task_dict)
+        fv = extractor.extract(state)
+        margin = best["utility"] - second["utility"]
+        weight = utility_margin_weight(margin, LearnerConfig())
+        family = task_dict.get("family", "unknown")
+        candidate_examples_with_family.append((
+            TrainingExample(
+                features=fv.as_list(),
+                best_action=best_action,
+                utility_margin=margin,
+                weight=weight,
+            ),
+            family,
+        ))
 
-    for gs in generation_seeds:
-        for ls in learner_seeds:
-            # Train with seed-perturbed initialization.
-            perturbed_learner = SupervisedRouterLearner(LearnerConfig())
-            _orig_init = perturbed_learner._init_params
-            def _seeded_init(seed=ls):
-                W, b = _orig_init()
-                rng = _seed_rng.Random(seed)
-                W = [[w + rng.gauss(0, 0.01) for w in row] for row in W]
-                b = [bi + rng.gauss(0, 0.01) for bi in b]
-                return W, b
-            perturbed_learner._init_params = _seeded_init
-            perturbed_policy, _ = perturbed_learner.train(
-                train_examples,
-                val_examples,
-                policy_id=f"candidate_gen{gs}_learn{ls}",
-                training_data_digest=_digest([ex.features for ex in train_examples]),
-            )
-            # Evaluate on test split.
-            seed_task_rows = []
-            for task_dict in task_dicts:
-                if task_dict["task_id"] not in test_task_ids:
-                    continue
-                tid = task_dict["task_id"]
-                state = _make_state(task_dict)
-                allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
-                try:
-                    decision = perturbed_policy.select_action(state, extractor=extractor, allowed_actions=allowed)
-                    selected_action = decision.action.value
-                except Exception:
-                    selected_action = "ANSWER_DIRECT"
-                task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == selected_action]
-                if task_outcomes:
-                    o = task_outcomes[0]
-                    seed_task_rows.append({
-                        "task_id": tid,
-                        "utility": o["utility"],
-                        "verified_success": o["verification"] == "success",
-                    })
-            if seed_task_rows:
-                seed_mean = sum(r["utility"] for r in seed_task_rows) / len(seed_task_rows)
-                delta = seed_mean - base_mean
-                replicate_results.append({
-                    "generation_seed": gs,
-                    "learner_seed": ls,
-                    "candidate_mean_utility": seed_mean,
-                    "baseline_mean_utility": base_mean,
-                    "candidate_vs_baseline_delta": delta,
-                    "candidate_vs_baseline_passes": delta > 0.01,
-                    "candidate_vs_sham_delta": delta,
-                    "candidate_vs_sham_passes": delta > 0.01,
-                })
-                print(f"  Replicate gen={gs} learn={ls}: mean_util={seed_mean:.4f}, delta={delta:.4f}")
-    write_json(artifacts / "replicate_results.json", replicate_results)
+    # Stratified label permutation: permute labels within each family.
+    family_groups: dict[str, list[int]] = {}
+    for i, (_, fam) in enumerate(candidate_examples_with_family):
+        family_groups.setdefault(fam, []).append(i)
+
+    permuted_labels = [ex.best_action for ex, _ in candidate_examples_with_family]
+    for fam, indices in family_groups.items():
+        labels = [permuted_labels[i] for i in indices]
+        _sham_rng_obj.shuffle(labels)
+        for i, label in zip(indices, labels):
+            permuted_labels[i] = label
+
+    # Build sham training examples with permuted labels.
+    sham_train_examples = []
+    for i, (ex, fam) in enumerate(candidate_examples_with_family):
+        sham_train_examples.append(TrainingExample(
+            features=ex.features,
+            best_action=permuted_labels[i],
+            utility_margin=ex.utility_margin,
+            weight=ex.weight,
+        ))
+
+    # Build sham validation examples similarly (stratified permutation).
+    sham_val_examples_with_family: list[tuple[TrainingExample, str]] = []
+    for tid in val_task_ids:
+        task_dict = task_dict_lookup.get(tid)
+        if not task_dict:
+            continue
+        task_outcomes = [o for o in outcomes if o["task_id"] == tid]
+        if len(task_outcomes) < 2:
+            continue
+        sorted_outcomes = sorted(task_outcomes, key=lambda o: o["utility"], reverse=True)
+        best = sorted_outcomes[0]
+        second = sorted_outcomes[1]
+        try:
+            best_action = Action(best["action_id"])
+        except ValueError:
+            continue
+        if best_action not in Action.learned():
+            continue
+        state = _make_state(task_dict)
+        fv = extractor.extract(state)
+        margin = best["utility"] - second["utility"]
+        weight = utility_margin_weight(margin, LearnerConfig())
+        family = task_dict.get("family", "unknown")
+        sham_val_examples_with_family.append((
+            TrainingExample(
+                features=fv.as_list(),
+                best_action=best_action,
+                utility_margin=margin,
+                weight=weight,
+            ),
+            family,
+        ))
+
+    val_family_groups: dict[str, list[int]] = {}
+    for i, (_, fam) in enumerate(sham_val_examples_with_family):
+        val_family_groups.setdefault(fam, []).append(i)
+
+    val_permuted_labels = [ex.best_action for ex, _ in sham_val_examples_with_family]
+    _val_sham_rng = _sham_rng.Random(99)
+    for fam, indices in val_family_groups.items():
+        labels = [val_permuted_labels[i] for i in indices]
+        _val_sham_rng.shuffle(labels)
+        for i, label in zip(indices, labels):
+            val_permuted_labels[i] = label
+
+    sham_val_examples = []
+    for i, (ex, _) in enumerate(sham_val_examples_with_family):
+        sham_val_examples.append(TrainingExample(
+            features=ex.features,
+            best_action=val_permuted_labels[i],
+            utility_margin=ex.utility_margin,
+            weight=ex.weight,
+        ))
+
+    print(f"  Sham: {len(sham_train_examples)} train, {len(sham_val_examples)} val (stratified permutation)")
 
     # Train sham with permuted labels.
-    sham_train_examples = _build_training_examples(exp_task_ids, permute_labels=True, seed=42)
-    sham_val_examples = _build_training_examples(val_task_ids, permute_labels=True, seed=42)
     sham_learner = SupervisedRouterLearner(LearnerConfig())
     sham_policy_obj, sham_metrics = sham_learner.train(
         sham_train_examples,
@@ -667,107 +701,211 @@ def run_local_gpu_scientific_pipeline(
     write_json(artifacts / "sham_policy.json", sham_policy)
     print(f"  Sham trained (permuted labels): train_acc={sham_metrics.train_accuracy:.3f}")
 
-    # --- Baseline results (BaselinePolicyV3) ---
-    # Use allowed_actions restriction to match v0.4.6 gate evaluation.
-    baseline_v3 = BaselinePolicyV3(extractor=extractor)
-    baseline_task_rows = []
-    for task_dict in task_dicts:
-        tid = task_dict["task_id"]
-        state = _make_state(task_dict)
-        allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
-        try:
-            decision = baseline_v3.select_action(state, allowed_actions=allowed)
-            selected_action = decision.action.value
-        except Exception:
-            selected_action = "ANSWER_DIRECT"
-        task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == selected_action]
-        if task_outcomes:
-            o = task_outcomes[0]
-            success = o["verification"] == "success"
-            baseline_task_rows.append({
-                "task_id": tid,
-                "success": success,
-                "verified_success": success,
-                "selected_utility": o["utility"],
-                "utility": o["utility"],
-                "selected_action": selected_action,
-            })
-    baseline_results = _build_results_dict("baseline_v3", baseline_task_rows, len(tasks))
-    write_json(artifacts / "baseline_results.json", baseline_results)
+    # --- Learner-seed replication for Gate A3 ---
+    # Generation is deterministic (greedy decoding), so we have 1 generation
+    # replicate. Learner replication uses 3 seeds with perturbed init.
+    # Gate A3 must honestly handle generation_deterministic=true.
+    import random as _seed_rng
+    replicate_results = []
+    test_task_ids = {t["task_id"] for t in task_dicts if t.get("split") == "test"}
 
-    # --- Candidate results (LearnedPolicy) ---
-    candidate_task_rows = []
+    # Pre-compute baseline and sham test means (same for all learner seeds).
+    base_test_utils = []
+    sham_test_utils = []
+    baseline_v3_temp = BaselinePolicyV3(extractor=extractor)
     for task_dict in task_dicts:
+        if task_dict["task_id"] not in test_task_ids:
+            continue
         tid = task_dict["task_id"]
         state = _make_state(task_dict)
         allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
+        # Baseline
         try:
-            decision = candidate_policy_obj.select_action(state, extractor=extractor, allowed_actions=allowed)
-            selected_action = decision.action.value
+            decision = baseline_v3_temp.select_action(state, allowed_actions=allowed)
+            b_action = decision.action.value
         except Exception:
-            selected_action = "ANSWER_DIRECT"
-        task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == selected_action]
-        if task_outcomes:
-            o = task_outcomes[0]
-            success = o["verification"] == "success"
-            candidate_task_rows.append({
-                "task_id": tid,
-                "success": success,
-                "verified_success": success,
-                "selected_utility": o["utility"],
-                "utility": o["utility"],
-                "selected_action": selected_action,
-            })
-    candidate_results = _build_results_dict(candidate_policy["policy_id"], candidate_task_rows, len(tasks))
-    write_json(artifacts / "candidate_results.json", candidate_results)
-
-    # --- Sham results (permuted-label LearnedPolicy) ---
-    sham_task_rows = []
-    for task_dict in task_dicts:
-        tid = task_dict["task_id"]
-        state = _make_state(task_dict)
-        allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
+            b_action = "ANSWER_DIRECT"
+        b_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == b_action]
+        if b_outcomes:
+            base_test_utils.append(b_outcomes[0]["utility"])
+        # Sham
         try:
             decision = sham_policy_obj.select_action(state, extractor=extractor, allowed_actions=allowed)
-            selected_action = decision.action.value
+            s_action = decision.action.value
         except Exception:
-            selected_action = "ANSWER_DIRECT"
-        task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == selected_action]
-        if task_outcomes:
-            o = task_outcomes[0]
-            success = o["verification"] == "success"
-            sham_task_rows.append({
-                "task_id": tid,
-                "success": success,
-                "verified_success": success,
-                "selected_utility": o["utility"],
-                "utility": o["utility"],
-                "selected_action": selected_action,
-            })
-    sham_results = _build_results_dict(sham_policy["policy_id"], sham_task_rows, len(tasks))
-    write_json(artifacts / "sham_results.json", sham_results)
+            s_action = "ANSWER_DIRECT"
+        s_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == s_action]
+        if s_outcomes:
+            sham_test_utils.append(s_outcomes[0]["utility"])
 
-    # --- Oracle results (always picks best action per task) ---
+    base_mean = sum(base_test_utils) / len(base_test_utils) if base_test_utils else 0.0
+    sham_mean = sum(sham_test_utils) / len(sham_test_utils) if sham_test_utils else 0.0
+
+    for ls in learner_seeds:
+        # Train with seed-perturbed initialization.
+        perturbed_learner = SupervisedRouterLearner(LearnerConfig())
+        _orig_init = perturbed_learner._init_params
+        def _seeded_init(seed=ls):
+            W, b = _orig_init()
+            rng = _seed_rng.Random(seed)
+            W = [[w + rng.gauss(0, 0.01) for w in row] for row in W]
+            b = [bi + rng.gauss(0, 0.01) for bi in b]
+            return W, b
+        perturbed_learner._init_params = _seeded_init
+        perturbed_policy, _ = perturbed_learner.train(
+            train_examples,
+            val_examples,
+            policy_id=f"candidate_learn{ls}",
+            training_data_digest=_digest([ex.features for ex in train_examples]),
+        )
+        # Evaluate candidate on test split.
+        seed_task_rows = []
+        for task_dict in task_dicts:
+            if task_dict["task_id"] not in test_task_ids:
+                continue
+            tid = task_dict["task_id"]
+            state = _make_state(task_dict)
+            allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
+            try:
+                decision = perturbed_policy.select_action(state, extractor=extractor, allowed_actions=allowed)
+                selected_action = decision.action.value
+            except Exception:
+                selected_action = "ANSWER_DIRECT"
+            task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == selected_action]
+            if task_outcomes:
+                seed_task_rows.append(task_outcomes[0]["utility"])
+        if seed_task_rows:
+            seed_mean = sum(seed_task_rows) / len(seed_task_rows)
+            delta_cb = seed_mean - base_mean  # candidate vs baseline
+            delta_cs = seed_mean - sham_mean  # candidate vs sham (computed separately!)
+            replicate_results.append({
+                "generation_seed": generation_seed,
+                "learner_seed": ls,
+                "generation_deterministic": True,
+                "candidate_mean_utility": seed_mean,
+                "baseline_mean_utility": base_mean,
+                "sham_mean_utility": sham_mean,
+                "candidate_vs_baseline_delta": delta_cb,
+                "candidate_vs_baseline_passes": delta_cb > 0.01,
+                "candidate_vs_sham_delta": delta_cs,
+                "candidate_vs_sham_passes": delta_cs > 0.01,
+            })
+            print(f"  Replicate learn={ls}: cand={seed_mean:.4f}, base={base_mean:.4f}, sham={sham_mean:.4f}, d_cb={delta_cb:.4f}, d_cs={delta_cs:.4f}")
+    write_json(artifacts / "replicate_results.json", replicate_results)
+
+    # --- Policy results (EVALUATED ON D_test ONLY) ---
+    # Gate A1/A2 must be evaluated only on the held-out test split.
+    # Experience, validation, OOD, and safety rows are excluded.
+    test_task_dicts = [t for t in task_dicts if t.get("split") == "test"]
+    test_task_id_set = {t["task_id"] for t in test_task_dicts}
+
+    # Hard assertion: test split must not overlap with training splits.
+    assert not (test_task_id_set & exp_task_ids), \
+        "Test split overlaps with experience split — contamination"
+    assert not (test_task_id_set & val_task_ids), \
+        "Test split overlaps with validation split — contamination"
+
+    def _eval_row(task_dict: dict, selected_action: str, o: dict) -> dict:
+        """Build a result row with full metadata for family/group analysis."""
+        return {
+            "task_id": task_dict["task_id"],
+            "task_group_id": task_dict.get("group_id", task_dict["task_id"]),
+            "split": task_dict.get("split", ""),
+            "family": task_dict.get("family", ""),
+            "success": o["verification"] == "success",
+            "verified_success": o["verification"] == "success",
+            "selected_utility": o["utility"],
+            "utility": o["utility"],
+            "selected_action": selected_action,
+        }
+
+    def _eval_policy_on_test(policy, extractor_obj, label: str) -> list[dict]:
+        """Evaluate a policy on D_test only, returning rows with metadata."""
+        rows = []
+        for task_dict in test_task_dicts:
+            tid = task_dict["task_id"]
+            state = _make_state(task_dict)
+            allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
+            try:
+                decision = policy.select_action(state, extractor=extractor_obj, allowed_actions=allowed)
+                selected_action = decision.action.value
+            except Exception:
+                selected_action = "ANSWER_DIRECT"
+            task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == selected_action]
+            if task_outcomes:
+                rows.append(_eval_row(task_dict, selected_action, task_outcomes[0]))
+        return rows
+
+    # --- Baseline results (BaselinePolicyV3) on D_test ---
+    baseline_v3 = BaselinePolicyV3(extractor=extractor)
+    baseline_task_rows = _eval_policy_on_test(baseline_v3, extractor, "baseline")
+    baseline_results = _build_results_dict("baseline_v3", baseline_task_rows, len(test_task_dicts))
+    write_json(artifacts / "baseline_results.json", baseline_results)
+    print(f"  Baseline (D_test): {len(baseline_task_rows)} rows, mean_util={baseline_results['mean_utility']:.4f}")
+
+    # --- Candidate results (LearnedPolicy) on D_test ---
+    candidate_task_rows = _eval_policy_on_test(candidate_policy_obj, extractor, "candidate")
+    candidate_results = _build_results_dict(candidate_policy["policy_id"], candidate_task_rows, len(test_task_dicts))
+    write_json(artifacts / "candidate_results.json", candidate_results)
+    print(f"  Candidate (D_test): {len(candidate_task_rows)} rows, mean_util={candidate_results['mean_utility']:.4f}")
+
+    # --- Sham results (permuted-label LearnedPolicy) on D_test ---
+    sham_task_rows = _eval_policy_on_test(sham_policy_obj, extractor, "sham")
+    sham_results = _build_results_dict(sham_policy["policy_id"], sham_task_rows, len(test_task_dicts))
+    write_json(artifacts / "sham_results.json", sham_results)
+    print(f"  Sham (D_test): {len(sham_task_rows)} rows, mean_util={sham_results['mean_utility']:.4f}")
+
+    # --- Oracle results (always picks best action per task) on D_test ---
     oracle_task_rows = []
-    for task_dict in task_dicts:
+    for task_dict in test_task_dicts:
         tid = task_dict["task_id"]
         task_outcomes = [o for o in outcomes if o["task_id"] == tid]
         if task_outcomes:
-            # Pick the best outcome: prefer success, then highest utility.
             best_outcome = max(
                 task_outcomes,
                 key=lambda o: (o["verification"] == "success", o["utility"]),
             )
-            success = best_outcome["verification"] == "success"
-            oracle_task_rows.append({
-                "task_id": tid,
-                "success": success,
-                "verified_success": success,
-                "selected_utility": best_outcome["utility"],
-                "utility": best_outcome["utility"],
-            })
-    oracle_results = _build_results_dict("oracle_optimal", oracle_task_rows, len(tasks))
+            oracle_task_rows.append(_eval_row(task_dict, best_outcome["action_id"], best_outcome))
+    oracle_results = _build_results_dict("oracle_optimal", oracle_task_rows, len(test_task_dicts))
     write_json(artifacts / "oracle_results.json", oracle_results)
+    print(f"  Oracle (D_test): {len(oracle_task_rows)} rows, mean_util={oracle_results['mean_utility']:.4f}")
+
+    # --- Safety results for all three policies on D_safety ---
+    # The safety evaluation requires candidate, baseline, and sham safety
+    # results to compare safety behavior across policies.
+    safety_task_dicts = [t for t in task_dicts if t.get("split") == "safety"]
+
+    def _eval_safety_policy(policy, extractor_obj, label: str) -> list[dict]:
+        rows = []
+        for task_dict in safety_task_dicts:
+            tid = task_dict["task_id"]
+            state = _make_state(task_dict)
+            allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
+            try:
+                decision = policy.select_action(state, extractor=extractor_obj, allowed_actions=allowed)
+                selected_action = decision.action.value
+            except Exception:
+                selected_action = "ANSWER_DIRECT"
+            task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == selected_action]
+            if task_outcomes:
+                o = task_outcomes[0]
+                rows.append({
+                    "task_id": tid,
+                    "family": task_dict.get("family", ""),
+                    "split": "safety",
+                    "action_id": selected_action,
+                    "verification": o["verification"],
+                    "safety_blocked": o["verification"] != "success",
+                    "utility": o["utility"],
+                })
+        return rows
+
+    candidate_safety_results = _eval_safety_policy(candidate_policy_obj, extractor, "candidate")
+    baseline_safety_results = _eval_safety_policy(baseline_v3, extractor, "baseline")
+    sham_safety_results = _eval_safety_policy(sham_policy_obj, extractor, "sham")
+    write_json(artifacts / "candidate_safety_results.json", candidate_safety_results)
+    write_json(artifacts / "baseline_safety_results.json", baseline_safety_results)
+    write_json(artifacts / "sham_safety_results.json", sham_safety_results)
 
     # --- Gate A results ---
     gate_a_results = {
@@ -777,7 +915,8 @@ def run_local_gpu_scientific_pipeline(
         "sham_mean_utility": sham_results["mean_utility"],
         "baseline_mean_utility": baseline_results["mean_utility"],
         "delta_candidate_sham": round(candidate_results["mean_utility"] - sham_results["mean_utility"], 4),
-        "n_tasks": len(tasks),
+        "n_tasks": len(test_task_dicts),
+        "eval_split": "test",
     }
     write_json(artifacts / "gate_a_results.json", gate_a_results)
 
@@ -810,7 +949,58 @@ def run_local_gpu_scientific_pipeline(
     write_json(artifacts / "runtime_completion_diagnostics.json", runtime_completion)
 
     # --- Source provenance ---
-    source_tree_sha = sha256_text(json.dumps(benchmark_manifest, sort_keys=True))
+    # Hash actual source files (Python files in src/ and qualification/)
+    # to create a real source-tree digest, not a benchmark-manifest hash.
+    import hashlib as _hashlib
+    import glob as _glob
+    source_files: list[str] = []
+    for pattern in ["src/**/*.py", "qualification/**/*.py"]:
+        source_files.extend(_glob.glob(pattern, recursive=True))
+    source_files.sort()
+    tree_hash_parts: list[str] = []
+    source_byte_total = 0
+    for sf in source_files:
+        try:
+            with open(sf, "rb") as f:
+                content = f.read()
+            file_hash = _hashlib.sha256(content).hexdigest()
+            tree_hash_parts.append(f"{sf}:{file_hash}")
+            source_byte_total += len(content)
+        except Exception:
+            pass
+    source_tree_sha = sha256_text("\n".join(tree_hash_parts))
+
+    # Capture actual runtime dependency versions from inspection.
+    dep_identity: dict[str, str] = {}
+    try:
+        import torch as _torch
+        dep_identity["torch"] = _torch.__version__
+    except ImportError:
+        dep_identity["torch"] = "not_installed"
+    try:
+        import transformers as _tf
+        dep_identity["transformers"] = _tf.__version__
+    except ImportError:
+        dep_identity["transformers"] = "not_installed"
+    try:
+        import numpy as _np
+        dep_identity["numpy"] = _np.__version__
+    except ImportError:
+        dep_identity["numpy"] = "not_installed"
+    try:
+        import platform as _pf
+        dep_identity["python"] = _pf.python_version()
+        dep_identity["platform"] = _pf.platform()
+    except Exception:
+        pass
+    try:
+        import torch as _torch
+        if _torch.cuda.is_available():
+            dep_identity["gpu"] = _torch.cuda.get_device_name(0)
+            dep_identity["cuda"] = _torch.version.cuda or "unknown"
+    except Exception:
+        pass
+
     config_hash_val = _digest({
         "model_id": model_id,
         "dtype": dtype,
@@ -835,8 +1025,8 @@ def run_local_gpu_scientific_pipeline(
         "n_safety_rows": len(safety_rows),
         "source_tree_sha256": source_tree_sha,
         "original_source_tree_sha256": source_tree_sha,
-        "source_file_count": len(task_dicts),
-        "source_byte_count": len(json.dumps(benchmark_manifest, default=str)),
+        "source_file_count": len(source_files),
+        "source_byte_count": source_byte_total,
         # Config hash under multiple aliases for different validators.
         "config_hash": config_hash_val,
         "config_digest": config_hash_val,
@@ -848,10 +1038,7 @@ def run_local_gpu_scientific_pipeline(
         "original_package_version": "2.15.11",
         "original_qualification_version": "0.4.7",
         "provider_model_identity": model_id,
-        "dependency_identity": {
-            "torch": "2.8.0",
-            "transformers": "5.14.1",
-        },
+        "dependency_identity": dep_identity,
     }
     write_json(artifacts / "source_provenance.json", source_provenance)
 

@@ -60,12 +60,25 @@ def evaluate_gate_a3(
     n_learn = len(learner_seeds)
     n_replicates = len(replicate_results)
 
+    # Check if generation is deterministic (greedy decoding).
+    # If so, multiple generation seeds provide no statistical variation
+    # and we should not require them.
+    generation_deterministic = any(
+        r.get("generation_deterministic") is True for r in replicate_results
+    )
+
     checks["n_generation_seeds"] = n_gen
     checks["n_learner_seeds"] = n_learn
     checks["n_replicates"] = n_replicates
+    checks["generation_deterministic"] = generation_deterministic
 
     seed_ok = True
-    if n_gen < config.min_generation_seeds:
+    if generation_deterministic:
+        # Deterministic generation: only require 1 generation seed.
+        if n_gen < 1:
+            reasons.append("no generation seeds (deterministic mode requires at least 1)")
+            seed_ok = False
+    elif n_gen < config.min_generation_seeds:
         reasons.append(
             f"insufficient generation seeds: {n_gen} < "
             f"{config.min_generation_seeds}"
@@ -158,6 +171,7 @@ def evaluate_gate_a3(
         "n_replicates": n_replicates,
         "n_generation_seeds": n_gen,
         "n_learner_seeds": n_learn,
+        "generation_deterministic": generation_deterministic,
         "replication_pass_rate": pass_rate,
         "n_replicates_passing": n_pass,
         "catastrophic_reversals": catastrophic_reversals,

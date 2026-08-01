@@ -134,7 +134,12 @@ def _load_evidence(evidence_dir: str) -> dict[str, Any]:
     sham_results = _load_policy_results(ev / "SHAM_POLICY")
     oracle_results = _load_policy_results(ev / "ORACLE_POLICY")
 
-    # Safety experiences.
+    # Safety results for all three policies (if available).
+    candidate_safety_results = _load_json_file(ev / "candidate_safety_results.json") or []
+    baseline_safety_results = _load_json_file(ev / "baseline_safety_results.json") or []
+    sham_safety_results = _load_json_file(ev / "sham_safety_results.json") or []
+
+    # Safety experiences (legacy format).
     safety_experiences = _load_jsonl(ev / "SAFETY_EXPERIENCES.jsonl")
 
     # Counterfactual outcomes.
@@ -168,6 +173,9 @@ def _load_evidence(evidence_dir: str) -> dict[str, Any]:
         "sham_results": sham_results,
         "oracle_results": oracle_results,
         "safety_experiences": safety_experiences,
+        "candidate_safety_results": candidate_safety_results,
+        "baseline_safety_results": baseline_safety_results,
+        "sham_safety_results": sham_safety_results,
         "counterfactual_outcomes": counterfactual_outcomes,
         "gate_a0_v046_result": gate_a0_v046_result,
         "evidence_origin": evidence_origin,
@@ -436,14 +444,14 @@ def _cmd_audit(args) -> int:
 def _cmd_evaluate(args) -> int:
     """Run Gates A1/A2/A3/A4 on existing evidence."""
     from qualification.autolearn_v04.common.audit_status import AuditStatus
-    from qualification.autolearn_v04.v047.gate_schema import QualificationVerdict, GateA4Result
+    from qualification.autolearn_v04.v047.gate_schema import QualificationVerdict
     from qualification.autolearn_v04.v047.gate_a1 import evaluate_gate_a1
     from qualification.autolearn_v04.v047.gate_a2 import evaluate_gate_a2
     from qualification.autolearn_v04.v047.gate_a3 import evaluate_gate_a3
+    from qualification.autolearn_v04.v047.gate_a4 import evaluate_gate_a4
     from qualification.autolearn_v04.v047.family_evaluation import evaluate_families
     from qualification.autolearn_v04.v047.collapse_checks import check_action_collapse
     from qualification.autolearn_v04.v047.safety_evaluation import evaluate_safety
-    from qualification.autolearn_v04.v047.evidence_enforcement import can_promote
 
     evidence = _load_evidence(args.evidence_dir)
     evidence_origin = str(evidence.get("evidence_origin", "")).upper()
@@ -513,10 +521,15 @@ def _cmd_evaluate(args) -> int:
     )
 
     # --- Safety evaluation ---
+    # Use dedicated safety results if available, otherwise fall back to
+    # safety_experiences (legacy format).
+    cand_safety = evidence.get("candidate_safety_results", [])
+    if not cand_safety:
+        cand_safety = evidence.get("safety_experiences", [])
     safety = evaluate_safety(
-        candidate_safety_results=evidence.get("safety_experiences", []),
-        baseline_safety_results=[],
-        sham_safety_results=[],
+        candidate_safety_results=cand_safety,
+        baseline_safety_results=evidence.get("baseline_safety_results", []),
+        sham_safety_results=evidence.get("sham_safety_results", []),
         config=config.safety,
     )
 
@@ -546,43 +559,20 @@ def _cmd_evaluate(args) -> int:
     )
 
     # --- Gate A4: Promotion eligibility ---
-    a2_pass = a2_result.status == AuditStatus.PASS.value
-    a3_pass = a3_result.status == AuditStatus.PASS.value
-    a0_pass = a0_result.status == AuditStatus.PASS.value
-    a1_pass = a1_result.status == AuditStatus.PASS.value
-
-    promotion_eligible = a0_pass and a1_pass and a2_pass and a3_pass
-    shadow_eligible = promotion_eligible and can_promote(
-        evidence_origin, require_real_model=config.promotion.require_real_model_evidence
-    )
-    active_eligible = shadow_eligible  # Active requires same gates in v0.4.7
-
-    blocking_reasons: list[str] = []
-    if not a0_pass:
-        blocking_reasons.append(f"Gate A0 did not pass (status={a0_result.status})")
-    if not a1_pass:
-        blocking_reasons.append(f"Gate A1 did not pass (status={a1_result.status})")
-    if not a2_pass:
-        blocking_reasons.append(f"Gate A2 did not pass (status={a2_result.status})")
-    if not a3_pass:
-        blocking_reasons.append(f"Gate A3 did not pass (status={a3_result.status})")
-    if config.promotion.require_real_model_evidence and evidence_origin != "REAL_MODEL":
-        blocking_reasons.append(
-            f"Promotion requires REAL_MODEL evidence but origin is {evidence_origin}"
-        )
-
-    a4_status = AuditStatus.PASS.value if (shadow_eligible and active_eligible) else (
-        AuditStatus.BLOCKED.value if any(
-            s == AuditStatus.BLOCKED.value
-            for s in [a0_result.status, a1_result.status, a2_result.status, a3_result.status]
-        ) else AuditStatus.FAIL.value
-    )
-
-    a4_result = GateA4Result(
-        status=a4_status,
-        shadow_eligible=shadow_eligible,
-        active_eligible=active_eligible,
-        blocking_reasons=blocking_reasons,
+    # Route through the dedicated evaluate_gate_a4 module to ensure
+    # consistent promotion semantics. Active eligibility is ALWAYS False
+    # after offline qualification — it requires post-shadow validation.
+    safety_status = safety.get("status", "FAIL")
+    artifact_binding_status = "PASS"  # artifact binding checked in A0
+    a4_result = evaluate_gate_a4(
+        gate_a0_status=a0_result.status,
+        gate_a1_status=a1_result.status,
+        gate_a2_status=a2_result.status,
+        gate_a3_status=a3_result.status,
+        safety_status=safety_status,
+        artifact_binding_status=artifact_binding_status,
+        evidence_origin=evidence_origin,
+        config=config.promotion,
     )
 
     # --- Build verdict ---
