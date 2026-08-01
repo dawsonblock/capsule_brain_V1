@@ -334,6 +334,8 @@ class LocalGPUExecutor:
             if torch.cuda.is_available() and (i + 1) % 5 == 0:
                 vram = torch.cuda.memory_allocated() / 1e9
                 print(f"    VRAM: {vram:.2f} GB")
+            if self.device.startswith("cuda") and (i + 1) % 10 == 0:
+                torch.cuda.empty_cache()
         return results
 
     def _generate_batch(
@@ -393,11 +395,9 @@ class LocalGPUExecutor:
         with torch.inference_mode():
             outputs = _do_generate()
 
-        # Clear KV cache periodically (every 10 batches) to prevent memory buildup.
+        # Clear KV cache after each batch (cheap).
         if hasattr(self._model, 'past_key_values') and self._model.past_key_values is not None:
             self._model.past_key_values = None
-        if self.device.startswith("cuda") and ((batch_start // bs + 1) % 10 == 0):
-            torch.cuda.empty_cache()
 
         elapsed = time.perf_counter() - started
         batch_results: list[dict[str, Any]] = []
