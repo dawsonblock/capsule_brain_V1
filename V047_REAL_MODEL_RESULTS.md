@@ -150,12 +150,13 @@ three policies.
 
 ## 4. The Key Scientific Finding
 
-**The candidate beats the baseline but does NOT beat the sham.**
+**Gate A failed. The observed candidate-over-baseline improvement cannot
+be attributed to learned causal state→action policy improvement because
+the sham policy reproduces the gain. Current evidence indicates the
+benchmark permits family-level shortcut learning.**
 
-This means the candidate's advantage over the baseline comes from model
-capacity (learning family→action mappings) not from learning a causal
-state→action relationship. The sham with stratified label permutation
-achieves identical performance because:
+The sham with stratified label permutation achieves identical performance
+to the candidate because:
 
 1. The features encode family identity directly
    (`workflow_capability_match = family == "workflow_required"`,
@@ -168,14 +169,13 @@ achieves identical performance because:
 
 4. Both candidate and sham learn the same family→action mapping
 
-5. The candidate's advantage over baseline comes from the baseline's
-   weaker keyword heuristics, not from superior state-conditioned routing
+5. The observed advantage is reproducible by the sham and is consistent
+   with exploitation of family-level structure
 
-This is exactly the "feature ablation" concern from the build 17 analysis.
-The experiment primarily demonstrates that a classifier can recover obvious
-routing labels from handcrafted task-family indicators — not that
-experience-driven AutoLearn discovers useful routing structure from
-general executive state.
+This is exactly what a good negative control is supposed to expose. The
+experiment has demonstrated that the policy learner can exploit task-family
+structure, but it has not demonstrated causal state-conditioned policy
+learning.
 
 ---
 

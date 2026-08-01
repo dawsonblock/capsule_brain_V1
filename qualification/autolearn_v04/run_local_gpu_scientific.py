@@ -473,25 +473,39 @@ def run_local_gpu_scientific_pipeline(
     def _make_state(task_dict: dict) -> ExecutiveState:
         """Build an ExecutiveState from a benchmark task dict.
 
-        MUST match _state_from_task in run_counterfactuals.py exactly so
-        the gate evaluation uses the same state representation.
+        PROMPT-ONLY FEATURES: No family labels, capability labels, template
+        IDs, or setup_spec-derived features are used. Only features derived
+        naturally from prompt text are included. This prevents the learner
+        from exploiting family-level shortcut structure.
+
+        The family predictability of these features is audited separately
+        by a diagnostic classifier g(h(x))→family.
         """
         prompt = task_dict.get("prompt", "")
-        setup = task_dict.get("setup_spec", {}) or {}
+        # All features below are derived ONLY from prompt text.
+        # No family/category/template labels are used.
+        prompt_lower = prompt.lower()
         return ExecutiveState(
             prompt_features={
                 "text": prompt,
-                "structured_output_request": "json" in prompt.lower(),
-                "estimated_difficulty": task_dict.get("difficulty", 0.5),
-                "workflow_capability_match": task_dict.get("family") == "workflow_required",
+                # These are derived from prompt text, not family labels:
+                "structured_output_request": "json" in prompt_lower,
+                "estimated_difficulty": min(1.0, len(prompt) / 500.0),
+                "workflow_capability_match": "function" in prompt_lower or "code" in prompt_lower,
+                # No previous attempt info for fresh tasks:
+                "previous_attempt_failed": False,
+                "verification_failure_type": "none",
             },
             conversation_features={"depth": 0},
+            # Memory features derived from prompt text, NOT family label:
             memory_features={
-                "hit_count": 1 if task_dict.get("family") == "memory_required" and setup.get("secret") else 0,
-                "top_similarity": 0.95 if task_dict.get("family") == "memory_required" and setup.get("secret") else 0.0,
+                "hit_count": 1 if "retrieve" in prompt_lower or "stored" in prompt_lower or "key" in prompt_lower else 0,
+                "top_similarity": 0.8 if "retrieve" in prompt_lower or "stored" in prompt_lower else 0.0,
             },
-            available_tools=setup.get("available_tools", []),
-            workflow_available=True,
+            # Tool availability derived from prompt text, NOT setup_spec:
+            available_tools=["data_tool"] if "tool" in prompt_lower or "fetch" in prompt_lower else [],
+            # Workflow availability derived from prompt text:
+            workflow_available="function" in prompt_lower or "code" in prompt_lower or "python" in prompt_lower,
             model_id="qual-grounded-v04",
             context_length=len(prompt),
         )
@@ -568,6 +582,47 @@ def run_local_gpu_scientific_pipeline(
     candidate_policy["n_training_rows"] = len(train_examples)
     write_json(artifacts / "candidate_policy.json", candidate_policy)
     print(f"  Candidate trained: train_acc={candidate_metrics.train_accuracy:.3f} val_acc={candidate_metrics.validation_accuracy:.3f}")
+
+    # --- Feature-family diagnostic classifier ---
+    # Train a diagnostic classifier g(h(x))→family to check if family
+    # identity is still predictable from the prompt-only features.
+    # If family accuracy is very high, the features still leak family
+    # identity and the benchmark permits shortcut learning.
+    from collections import Counter
+    all_task_dicts_for_diag = [t for t in task_dicts if t.get("split") in ("experience", "validation", "test")]
+    diag_features: list[list[float]] = []
+    diag_labels: list[str] = []
+    for td in all_task_dicts_for_diag:
+        state = _make_state(td)
+        fv = extractor.extract(state)
+        diag_features.append(fv.as_list())
+        diag_labels.append(td.get("family", "unknown"))
+    # Simple nearest-centroid classifier for family prediction.
+    from sklearn.neighbors import NearestCentroid
+    from sklearn.model_selection import cross_val_score
+    import numpy as _np
+    X = _np.array(diag_features)
+    y = _np.array(diag_labels)
+    family_counts = Counter(diag_labels)
+    n_families = len(family_counts)
+    if n_families > 1 and len(diag_features) > n_families * 2:
+        clf = NearestCentroid()
+        scores = cross_val_score(clf, X, y, cv=min(5, len(diag_features) // n_families))
+        family_predictability = float(scores.mean())
+    else:
+        family_predictability = 1.0  # can't evaluate, assume worst
+    diagnostic = {
+        "schema_version": "feature-diagnostic/1",
+        "family_predictability_accuracy": round(family_predictability, 4),
+        "n_families": n_families,
+        "family_counts": dict(family_counts),
+        "n_samples": len(diag_features),
+        "verdict": "LEAKAGE_DETECTED" if family_predictability > 0.8 else "OK",
+        "threshold": 0.8,
+        "note": "If family_predictability > 0.8, features still encode family identity.",
+    }
+    write_json(artifacts / "feature_family_diagnostic.json", diagnostic)
+    print(f"  Feature-family diagnostic: accuracy={family_predictability:.3f} ({diagnostic['verdict']})")
 
     # --- Proper label permutation sham ---
     # Build the true label vector from training examples, then permute
@@ -700,6 +755,110 @@ def run_local_gpu_scientific_pipeline(
     sham_policy["n_training_rows"] = len(sham_train_examples)
     write_json(artifacts / "sham_policy.json", sham_policy)
     print(f"  Sham trained (permuted labels): train_acc={sham_metrics.train_accuracy:.3f}")
+
+    # --- Additional sham controls for stronger negative control suite ---
+    # 1. Family-only policy: always predict the majority action per family.
+    #    This tests whether the candidate is just a family lookup table.
+    family_action_counts: dict[str, dict[str, int]] = {}
+    for ex, fam in candidate_examples_with_family:
+        action_str = ex.best_action.value
+        family_action_counts.setdefault(fam, {})
+        family_action_counts[fam][action_str] = family_action_counts[fam].get(action_str, 0) + 1
+    family_majority_action: dict[str, str] = {}
+    for fam, counts in family_action_counts.items():
+        family_majority_action[fam] = max(counts, key=counts.get)
+    print(f"  Family-only sham: {family_majority_action}")
+
+    # 2. Random labels with matched class balance.
+    import random as _rand_sham
+    _rand_sham_obj = _rand_sham.Random(777)
+    all_labels = [ex.best_action for ex, _ in candidate_examples_with_family]
+    _rand_sham_obj.shuffle(all_labels)
+    random_sham_examples = []
+    for i, (ex, fam) in enumerate(candidate_examples_with_family):
+        random_sham_examples.append(TrainingExample(
+            features=ex.features,
+            best_action=all_labels[i],
+            utility_margin=ex.utility_margin,
+            weight=ex.weight,
+        ))
+
+    # 3. Feature permutation sham: permute features across examples.
+    feature_indices = list(range(len(candidate_examples_with_family)))
+    _rand_sham_obj.shuffle(feature_indices)
+    feature_perm_sham_examples = []
+    for i, (ex, fam) in enumerate(candidate_examples_with_family):
+        perm_ex = candidate_examples_with_family[feature_indices[i]][0]
+        feature_perm_sham_examples.append(TrainingExample(
+            features=perm_ex.features,  # features from a different example
+            best_action=ex.best_action,  # original label
+            utility_margin=ex.utility_margin,
+            weight=ex.weight,
+        ))
+
+    # Train all sham variants.
+    sham_variants: dict[str, object] = {}
+    for sham_name, sham_exs in [
+        ("random_matched", random_sham_examples),
+        ("feature_perm", feature_perm_sham_examples),
+    ]:
+        sham_l = SupervisedRouterLearner(LearnerConfig())
+        sham_p, sham_m = sham_l.train(
+            sham_exs, sham_val_examples[:len(sham_exs)] if sham_val_examples else sham_exs,
+            policy_id=f"sham_{sham_name}_{int(time.time())}",
+            training_data_digest=_digest([ex.features for ex in sham_exs]),
+        )
+        sham_variants[sham_name] = sham_p
+        write_json(artifacts / f"sham_{sham_name}_policy.json", sham_p.to_dict())
+        print(f"  Sham ({sham_name}): train_acc={sham_m.train_accuracy:.3f}")
+
+    # --- Leave-family-out evaluation ---
+    # Train on all families except one, evaluate on the held-out family.
+    # A family lookup policy should collapse; a genuine state-conditioned
+    # policy has at least a chance to transfer.
+    all_families = sorted(family_action_counts.keys())
+    leave_family_out_results: list[dict] = []
+    for held_out_family in all_families:
+        # Split training data: exclude held-out family.
+        lfo_train = [
+            ex for i, (ex, fam) in enumerate(candidate_examples_with_family)
+            if fam != held_out_family
+        ]
+        if len(lfo_train) < 4:
+            continue  # not enough data
+        lfo_val = [ex for i, (ex, fam) in enumerate(sham_val_examples_with_family) if fam != held_out_family]
+        lfo_learner = SupervisedRouterLearner(LearnerConfig())
+        lfo_policy, lfo_metrics = lfo_learner.train(
+            lfo_train, lfo_val[:len(lfo_train)] if lfo_val else lfo_train,
+            policy_id=f"lfo_{held_out_family}",
+            training_data_digest=_digest([ex.features for ex in lfo_train]),
+        )
+        # Evaluate on held-out family test tasks.
+        held_out_test = [t for t in test_task_dicts if t.get("family") == held_out_family]
+        lfo_rows = []
+        for task_dict in held_out_test:
+            tid = task_dict["task_id"]
+            state = _make_state(task_dict)
+            allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
+            try:
+                decision = lfo_policy.select_action(state, extractor=extractor, allowed_actions=allowed)
+                selected_action = decision.action.value
+            except Exception:
+                selected_action = "ANSWER_DIRECT"
+            task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == selected_action]
+            if task_outcomes:
+                lfo_rows.append(task_outcomes[0]["utility"])
+        if lfo_rows:
+            lfo_mean = sum(lfo_rows) / len(lfo_rows)
+            leave_family_out_results.append({
+                "held_out_family": held_out_family,
+                "n_train": len(lfo_train),
+                "n_test": len(held_out_test),
+                "mean_utility": lfo_mean,
+                "train_acc": lfo_metrics.train_accuracy,
+            })
+            print(f"  Leave-family-out ({held_out_family}): n_train={len(lfo_train)}, test_util={lfo_mean:.4f}")
+    write_json(artifacts / "leave_family_out_results.json", leave_family_out_results)
 
     # --- Learner-seed replication for Gate A3 ---
     # Generation is deterministic (greedy decoding), so we have 1 generation
