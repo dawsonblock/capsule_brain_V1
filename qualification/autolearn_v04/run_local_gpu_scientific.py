@@ -471,28 +471,29 @@ def run_local_gpu_scientific_pipeline(
     extractor = FeatureExtractor()
 
     def _make_state(task_dict: dict) -> ExecutiveState:
-        """Build an ExecutiveState from a benchmark task dict."""
+        """Build an ExecutiveState from a benchmark task dict.
+
+        MUST match _state_from_task in run_counterfactuals.py exactly so
+        the gate evaluation uses the same state representation.
+        """
         prompt = task_dict.get("prompt", "")
-        setup = task_dict.get("setup_spec", {})
-        family = task_dict.get("family", "")
-        # Determine available tools and workflow from family/setup_spec.
-        available_tools: list[str] = []
-        workflow_available = False
-        if family == "tool_required" or "tool" in family:
-            available_tools = setup.get("tools", ["search_tool"])
-        if family == "workflow_required" or "workflow" in family:
-            workflow_available = True
-        # Memory features from setup_spec.
-        memory_features = {}
-        if family == "memory_required" or "memory" in family:
-            memory_features = {"hit_count": 1, "top_similarity": 0.85}
+        setup = task_dict.get("setup_spec", {}) or {}
         return ExecutiveState(
-            prompt_features={"text": prompt, "estimated_difficulty": 0.5},
+            prompt_features={
+                "text": prompt,
+                "structured_output_request": "json" in prompt.lower(),
+                "estimated_difficulty": task_dict.get("difficulty", 0.5),
+                "workflow_capability_match": task_dict.get("family") == "workflow_required",
+            },
             conversation_features={"depth": 0},
-            memory_features=memory_features,
-            available_tools=available_tools,
-            workflow_available=workflow_available,
-            model_id=model_id,
+            memory_features={
+                "hit_count": 1 if task_dict.get("family") == "memory_required" and setup.get("secret") else 0,
+                "top_similarity": 0.95 if task_dict.get("family") == "memory_required" and setup.get("secret") else 0.0,
+            },
+            available_tools=setup.get("available_tools", []),
+            workflow_available=True,
+            model_id="qual-grounded-v04",
+            context_length=len(prompt),
         )
 
     # Build training examples from experience split.
@@ -574,13 +575,15 @@ def run_local_gpu_scientific_pipeline(
     print(f"  Sham trained (permuted labels): train_acc={sham_metrics.train_accuracy:.3f}")
 
     # --- Baseline results (BaselinePolicyV3) ---
+    # Use allowed_actions restriction to match v0.4.6 gate evaluation.
     baseline_v3 = BaselinePolicyV3(extractor=extractor)
     baseline_task_rows = []
     for task_dict in task_dicts:
         tid = task_dict["task_id"]
         state = _make_state(task_dict)
+        allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
         try:
-            decision = baseline_v3.select_action(state)
+            decision = baseline_v3.select_action(state, allowed_actions=allowed)
             selected_action = decision.action.value
         except Exception:
             selected_action = "ANSWER_DIRECT"
@@ -604,8 +607,9 @@ def run_local_gpu_scientific_pipeline(
     for task_dict in task_dicts:
         tid = task_dict["task_id"]
         state = _make_state(task_dict)
+        allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
         try:
-            decision = candidate_policy_obj.select_action(state, extractor=extractor)
+            decision = candidate_policy_obj.select_action(state, extractor=extractor, allowed_actions=allowed)
             selected_action = decision.action.value
         except Exception:
             selected_action = "ANSWER_DIRECT"
@@ -629,8 +633,9 @@ def run_local_gpu_scientific_pipeline(
     for task_dict in task_dicts:
         tid = task_dict["task_id"]
         state = _make_state(task_dict)
+        allowed = [Action(a) for a in task_dict.get("allowed_actions", _ALL_ACTIONS)]
         try:
-            decision = sham_policy_obj.select_action(state, extractor=extractor)
+            decision = sham_policy_obj.select_action(state, extractor=extractor, allowed_actions=allowed)
             selected_action = decision.action.value
         except Exception:
             selected_action = "ANSWER_DIRECT"
