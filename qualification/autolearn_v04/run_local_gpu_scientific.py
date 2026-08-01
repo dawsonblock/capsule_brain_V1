@@ -136,7 +136,7 @@ def run_local_gpu_scientific_pipeline(
     n_counterfactuals = n_total_tasks * 4  # 4 actions per task
 
     print("=" * 70)
-    print("CAPSULE BRAIN 2.15.10 / AutoLearn 0.3.9 SCIENTIFIC QUALIFICATION (LOCAL GPU)")
+    print("CAPSULE BRAIN 2.15.11 / AutoLearn 0.3.10 SCIENTIFIC QUALIFICATION (LOCAL GPU)")
     print("=" * 70)
     print(f"Model: {model_id}")
     print(f"Device: {device}, dtype: {dtype}")
@@ -456,47 +456,135 @@ def run_local_gpu_scientific_pipeline(
     }
     write_json(artifacts / "dataset_manifest.json", dataset_manifest)
 
-    # --- Candidate policy (trained from experience rows) ---
-    # Simple policy: prefer ANSWER_DIRECT for direct_answer, RETRIEVE_MEMORY for memory, etc.
-    action_utility: dict[str, list[float]] = {}
-    for row in experience_rows:
-        action_utility.setdefault(row["action_id"], []).append(row["utility"])
-    candidate_policy_weights = {
-        action: round(sum(utils) / len(utils), 4) if utils else 0.0
-        for action, utils in action_utility.items()
-    }
-    candidate_policy = {
-        "schema_version": "policy/1",
-        "policy_id": f"candidate_local_gpu_{int(time.time())}",
-        "policy_type": "candidate",
-        "weights": candidate_policy_weights,
-        "policy_sha256": _digest(candidate_policy_weights),
-        "n_training_rows": len(experience_rows),
-    }
+    # --- Candidate policy (trained with SupervisedRouterLearner) ---
+    # Build training examples from experience split counterfactual outcomes.
+    from capsule_brain.autolearn.learner import (
+        SupervisedRouterLearner,
+        TrainingExample,
+        LearnerConfig,
+        utility_margin_weight,
+    )
+    from capsule_brain.autolearn.features import FeatureExtractor
+    from capsule_brain.autolearn.schema import ExecutiveState, Action
+    from capsule_brain.autolearn.baseline import BaselinePolicyV3
+
+    extractor = FeatureExtractor()
+
+    def _make_state(task_dict: dict) -> ExecutiveState:
+        """Build an ExecutiveState from a benchmark task dict."""
+        prompt = task_dict.get("prompt", "")
+        setup = task_dict.get("setup_spec", {})
+        family = task_dict.get("family", "")
+        # Determine available tools and workflow from family/setup_spec.
+        available_tools: list[str] = []
+        workflow_available = False
+        if family == "tool_required" or "tool" in family:
+            available_tools = setup.get("tools", ["search_tool"])
+        if family == "workflow_required" or "workflow" in family:
+            workflow_available = True
+        # Memory features from setup_spec.
+        memory_features = {}
+        if family == "memory_required" or "memory" in family:
+            memory_features = {"hit_count": 1, "top_similarity": 0.85}
+        return ExecutiveState(
+            prompt_features={"text": prompt, "estimated_difficulty": 0.5},
+            conversation_features={"depth": 0},
+            memory_features=memory_features,
+            available_tools=available_tools,
+            workflow_available=workflow_available,
+            model_id=model_id,
+        )
+
+    # Build training examples from experience split.
+    exp_task_ids = {t["task_id"] for t in task_dicts if t.get("split") == "experience"}
+    val_task_ids = {t["task_id"] for t in task_dicts if t.get("split") == "validation"}
+
+    def _build_training_examples(task_ids: set[str], permute_labels: bool = False, seed: int = 42):
+        """Build TrainingExample list from counterfactual outcomes for given task IDs."""
+        import random as _rng
+        rng = _rng.Random(seed)
+        examples = []
+        for tid in task_ids:
+            task_dict = task_dict_lookup.get(tid)
+            if not task_dict:
+                continue
+            task_outcomes = [o for o in outcomes if o["task_id"] == tid]
+            if len(task_outcomes) < 2:
+                continue
+            # Sort by utility descending to find best and second-best.
+            sorted_outcomes = sorted(task_outcomes, key=lambda o: o["utility"], reverse=True)
+            best = sorted_outcomes[0]
+            second = sorted_outcomes[1]
+            best_action_str = best["action_id"]
+            if permute_labels:
+                # Shuffle the action labels for sham training.
+                action_strs = [o["action_id"] for o in sorted_outcomes]
+                rng.shuffle(action_strs)
+                best_action_str = action_strs[0]
+            try:
+                best_action = Action(best_action_str)
+            except ValueError:
+                continue
+            if best_action not in Action.learned():
+                continue
+            state = _make_state(task_dict)
+            fv = extractor.extract(state)
+            margin = best["utility"] - second["utility"]
+            weight = utility_margin_weight(margin, LearnerConfig())
+            examples.append(TrainingExample(
+                features=fv.as_list(),
+                best_action=best_action,
+                utility_margin=margin,
+                weight=weight,
+            ))
+        return examples
+
+    train_examples = _build_training_examples(exp_task_ids, permute_labels=False)
+    val_examples = _build_training_examples(val_task_ids, permute_labels=False)
+    print(f"  Training examples: {len(train_examples)} train, {len(val_examples)} validation")
+
+    # Train candidate with SupervisedRouterLearner.
+    learner = SupervisedRouterLearner(LearnerConfig())
+    candidate_policy_obj, candidate_metrics = learner.train(
+        train_examples,
+        val_examples,
+        policy_id=f"candidate_learned_{int(time.time())}",
+        training_data_digest=_digest([ex.features for ex in train_examples]),
+    )
+    candidate_policy = candidate_policy_obj.to_dict()
+    candidate_policy["policy_type"] = "candidate"
+    candidate_policy["n_training_rows"] = len(train_examples)
     write_json(artifacts / "candidate_policy.json", candidate_policy)
+    print(f"  Candidate trained: train_acc={candidate_metrics.train_accuracy:.3f} val_acc={candidate_metrics.validation_accuracy:.3f}")
 
-    # --- Sham policy (random baseline) ---
-    import random as _rng
-    _rng.seed(42)
-    sham_weights = {
-        action: round(_rng.uniform(-1, 1), 4)
-        for action in candidate_policy_weights
-    }
-    sham_policy = {
-        "schema_version": "policy/1",
-        "policy_id": f"sham_local_gpu_{int(time.time())}",
-        "policy_type": "sham",
-        "weights": sham_weights,
-        "policy_sha256": _digest(sham_weights),
-        "n_training_rows": len(experience_rows),
-    }
+    # Train sham with permuted labels.
+    sham_train_examples = _build_training_examples(exp_task_ids, permute_labels=True, seed=42)
+    sham_val_examples = _build_training_examples(val_task_ids, permute_labels=True, seed=42)
+    sham_learner = SupervisedRouterLearner(LearnerConfig())
+    sham_policy_obj, sham_metrics = sham_learner.train(
+        sham_train_examples,
+        sham_val_examples,
+        policy_id=f"sham_permuted_{int(time.time())}",
+        training_data_digest=_digest([ex.features for ex in sham_train_examples]),
+    )
+    sham_policy = sham_policy_obj.to_dict()
+    sham_policy["policy_type"] = "sham"
+    sham_policy["n_training_rows"] = len(sham_train_examples)
     write_json(artifacts / "sham_policy.json", sham_policy)
+    print(f"  Sham trained (permuted labels): train_acc={sham_metrics.train_accuracy:.3f}")
 
-    # --- Baseline results (always ANSWER_DIRECT) ---
+    # --- Baseline results (BaselinePolicyV3) ---
+    baseline_v3 = BaselinePolicyV3(extractor=extractor)
     baseline_task_rows = []
     for task_dict in task_dicts:
         tid = task_dict["task_id"]
-        task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == "ANSWER_DIRECT"]
+        state = _make_state(task_dict)
+        try:
+            decision = baseline_v3.select_action(state)
+            selected_action = decision.action.value
+        except Exception:
+            selected_action = "ANSWER_DIRECT"
+        task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == selected_action]
         if task_outcomes:
             o = task_outcomes[0]
             success = o["verification"] == "success"
@@ -506,49 +594,57 @@ def run_local_gpu_scientific_pipeline(
                 "verified_success": success,
                 "selected_utility": o["utility"],
                 "utility": o["utility"],
+                "selected_action": selected_action,
             })
-    baseline_results = _build_results_dict("baseline_always_direct", baseline_task_rows, len(tasks))
+    baseline_results = _build_results_dict("baseline_v3", baseline_task_rows, len(tasks))
     write_json(artifacts / "baseline_results.json", baseline_results)
 
-    # --- Candidate results ---
-    # Pick the action with the highest weight from candidate_policy_weights.
+    # --- Candidate results (LearnedPolicy) ---
     candidate_task_rows = []
     for task_dict in task_dicts:
         tid = task_dict["task_id"]
-        task_outcomes = [o for o in outcomes if o["task_id"] == tid]
+        state = _make_state(task_dict)
+        try:
+            decision = candidate_policy_obj.select_action(state, extractor=extractor)
+            selected_action = decision.action.value
+        except Exception:
+            selected_action = "ANSWER_DIRECT"
+        task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == selected_action]
         if task_outcomes:
-            best_outcome = max(
-                task_outcomes,
-                key=lambda o: candidate_policy_weights.get(o["action_id"], 0.0),
-            )
-            success = best_outcome["verification"] == "success"
+            o = task_outcomes[0]
+            success = o["verification"] == "success"
             candidate_task_rows.append({
                 "task_id": tid,
                 "success": success,
                 "verified_success": success,
-                "selected_utility": best_outcome["utility"],
-                "utility": best_outcome["utility"],
+                "selected_utility": o["utility"],
+                "utility": o["utility"],
+                "selected_action": selected_action,
             })
     candidate_results = _build_results_dict(candidate_policy["policy_id"], candidate_task_rows, len(tasks))
     write_json(artifacts / "candidate_results.json", candidate_results)
 
-    # --- Sham results ---
-    # Pick a random action per task (seeded for reproducibility).
-    import random as _sham_rng
-    _sham_rng.seed(42)
+    # --- Sham results (permuted-label LearnedPolicy) ---
     sham_task_rows = []
     for task_dict in task_dicts:
         tid = task_dict["task_id"]
-        task_outcomes = [o for o in outcomes if o["task_id"] == tid]
+        state = _make_state(task_dict)
+        try:
+            decision = sham_policy_obj.select_action(state, extractor=extractor)
+            selected_action = decision.action.value
+        except Exception:
+            selected_action = "ANSWER_DIRECT"
+        task_outcomes = [o for o in outcomes if o["task_id"] == tid and o["action_id"] == selected_action]
         if task_outcomes:
-            chosen = _sham_rng.choice(task_outcomes)
-            success = chosen["verification"] == "success"
+            o = task_outcomes[0]
+            success = o["verification"] == "success"
             sham_task_rows.append({
                 "task_id": tid,
                 "success": success,
                 "verified_success": success,
-                "selected_utility": chosen["utility"],
-                "utility": chosen["utility"],
+                "selected_utility": o["utility"],
+                "utility": o["utility"],
+                "selected_action": selected_action,
             })
     sham_results = _build_results_dict(sham_policy["policy_id"], sham_task_rows, len(tasks))
     write_json(artifacts / "sham_results.json", sham_results)
