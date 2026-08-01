@@ -1,76 +1,92 @@
-# v0.4.7 Real-Model Qualification Results — Qwen2.5-3B-Instruct
+# v0.4.7 Real-Model Qualification Results — Qwen2.5-3B-Instruct (Corrected)
 
 **Date:** 2026-08-01
-**Run ID:** `v047_real_3b_v2_002`
+**Run ID:** `v047_real_3b_v3_001`
 **Model:** Qwen/Qwen2.5-3B-Instruct (float16)
 **Hardware:** RunPod RTX 4090 (24 GB VRAM)
 **Evidence origin:** REAL_MODEL
 **Protocol:** 0.4.7
-**Commit:** `786e498`
+**Commit:** `22284bb`
 
 ---
 
 ## 1. Executive Summary
 
-The v0.4.7 evaluation pipeline was executed end-to-end on real-model evidence
-generated from Qwen2.5-3B-Instruct. **ALL GATES PASS.** The candidate policy
-(SupervisedRouterLearner) demonstrates causal effectiveness over both the
-frozen BaselinePolicyV3 and the permuted-label sham control, with robustness
-across 9 replicates (3 generation seeds x 3 learner seeds).
+This is the corrected run that fixes the six experiment-integrity defects
+identified in the build 17 analysis. The previous run (`v047_real_3b_v2_002`)
+claimed "ALL GATES PASS" but that claim was invalid due to split contamination,
+fake generation seeds, incorrect sham delta calculation, and other issues.
+
+This corrected run produces a **scientifically honest FAIL**:
 
 | Gate | Status | One-line summary |
 |---|---|---|
-| A0 — Evidence admissibility | **PASS** | 24/24 sub-gates passed; real-model evidence is valid |
-| A1 — Routing headroom | **PASS** | Oracle exceeds baseline by LCB=0.187, win_rate=66.3% |
-| A2 — Candidate effectiveness | **PASS** | Candidate beats baseline by LCB=0.129, win_rate=53.8% |
-| A3 — Robustness | **PASS** | 9/9 replicates pass, 3 gen seeds, 3 learner seeds |
-| A4 — Promotion | **PASS** | Shadow + active eligible |
-| `legacy_gate_a_status` | **PASS** | All gates pass |
+| A0 — Evidence admissibility | **FAIL** | v0.4.6 Gate A failed (candidate=sham) |
+| A1 — Routing headroom | **FAIL** | Inherits from A0 |
+| A2 — Candidate effectiveness | **FAIL** | Candidate beats baseline but NOT sham (delta=0.0) |
+| A3 — Robustness | **FAIL** | 0/3 replicates pass (candidate_vs_sham never passes) |
+| A4 — Promotion | **FAIL** | shadow_eligible=false, active_eligible=false |
+| `legacy_gate_a_status` | **FAIL** | Correctly FAIL |
 
-**Shadow eligible:** Yes
-**Active eligible:** Yes
+**Shadow eligible:** No
+**Active eligible:** No
 
 ---
 
-## 2. Key Changes from Previous Run
+## 2. What Was Fixed from Previous Run
 
-The previous run (`v047_real_3b_001`) failed because the candidate policy was
-a global-average heuristic that picked one action for all tasks. This run fixes
-that with three key changes:
+### 2.1 Split contamination fixed (P0-1)
 
-### 2.1 Real SupervisedRouterLearner
+Policy results (baseline, candidate, sham, oracle) now evaluate ONLY on
+D_test (20 tasks). Experience, validation, OOD, and safety rows are excluded.
+Hard assertions prevent test/experience and test/validation overlap.
 
-The candidate policy is now trained using `SupervisedRouterLearner` — a
-multinomial logistic regression trained on 17 interpretable task features
-(prompt length, code indicators, tool keywords, retrieval indicators, etc.)
-with weighted cross-entropy loss. The learner trains on the experience split's
-counterfactual outcomes and makes per-task routing decisions.
+### 2.2 Metadata preserved in result rows (P0-2)
 
-### 2.2 BaselinePolicyV3 (not hardcoded ANSWER_DIRECT)
+Every result row now includes `split`, `family`, and `task_group_id`.
+Family evaluation can now properly distinguish task families (4 families
+detected: direct_answer, memory_required, tool_required, workflow_required).
 
-The baseline is now the frozen `BaselinePolicyV3` — a rule-based router with
-keyword heuristics for tool/workflow/memory signals. This is a competent
-baseline that routes correctly when signals are strong.
+### 2.3 Candidate-vs-sham delta fixed (P0-3)
 
-### 2.3 Permuted-label sham (not random weights)
+Replicate records now compute `candidate_vs_sham_delta` independently from
+`candidate_vs_baseline_delta`. The previous code incorrectly copied the
+baseline delta to the sham delta.
 
-The sham policy is trained with `SupervisedRouterLearner` on permuted action
-labels — same model capacity as the candidate but learning a random mapping.
-This controls for model complexity and ensures the candidate's advantage comes
-from learning the correct mapping, not from having more parameters.
+### 2.4 Proper stratified label permutation sham (P0-4)
 
-### 2.4 Aligned state representation
+Sham now permutes labels across ALL examples stratified by family,
+preserving marginal label statistics while destroying state-target
+association. The previous per-task shuffle was not a true permutation.
 
-The `_make_state` function in `run_local_gpu_scientific.py` now exactly matches
-`_state_from_task` in `run_counterfactuals.py`, ensuring the policy is trained
-on the same state distribution that the gate evaluation uses.
+### 2.5 Fake generation seeds removed (P0-5)
 
-### 2.5 Multi-seed replication
+Generation is deterministic (greedy decoding). We now honestly report
+`generation_deterministic=true` with 1 generation seed. Gate A3 handles
+this correctly (requires >= 1 gen seed when deterministic).
 
-Gate A3 requires >= 3 generation seeds and >= 3 learner seeds. Since greedy
-decoding is deterministic, all generation seeds produce identical results
-(honestly stable). Learner seeds use perturbed weight initialization to test
-training robustness. 9 replicates (3x3) all pass.
+### 2.6 Promotion semantics fixed (P0-6)
+
+CLI now routes through `evaluate_gate_a4()` module. `active_eligible` is
+ALWAYS False after offline qualification, matching the intended
+shadow/active promotion architecture.
+
+### 2.7 Source provenance fixed (P0-7)
+
+`source_tree_sha256` now hashes actual Python source files (src/,
+qualification/), not the benchmark manifest JSON.
+
+### 2.8 Dependency identity fixed (P0-8)
+
+`dependency_identity` now comes from runtime inspection
+(`torch.__version__`, `transformers.__version__`, GPU name, CUDA version)
+instead of hardcoded strings.
+
+### 2.9 Safety evaluation fixed (P0-10)
+
+CLI now loads `candidate_safety_results.json`, `baseline_safety_results.json`,
+and `sham_safety_results.json` for proper safety comparison across all
+three policies.
 
 ---
 
@@ -78,127 +94,172 @@ training robustness. 9 replicates (3x3) all pass.
 
 ### Gate A0 — Evidence Admissibility
 
-- **Status:** PASS
-- **Sub-gates:** 24/24 passed
-- **Evidence origin:** REAL_MODEL
+- **Status:** FAIL
+- **Reason:** v0.4.6 Gate A failed (candidate_vs_sham_lcb: fail, delta=0.0)
+- **Sub-gates:** 24 checks, evidence_origin=REAL_MODEL
 
-### Gate A1 — Routing Headroom
+### Gate A1 — Routing Headroom (D_test only, 20 tasks)
 
-- **Status:** PASS
+- **Status:** FAIL (inherits from A0)
 - **Oracle vs Baseline:**
-  - Mean delta: 0.4698
-  - 95% LCB: 0.1871
-  - Win rate: 66.3%
+  - Mean delta: 2.288
+  - 95% LCB: 0.781
+  - Win rate: 100%
   - Threshold: 0.02
-- **Oracle vs Sham:**
-  - Mean delta: 3.2820
-  - 95% LCB: 1.0160
-  - Win rate: 86.3%
+  - **PASS** — oracle clearly beats baseline on D_test
 
-### Gate A2 — Candidate Causal Effectiveness
+### Gate A2 — Candidate Causal Effectiveness (D_test only, 20 tasks)
 
-- **Status:** PASS
+- **Status:** FAIL
 - **Candidate vs Baseline:**
-  - Mean delta: 0.1885
-  - 95% LCB: 0.1295
-  - Win rate: 53.8%
-  - Tie rate: 46.2%
-  - Loss rate: 0.0%
+  - Mean delta: 2.288
+  - 95% LCB: 0.781
+  - Win rate: 100%
   - Threshold: 0.01
+  - **PASS** — candidate clearly beats baseline on D_test
 - **Candidate vs Sham:**
-  - Mean delta: 2.8730
-  - 95% LCB: 1.0160
-  - Win rate: 86.3%
+  - Mean delta: 0.000
+  - 95% LCB: 0.000
+  - Win rate: 0%
+  - **FAIL** — candidate does NOT beat sham
 
 ### Gate A3 — Robustness and Replication
 
-- **Status:** PASS
+- **Status:** FAIL
 - **Replicate summary:**
-  - n_replicates: 9 (3 gen x 3 learner seeds)
-  - n_generation_seeds: 3
-  - n_learner_seeds: 3
-  - Replication pass rate: 100% (9/9)
+  - n_replicates: 3 (1 gen seed x 3 learner seeds)
+  - generation_deterministic: true
+  - Replication pass rate: 0% (0/3)
   - Catastrophic reversals: 0
   - Seed diversity: OK
 - **Family summary:**
-  - n_sufficient: 1
-  - n_insufficient: 0
+  - n_sufficient: 0
+  - n_insufficient: 4
   - Critical regressions: 0
 - **Collapse check:** PASS
 - **Safety check:** PASS
 
 ### Gate A4 — Promotion Eligibility
 
-- **Status:** PASS
-- **Shadow eligible:** Yes
-- **Active eligible:** Yes
-- **Blocking reasons:** None
+- **Status:** FAIL
+- **Shadow eligible:** No
+- **Active eligible:** No
+- **Blocking reasons:** Gate A0-A3 did not pass
 
 ---
 
-## 4. Model Performance
+## 4. The Key Scientific Finding
+
+**The candidate beats the baseline but does NOT beat the sham.**
+
+This means the candidate's advantage over the baseline comes from model
+capacity (learning family→action mappings) not from learning a causal
+state→action relationship. The sham with stratified label permutation
+achieves identical performance because:
+
+1. The features encode family identity directly
+   (`workflow_capability_match = family == "workflow_required"`,
+   `hit_count = 1 if family == "memory_required"`)
+
+2. Within each family, the best action is constant
+   (all tool_required → CALL_TOOL, all memory_required → RETRIEVE_MEMORY, etc.)
+
+3. Stratified permutation within family preserves the family→action mapping
+
+4. Both candidate and sham learn the same family→action mapping
+
+5. The candidate's advantage over baseline comes from the baseline's
+   weaker keyword heuristics, not from superior state-conditioned routing
+
+This is exactly the "feature ablation" concern from the build 17 analysis.
+The experiment primarily demonstrates that a classifier can recover obvious
+routing labels from handcrafted task-family indicators — not that
+experience-driven AutoLearn discovers useful routing structure from
+general executive state.
+
+---
+
+## 5. What This Run Proves
+
+1. The corrected experiment infrastructure works correctly:
+   - D_test-only evaluation
+   - Proper stratified label permutation sham
+   - Honest generation_deterministic reporting
+   - Correct candidate-vs-sham delta calculation
+   - Proper promotion semantics (active=false)
+
+2. The candidate (SupervisedRouterLearner) beats the baseline
+   (BaselinePolicyV3) on D_test: delta=2.288, LCB=0.781, win_rate=100%
+
+3. The candidate does NOT beat the sham: delta=0.000
+
+4. The advantage over baseline comes from family→action mapping, not
+   causal state→action learning
+
+5. The gate framework correctly detects this and returns FAIL
+
+---
+
+## 6. What Is Needed Next (P1 — Scientific Strength)
+
+1. **Feature ablation**: Remove family-proxy features and rerun. If
+   performance collapses, the current experiment is measuring engineered
+   label leakage.
+
+2. **Stronger sham**: The current stratified permutation preserves
+   family→action mapping. Need a sham that destroys this mapping while
+   preserving marginal label statistics across the full dataset.
+
+3. **Prompt-only features**: Use only features derived naturally from
+   prompt text, not from setup_spec or family labels.
+
+4. **Stronger statistical baseline**: Compare against logistic regression
+   trained directly on task labels, not just keyword heuristics.
+
+5. **Larger test set**: 20 test tasks is too small for convincing
+   generalization evidence.
+
+6. **More diverse families**: Ensure multiple tasks per family have
+   different best actions, so family identity alone doesn't determine
+   the optimal route.
+
+---
+
+## 7. Model Performance
 
 - **Model:** Qwen/Qwen2.5-3B-Instruct (float16)
 - **VRAM:** 6.42 GB
 - **Total tasks:** 80 (30 experience, 10 validation, 20 test, 10 ood, 10 safety)
 - **Total counterfactuals:** 320 (4 actions x 80 tasks)
 - **Verified success:** 49/320 (15.3%)
-- **Mean latency:** 1082ms
+- **Mean latency:** 1073ms
 - **Mean tokens:** 269
-- **Total elapsed:** 412s (~7 minutes)
+- **Total elapsed:** 368s
 
 ---
 
-## 5. Candidate Policy Details
+## 8. D_test Performance (20 tasks)
 
-- **Policy type:** SupervisedRouterLearner (multinomial logistic regression)
-- **Training examples:** 30 (experience split)
-- **Validation examples:** 10 (validation split)
-- **Train accuracy:** 100%
-- **Validation accuracy:** 100%
-- **Features:** 17 interpretable features (prompt length, code indicators, etc.)
-- **Actions:** 4 learned actions (ANSWER_DIRECT, RETRIEVE_MEMORY, CALL_TOOL, START_WORKFLOW)
+| Policy | Mean utility | n_rows |
+|---|---|---|
+| Baseline (BaselinePolicyV3) | -3.005 | 20 |
+| Candidate (SupervisedRouterLearner) | -0.717 | 20 |
+| Sham (permuted-label) | -0.717 | 20 |
+| Oracle (best action) | -0.717 | 20 |
 
-### Per-family routing decisions:
-
-| Family | Candidate action | Baseline action | Utility delta |
-|---|---|---|---|
-| direct_answer | RETRIEVE_MEMORY | ANSWER_DIRECT | +0.26 |
-| memory_required | RETRIEVE_MEMORY | RETRIEVE_MEMORY | 0.00 |
-| tool_required | CALL_TOOL | CALL_TOOL | 0.00 |
-| workflow_required | START_WORKFLOW | START_WORKFLOW | 0.00 |
-| safety_adversarial | RETRIEVE_MEMORY | ANSWER_DIRECT | +2.05 |
-
-The candidate's advantage comes from routing direct_answer tasks to
-RETRIEVE_MEMORY (which has slightly higher utility than ANSWER_DIRECT) and
-safety tasks to RETRIEVE_MEMORY (which has much higher utility).
+Candidate = Sham = Oracle (all learn the same family→action mapping).
+Baseline is worse because its keyword heuristics are weaker than
+the learned family classifier.
 
 ---
 
-## 6. Scientific Integrity
+## 9. Reproducibility
 
-This run demonstrates the core v0.4.7 scientific principle: **Gate A0 PASS
-does not imply Gate A2 PASS.** The candidate must independently prove causal
-effectiveness over both baseline and sham controls.
-
-The previous run (`v047_real_3b_001`) correctly failed Gate A2 because the
-heuristic candidate was identical to baseline. This run passes because the
-SupervisedRouterLearner makes per-task routing decisions that beat the
-baseline's keyword heuristics.
-
-The sham control (permuted-label training) confirms that the candidate's
-advantage comes from learning the correct action mapping, not from model
-complexity or regularization effects.
-
----
-
-## 7. Reproducibility
-
-- **Commit:** `786e498`
+- **Commit:** `22284bb`
 - **Model:** Qwen/Qwen2.5-3B-Instruct (HuggingFace, float16)
-- **Generation:** Greedy decoding (do_sample=False, temperature=0.0)
+- **Generation:** Greedy decoding (do_sample=False, deterministic)
 - **Task seed:** 42
 - **Learner seeds:** [11, 22, 33]
-- **Generation seeds:** [101, 202, 303]
+- **Generation seed:** 101 (single deterministic run)
 - **Hardware:** RunPod RTX 4090, 24GB VRAM
-- **Software:** PyTorch 2.1.0+cu118, Transformers 4.44.2
+- **Dependencies:** Captured from runtime inspection in source_provenance.json
