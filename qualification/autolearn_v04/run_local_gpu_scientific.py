@@ -862,6 +862,70 @@ def run_local_gpu_scientific_pipeline(
             print(f"  Leave-family-out ({held_out_family}): n_train={len(lfo_train)}, test_util={lfo_mean:.4f}")
     write_json(artifacts / "leave_family_out_results.json", leave_family_out_results)
 
+    # --- Matched-pair flip accuracy test ---
+    # Construct matched pairs (x, x') where the optimal action flips.
+    # Measure: does the policy pick DIFFERENT actions for x vs x'?
+    # A family lookup policy picks the same action for both (flip accuracy = 0).
+    # A genuine state-conditioned policy responds to the causal feature.
+    matched_pair_results: list[dict] = []
+    # Find matched pairs in the test split by pair_id
+    test_pairs: dict[str, list[dict]] = {}
+    for td in test_task_dicts:
+        setup = td.get("setup_spec", {}) or {}
+        pair_id = setup.get("pair_id", "")
+        if pair_id:
+            test_pairs.setdefault(pair_id, []).append(td)
+
+    n_pairs_total = 0
+    n_pairs_flipped_correctly = 0
+    for pair_id, pair_tasks in test_pairs.items():
+        if len(pair_tasks) != 2:
+            continue
+        n_pairs_total += 1
+        task_a, task_b = pair_tasks[0], pair_tasks[1]
+        # Get policy decisions for both
+        decisions = {}
+        for td in [task_a, task_b]:
+            state = _make_state(td)
+            allowed = [Action(a) for a in td.get("allowed_actions", _ALL_ACTIONS)]
+            try:
+                decision = candidate_policy_obj.select_action(state, extractor=extractor, allowed_actions=allowed)
+                decisions[td["task_id"]] = decision.action.value
+            except Exception:
+                decisions[td["task_id"]] = "ANSWER_DIRECT"
+        # Check if the policy picked DIFFERENT actions for the pair
+        action_a = decisions[task_a["task_id"]]
+        action_b = decisions[task_b["task_id"]]
+        flipped = action_a != action_b
+        if flipped:
+            n_pairs_flipped_correctly += 1
+        # Also check what the optimal actions are (from verifier type)
+        opt_a = task_a.get("verifier_spec", {}).get("type", "")
+        opt_b = task_b.get("verifier_spec", {}).get("type", "")
+        matched_pair_results.append({
+            "pair_id": pair_id,
+            "task_a_id": task_a["task_id"],
+            "task_b_id": task_b["task_id"],
+            "action_a": action_a,
+            "action_b": action_b,
+            "optimal_a_type": opt_a,
+            "optimal_b_type": opt_b,
+            "policy_flipped": flipped,
+        })
+
+    flip_accuracy = n_pairs_flipped_correctly / n_pairs_total if n_pairs_total > 0 else 0.0
+    flip_summary = {
+        "n_pairs": n_pairs_total,
+        "n_flipped_correctly": n_pairs_flipped_correctly,
+        "flip_accuracy": round(flip_accuracy, 4),
+        "verdict": "PASS" if flip_accuracy > 0.5 else "FAIL",
+        "threshold": 0.5,
+        "note": "A family lookup policy picks the same action for both pair members (flip=0). A genuine state-conditioned policy responds to the causal feature.",
+        "pairs": matched_pair_results,
+    }
+    write_json(artifacts / "matched_pair_flip_results.json", flip_summary)
+    print(f"  Matched-pair flip: {n_pairs_flipped_correctly}/{n_pairs_total} = {flip_accuracy:.3f} ({flip_summary['verdict']})")
+
     # --- Learner-seed replication for Gate A3 ---
     # Generation is deterministic (greedy decoding), so we have 1 generation
     # replicate. Learner replication uses 3 seeds with perturbed init.

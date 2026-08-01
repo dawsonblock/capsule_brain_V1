@@ -60,12 +60,17 @@ def evaluate_gate_a2(
     sham_results: dict,
     config: GateA2Config,
     statistics_config: StatisticsConfig,
+    matched_pair_flip: dict | None = None,
 ) -> GateA2Result:
     """Evaluate candidate causal effectiveness.
 
     The candidate must beat BOTH baseline and sham. Passes only when:
       - LCB(delta_candidate_vs_baseline) > epsilon_0
       - LCB(delta_candidate_vs_sham) > epsilon_S
+
+    Additionally, if matched-pair flip data is provided, the candidate
+    must achieve flip accuracy > 0.5 (the policy must pick different
+    actions for matched pairs where the optimal route flips).
 
     Do NOT permit a zero or positive point estimate to pass when the
     lower confidence bound does not exceed the threshold.
@@ -121,11 +126,25 @@ def evaluate_gate_a2(
             f"does not exceed epsilon_S {cs_threshold:.6f}"
         )
 
-    # Gate passes only when both comparisons pass.
+    # Matched-pair flip accuracy check.
+    flip_data: dict = {}
+    flip_ok = True
+    if matched_pair_flip is not None:
+        flip_data = matched_pair_flip
+        flip_acc = matched_pair_flip.get("flip_accuracy", 0.0)
+        flip_threshold = matched_pair_flip.get("threshold", 0.5)
+        flip_ok = flip_acc > flip_threshold
+        if not flip_ok:
+            reasons.append(
+                f"matched_pair_flip accuracy {flip_acc:.4f} "
+                f"does not exceed threshold {flip_threshold:.4f}"
+            )
+
+    # Gate passes only when all comparisons pass.
     if not cand_vs_base_rows and not cand_vs_sham_rows:
         status = AuditStatus.BLOCKED.value
         reasons.append("no paired task rows available for candidate comparisons")
-    elif cb_result.passes and cs_result.passes:
+    elif cb_result.passes and cs_result.passes and flip_ok:
         status = AuditStatus.PASS.value
     else:
         status = AuditStatus.FAIL.value
@@ -134,6 +153,7 @@ def evaluate_gate_a2(
         status=status,
         candidate_vs_baseline=cb_result.to_dict(),
         candidate_vs_sham=cs_result.to_dict(),
+        matched_pair_flip=flip_data,
         reasons=reasons,
     )
 

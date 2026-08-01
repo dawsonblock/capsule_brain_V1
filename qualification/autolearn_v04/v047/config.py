@@ -21,9 +21,14 @@ class GateA1Config:
 
 @dataclass(frozen=True)
 class GateA2Config:
-    """Gate A2 — Candidate causal effectiveness thresholds."""
-    candidate_vs_baseline_min_effect: float = 0.01
-    candidate_vs_sham_min_effect: float = 0.01
+    """Gate A2 — Candidate causal effectiveness thresholds.
+
+    The practical-effect threshold epsilon ensures that microscopic
+    statistically significant improvements cannot qualify. The candidate
+    must beat BOTH baseline and sham by at least epsilon.
+    """
+    candidate_vs_baseline_min_effect: float = 0.05  # epsilon_0
+    candidate_vs_sham_min_effect: float = 0.02      # epsilon_S
     confidence_level: float = 0.95
 
 

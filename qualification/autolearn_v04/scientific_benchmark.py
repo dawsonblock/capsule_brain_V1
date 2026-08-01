@@ -877,6 +877,229 @@ _WITHIN_FAMILY_CROSSOVERS = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Matched-pair flip tasks
+#
+# These construct PAIRS of tasks that share the same prompt template but
+# differ in one decision-relevant property, such that the optimal route
+# flips between the two. This directly tests whether the learner responds
+# to the causal feature rather than the task class.
+#
+# Each pair (x, x') shares a common base prompt but has a property edited:
+#   x  → a_A*  (optimal action A)
+#   x' → a_B*  (optimal action B, after edit)
+#
+# The pair_id links them. Flip accuracy = does the policy pick different
+# actions for x vs x'?
+# ---------------------------------------------------------------------------
+
+
+def _matched_pair_memory_vs_direct(tid_a: str, tid_b: str, split: str, rng: random.Random) -> tuple[BenchmarkTask, BenchmarkTask]:
+    """Pair: same question, but one has answer in prompt (direct) and one in memory.
+
+    x:  "The value is 42. What is the value?" → ANSWER_DIRECT optimal
+    x': "What is the value stored under key 'vault_xxx'?" → RETRIEVE_MEMORY optimal
+    """
+    value = str(rng.randint(1000, 9999))
+    key = f"vault_{_hex(rng, 4)}"
+    pair_id = f"mp_mem_direct_{_hex(rng, 4)}"
+    entity_seed = rng.getrandbits(31)
+
+    # x: answer in prompt → direct
+    prompt_a = f"The stored value is {value}. What is the value? Output JSON: {{\"result\": \"{value}\"}}"
+    task_a = BenchmarkTask(
+        task_id=tid_a,
+        family="direct_answer",
+        archetype=_archetype("direct_answer", split, "matched_pair_direct"),
+        split=split,
+        prompt=prompt_a,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"pair_id": pair_id, "pair_role": "A_direct", "crossover": "matched_pair"},
+        verifier_spec={"type": "direct_exact", "expected_value": value},
+        expected_output_digest=sha256_text(value),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="matched_pair_direct",
+        group_id=_group_id("matched_pair", split, "mem_direct", entity_seed),
+        template_family="matched_pair",
+        generator_family="mp_mem_direct_v04",
+        entity_family=f"mpmd_{entity_seed & 0xFF}",
+        capability_family="direct_reasoning",
+    )
+
+    # x': answer in memory → retrieve
+    prompt_b = f"What is the value stored under key '{key}'? Output JSON: {{\"result\": \"<value>\"}}"
+    task_b = BenchmarkTask(
+        task_id=tid_b,
+        family="direct_answer",
+        archetype=_archetype("direct_answer", split, "matched_pair_memory"),
+        split=split,
+        prompt=prompt_b,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"secret": f"SECRET-{value}", "key": key, "pair_id": pair_id, "pair_role": "B_memory", "crossover": "matched_pair"},
+        verifier_spec={"type": "memory_secret", "expected_secret": f"SECRET-{value}"},
+        expected_output_digest=sha256_text(f"SECRET-{value}"),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="matched_pair_memory",
+        group_id=_group_id("matched_pair", split, "mem_direct", entity_seed),
+        template_family="matched_pair",
+        generator_family="mp_mem_direct_v04",
+        entity_family=f"mpmd_{entity_seed & 0xFF}",
+        capability_family="memory_retrieval",
+    )
+
+    return task_a, task_b
+
+
+def _matched_pair_tool_vs_direct(tid_a: str, tid_b: str, split: str, rng: random.Random) -> tuple[BenchmarkTask, BenchmarkTask]:
+    """Pair: same question, but one has answer in prompt (direct) and one needs tool.
+
+    x:  "The tool returns 'DATA-1234'. What does it return?" → ANSWER_DIRECT optimal
+    x': "What does tool_xxx currently return?" → CALL_TOOL optimal
+    """
+    value = f"DATA-{rng.randint(1000, 9999)}"
+    tool_name = f"data_tool_{_hex(rng, 4)}"
+    pair_id = f"mp_tool_direct_{_hex(rng, 4)}"
+    entity_seed = rng.getrandbits(31)
+
+    # x: answer in prompt → direct
+    prompt_a = f"The tool {tool_name} returns the value '{value}'. What is the current reading? Output JSON: {{\"result\": \"{value}\"}}"
+    task_a = BenchmarkTask(
+        task_id=tid_a,
+        family="tool_required",
+        archetype=_archetype("tool_required", split, "matched_pair_direct"),
+        split=split,
+        prompt=prompt_a,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"tool_name": tool_name, "expected_tool_output": value, "pair_id": pair_id, "pair_role": "A_direct", "crossover": "matched_pair"},
+        verifier_spec={"type": "direct_exact", "expected_value": value},
+        expected_output_digest=sha256_text(value),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="matched_pair_direct",
+        group_id=_group_id("matched_pair", split, "tool_direct", entity_seed),
+        template_family="matched_pair",
+        generator_family="mp_tool_direct_v04",
+        entity_family=f"mptd_{entity_seed & 0xFF}",
+        capability_family="direct_reasoning",
+    )
+
+    # x': answer needs tool → call tool
+    prompt_b = f"What is the current reading from {tool_name}? Output JSON: {{\"result\": \"<value>\"}}"
+    task_b = BenchmarkTask(
+        task_id=tid_b,
+        family="tool_required",
+        archetype=_archetype("tool_required", split, "matched_pair_tool"),
+        split=split,
+        prompt=prompt_b,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"tool_name": tool_name, "expected_tool_output": value, "pair_id": pair_id, "pair_role": "B_tool", "crossover": "matched_pair"},
+        verifier_spec={
+            "type": "tool_output",
+            "expected_tool_output": value,
+            "tool_name": tool_name,
+            "expected_invocation_count": 1,
+        },
+        expected_output_digest=sha256_text(value),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="matched_pair_tool",
+        group_id=_group_id("matched_pair", split, "tool_direct", entity_seed),
+        template_family="matched_pair",
+        generator_family="mp_tool_direct_v04",
+        entity_family=f"mptd_{entity_seed & 0xFF}",
+        capability_family="tool_invocation",
+    )
+
+    return task_a, task_b
+
+
+def _matched_pair_workflow_vs_direct(tid_a: str, tid_b: str, split: str, rng: random.Random) -> tuple[BenchmarkTask, BenchmarkTask]:
+    """Pair: same question, but one can be answered directly and one needs workflow.
+
+    x:  "Write a function returning 42. Or just state the value." → ANSWER_DIRECT optimal
+    x': "Write a function returning the stored secret. Pass acceptance test." → START_WORKFLOW optimal
+    """
+    value = rng.randint(1, 100)
+    secret = f"SECRET-{_hex(rng)}"
+    key = f"vault_{_hex(rng, 4)}"
+    pair_id = f"mp_wf_direct_{_hex(rng, 4)}"
+    entity_seed = rng.getrandbits(31)
+
+    # x: value in prompt → direct
+    prompt_a = (
+        f"Write a Python function called 'compute' that returns {value}. "
+        f"Alternatively, just state the return value. "
+        f"Output JSON: {{\"result\": {value}}}"
+    )
+    task_a = BenchmarkTask(
+        task_id=tid_a,
+        family="workflow_required",
+        archetype=_archetype("workflow_required", split, "matched_pair_direct"),
+        split=split,
+        prompt=prompt_a,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"pair_id": pair_id, "pair_role": "A_direct", "crossover": "matched_pair"},
+        verifier_spec={"type": "direct_exact", "expected_value": str(value)},
+        expected_output_digest=sha256_text(str(value)),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="matched_pair_direct",
+        group_id=_group_id("matched_pair", split, "wf_direct", entity_seed),
+        template_family="matched_pair",
+        generator_family="mp_wf_direct_v04",
+        entity_family=f"mpwd_{entity_seed & 0xFF}",
+        capability_family="direct_reasoning",
+    )
+
+    # x': needs workflow (acceptance test)
+    nonce = _hex(rng)
+    acceptance_code = (
+        "from solution import compute\n"
+        "def test_compute():\n"
+        f"    result = compute()\n"
+        f"    assert result == {repr(secret)}, f'wrong: {{result}}'\n"
+        "if __name__ == '__main__':\n"
+        "    test_compute()\n"
+        "    print('ACCEPTANCE_OK')\n"
+    )
+    prompt_b = (
+        f"Write a Python function called 'compute' that returns the value "
+        f"stored under key '{key}'. The function must pass an acceptance test. "
+        f"Output the function in a ```python code block."
+    )
+    task_b = BenchmarkTask(
+        task_id=tid_b,
+        family="workflow_required",
+        archetype=_archetype("workflow_required", split, "matched_pair_workflow"),
+        split=split,
+        prompt=prompt_b,
+        allowed_actions=_LEARNED_ACTIONS,
+        setup_spec={"secret": secret, "key": key, "nonce": nonce, "acceptance_code": acceptance_code, "pair_id": pair_id, "pair_role": "B_workflow", "crossover": "matched_pair"},
+        verifier_spec={"type": "workflow_acceptance", "expected_marker": "ACCEPTANCE_OK", "nonce": nonce},
+        expected_output_digest=sha256_text("ACCEPTANCE_OK"),
+        generator_seed=rng.getrandbits(31),
+        risk_class="standard",
+        crossover_type="matched_pair_workflow",
+        group_id=_group_id("matched_pair", split, "wf_direct", entity_seed),
+        template_family="matched_pair",
+        generator_family="mp_wf_direct_v04",
+        entity_family=f"mpwd_{entity_seed & 0xFF}",
+        capability_family="workflow_coding",
+    )
+
+    return task_a, task_b
+
+
+# Matched-pair builders: each returns (task_a, task_b) where optimal action flips.
+_MATCHED_PAIR_BUILDERS = [
+    _matched_pair_memory_vs_direct,
+    _matched_pair_tool_vs_direct,
+    _matched_pair_workflow_vs_direct,
+]
+
+
 def _allocate_scientific_split(
     split: str,
     n: int,
@@ -966,6 +1189,20 @@ def _allocate_scientific_split(
         else:
             builder = _scientific_workflow_task
         tasks.append(builder(tid, split, rng_local, crossover=ctype))
+
+    # Matched-pair flip tasks: construct pairs where the optimal action
+    # flips between the two members. These directly test whether the
+    # learner responds to the causal feature rather than the task class.
+    # Generate at least 1 pair per builder, more for larger splits.
+    n_matched_pairs = max(len(_MATCHED_PAIR_BUILDERS), n // 10)
+    for j in range(n_matched_pairs):
+        builder = _MATCHED_PAIR_BUILDERS[j % len(_MATCHED_PAIR_BUILDERS)]
+        tid_a = f"{split}_mpair_{j:04d}_a"
+        tid_b = f"{split}_mpair_{j:04d}_b"
+        rng_local = random.Random(rng.getrandbits(31))
+        task_a, task_b = builder(tid_a, tid_b, split, rng_local)
+        tasks.append(task_a)
+        tasks.append(task_b)
 
     return tasks
 
