@@ -497,7 +497,7 @@ def _cmd_evaluate(args) -> int:
     # --- Gate A2: Candidate causal effectiveness ---
     # Load matched-pair flip results if available.
     matched_pair_flip = None
-    mp_path = evidence_dir / "matched_pair_flip_results.json"
+    mp_path = Path(args.evidence_dir) / "matched_pair_flip_results.json"
     if mp_path.exists():
         import json as _json
         with open(mp_path) as f:
