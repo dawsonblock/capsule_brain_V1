@@ -76,7 +76,12 @@ def _git_commit_sha() -> str:
 
 
 def _verifier_for_family(family: str) -> tuple[str, str, str]:
-    """Return (verifier_name, verifier_version, verifier_class) for a task family."""
+    """Return (verifier_name, verifier_version, verifier_class) for a task family.
+
+    NOTE: This is used only for provenance metadata labeling, not for
+    actual verification. Actual verification dispatches by verifier_spec["type"]
+    in verify_scientific_outcome(), which is family-independent.
+    """
     _MAP = {
         "direct_answer": ("exact_match", "1.0", "ExactMatchVerifier"),
         "memory_required": ("memory_recall", "1.0", "MemoryRecallVerifier"),
@@ -136,7 +141,7 @@ def run_local_gpu_scientific_pipeline(
     n_counterfactuals = n_total_tasks * 4  # 4 actions per task
 
     print("=" * 70)
-    print("CAPSULE BRAIN 2.15.11 / AutoLearn 0.3.10 SCIENTIFIC QUALIFICATION (LOCAL GPU)")
+    print("CAPSULE BRAIN 2.15.12 / AutoLearn 0.3.10 SCIENTIFIC QUALIFICATION (LOCAL GPU)")
     print("=" * 70)
     print(f"Model: {model_id}")
     print(f"Device: {device}, dtype: {dtype}")
@@ -164,7 +169,7 @@ def run_local_gpu_scientific_pipeline(
 
     benchmark_manifest = {
         "schema_version": "scientific-benchmark/1",
-        "package_version": "2.15.11",
+        "package_version": "2.15.12",
         "qualification_version": "0.4.7",
         "model_id": model_id,
         "provider_class": "real_model",
@@ -583,20 +588,23 @@ def run_local_gpu_scientific_pipeline(
     write_json(artifacts / "candidate_policy.json", candidate_policy)
     print(f"  Candidate trained: train_acc={candidate_metrics.train_accuracy:.3f} val_acc={candidate_metrics.validation_accuracy:.3f}")
 
-    # --- Feature-family diagnostic classifier ---
-    # Train a diagnostic classifier g(h(x))→family to check if family
-    # identity is still predictable from the prompt-only features.
+    # --- Feature-family diagnostic classifier (multi-probe) ---
+    # Train multiple diagnostic classifiers g(h(x))→family to check if
+    # family identity is predictable from the features.
+    #
+    # We use a SUITE of probes (nearest centroid, logistic regression,
+    # linear SVM, random forest) and report the MAXIMUM accuracy.
+    # Failure of one weak decoder to extract family does not imply
+    # family information is absent — the strongest probe determines
+    # the leakage verdict.
     #
     # Metrics:
-    #   A_family     = cross-validated accuracy of g(h(x))→family
+    #   A_family     = max over probes of cross-validated accuracy
     #   A_majority   = majority-class baseline accuracy
     #   excess       = A_family - A_majority
     #   L_F          = (A_family - A_majority) / (1 - A_majority)
-    #                  (normalized lift: fraction of possible improvement over chance)
     #
     # Pass criterion: excess < delta_F (default 0.10)
-    # This means family predictability must not exceed majority-class
-    # baseline by more than 10 percentage points.
     from collections import Counter
     all_task_dicts_for_diag = [t for t in task_dicts if t.get("split") in ("experience", "validation", "test")]
     diag_features: list[list[float]] = []
@@ -607,6 +615,9 @@ def run_local_gpu_scientific_pipeline(
         diag_features.append(fv.as_list())
         diag_labels.append(td.get("family", "unknown"))
     from sklearn.neighbors import NearestCentroid
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.svm import LinearSVC
+    from sklearn.ensemble import RandomForestClassifier
     from sklearn.model_selection import cross_val_score
     import numpy as _np
     X = _np.array(diag_features)
@@ -617,18 +628,38 @@ def run_local_gpu_scientific_pipeline(
     # Majority-class baseline
     a_majority = max(family_counts.values()) / n_samples if n_samples > 0 else 0.0
     delta_f_threshold = 0.10  # max acceptable excess over majority baseline
+
+    # Multi-probe suite: report the strongest probe's accuracy.
+    probe_results: dict[str, float] = {}
     if n_families > 1 and n_samples > n_families * 2:
-        clf = NearestCentroid()
-        scores = cross_val_score(clf, X, y, cv=min(5, n_samples // n_families))
-        a_family = float(scores.mean())
+        cv_folds = min(5, n_samples // n_families)
+        probes = {
+            "nearest_centroid": NearestCentroid(),
+            "logistic_regression": LogisticRegression(max_iter=500, random_state=42),
+            "linear_svm": LinearSVC(max_iter=1000, random_state=42),
+            "random_forest": RandomForestClassifier(n_estimators=50, random_state=42, max_depth=5),
+        }
+        for probe_name, probe_clf in probes.items():
+            try:
+                scores = cross_val_score(probe_clf, X, y, cv=cv_folds)
+                probe_results[probe_name] = float(scores.mean())
+            except Exception:
+                probe_results[probe_name] = 0.0
+        a_family = max(probe_results.values()) if probe_results else 1.0
+        best_probe = max(probe_results, key=probe_results.get) if probe_results else "none"
     else:
         a_family = 1.0  # can't evaluate, assume worst
+        best_probe = "none"
+        probe_results = {}
+
     excess = a_family - a_majority
     l_f = excess / (1.0 - a_majority) if (1.0 - a_majority) > 0 else 1.0
     leakage_verdict = "LEAKAGE_DETECTED" if excess >= delta_f_threshold else "OK"
     diagnostic = {
-        "schema_version": "feature-diagnostic/2",
+        "schema_version": "feature-diagnostic/3",
         "a_family": round(a_family, 4),
+        "best_probe": best_probe,
+        "probe_results": {k: round(v, 4) for k, v in probe_results.items()},
         "a_majority": round(a_majority, 4),
         "excess": round(excess, 4),
         "l_f_normalized_lift": round(l_f, 4),
@@ -638,15 +669,18 @@ def run_local_gpu_scientific_pipeline(
         "n_samples": n_samples,
         "verdict": leakage_verdict,
         "note": (
-            "A_family = diagnostic classifier accuracy. "
+            "A_family = max over probes of cross-validated accuracy. "
+            "Probes: nearest_centroid, logistic_regression, linear_svm, random_forest. "
             "A_majority = majority-class baseline. "
             "excess = A_family - A_majority. "
             "L_F = (A_family - A_majority)/(1 - A_majority) = normalized lift. "
-            f"Pass if excess < {delta_f_threshold}."
+            f"Pass if excess < {delta_f_threshold}. "
+            "Using max over probes: failure of one weak decoder does not "
+            "imply family information is absent."
         ),
     }
     write_json(artifacts / "feature_family_diagnostic.json", diagnostic)
-    print(f"  Feature-family diagnostic: A_family={a_family:.3f}, A_majority={a_majority:.3f}, excess={excess:.3f}, L_F={l_f:.3f} ({leakage_verdict})")
+    print(f"  Feature-family diagnostic: A_family={a_family:.3f} (best={best_probe}), A_majority={a_majority:.3f}, excess={excess:.3f}, L_F={l_f:.3f} ({leakage_verdict})")
 
     # --- Proper label permutation sham ---
     # Build the true label vector from training examples, then permute
@@ -1317,7 +1351,7 @@ def run_local_gpu_scientific_pipeline(
         "commit_sha": commit_sha,
         "original_commit_sha": commit_sha,
         # Version identity for historical identity validator.
-        "original_package_version": "2.15.11",
+        "original_package_version": "2.15.12",
         "original_qualification_version": "0.4.7",
         "provider_model_identity": model_id,
         "dependency_identity": dep_identity,
@@ -1329,32 +1363,40 @@ def run_local_gpu_scientific_pipeline(
     # construction, statistical gates, and seeds into a single
     # experiment manifest. This freezes the measurement instrument
     # so that learner changes can be evaluated against a fixed target.
+    # Compute actual split counts from the generated benchmark
+    from collections import Counter as _Counter
+    _actual_splits = dict(_Counter(t.get("split", "unknown") for t in task_dicts))
+
     experiment_manifest = {
         "schema_version": "experiment-manifest/1",
         "build_version": "20",
+        "package_version": "2.15.12",
         "frozen_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "commit_sha": commit_sha,
         # Benchmark configuration (frozen)
         "benchmark": {
             "task_seed": 42,
-            "n_experience": n_experience,
-            "n_validation": n_validation,
-            "n_test": n_test,
-            "n_ood": n_ood,
-            "n_safety": n_safety,
-            "crossover_fraction": 0.25,
-            "n_within_family_crossovers": 8,
+            "n_within_family_crossovers": 4,
             "n_matched_pair_builders": 3,
             "families": ["direct_answer", "memory_required", "tool_required", "workflow_required", "safety_adversarial"],
             "actions": list(_ALL_ACTIONS),
+            "verifier_decoupled_from_family": True,
         },
-        # Split configuration (frozen)
+        # Split configuration (frozen) — both requested and actual
         "splits": {
-            "experience": n_experience,
-            "validation": n_validation,
-            "test": n_test,
-            "ood": n_ood,
-            "safety": n_safety,
+            "requested_counts": {
+                "experience": n_experience,
+                "validation": n_validation,
+                "test": n_test,
+                "ood": n_ood,
+                "safety": n_safety,
+            },
+            "actual_counts": _actual_splits,
+            "requested_equals_actual": _actual_splits.get("experience", 0) == n_experience
+                and _actual_splits.get("validation", 0) == n_validation
+                and _actual_splits.get("test", 0) == n_test
+                and _actual_splits.get("ood", 0) == n_ood
+                and _actual_splits.get("safety", 0) == n_safety,
         },
         # Verifier configuration (frozen)
         "verifier": {
@@ -1498,9 +1540,9 @@ def run_local_gpu_scientific_pipeline(
     # --- Evidence manifest ---
     evidence_manifest = {
         "schema_version": "evidence-manifest/1",
-        "package_version": "2.15.11",
+        "package_version": "2.15.12",
         "qualification_version": "0.4.7",
-        "original_package_version": "2.15.11",
+        "original_package_version": "2.15.12",
         "original_qualification_version": "0.4.7",
         "evidence_run_id": f"local_gpu_{int(time.time())}",
         "evidence_origin": "REAL_MODEL",
@@ -1553,7 +1595,7 @@ def run_local_gpu_scientific_pipeline(
         "run_id": f"local_gpu_{int(time.time())}",
         "evidence_origin": "REAL_MODEL",
         "protocol_version": "0.4.7",
-        "package_version": "2.15.11",
+        "package_version": "2.15.12",
         "model_id": model_id,
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }

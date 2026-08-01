@@ -1,4 +1,4 @@
-"""Comprehensive tests for the v0.4.6 release (Capsule Brain 2.15.11 / AutoLearn v0.4.7).
+"""Comprehensive tests for the v0.4.6 release (Capsule Brain 2.15.12 / AutoLearn v0.4.7).
 
 Covers all areas from the v0.4.6 evidence-repair specification:
 - Version identity
@@ -295,7 +295,7 @@ def sham_policy():
 
 class TestVersionIdentity:
     def test_package_version(self):
-        assert PACKAGE_VERSION == "2.15.11"
+        assert PACKAGE_VERSION == "2.15.12"
 
     def test_autolearn_version(self):
         assert AUTOLEARN_VERSION == "0.3.10"
@@ -306,15 +306,15 @@ class TestVersionIdentity:
     def test_qualification_manifest_has_correct_versions(self):
         assert QUALIFICATION_MANIFEST.exists()
         manifest = json.loads(QUALIFICATION_MANIFEST.read_text())
-        assert manifest["package_version"] == "2.15.11"
+        assert manifest["package_version"] == "2.15.12"
         assert manifest["qualification_version"] == "0.4.7"
 
     def test_version_invariant(self):
         pyproject = (REPO_ROOT / "pyproject.toml").read_text()
         # pyproject version line.
-        assert 'version = "2.15.11"' in pyproject
+        assert 'version = "2.15.12"' in pyproject
         manifest = json.loads(QUALIFICATION_MANIFEST.read_text())
-        assert manifest["package_version"] == PACKAGE_VERSION == "2.15.11"
+        assert manifest["package_version"] == PACKAGE_VERSION == "2.15.12"
         assert manifest["qualification_version"] == AUTOLEARN_QUALIFICATION_VERSION == "0.4.7"
 
     def test_cli_output_shows_correct_version(self):
@@ -326,7 +326,7 @@ class TestVersionIdentity:
             capture_output=True, text=True, timeout=30,
         )
         assert result.returncode == 0
-        assert "2.15.11" in result.stdout
+        assert "2.15.12" in result.stdout
         assert "0.4.7" in result.stdout
 
 

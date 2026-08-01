@@ -25,7 +25,7 @@ from capsule_brain.version import (
 )
 
 # Expected identity for the current analysis build.
-EXPECTED_PACKAGE_VERSION = "2.15.11"
+EXPECTED_PACKAGE_VERSION = "2.15.12"
 EXPECTED_QUALIFICATION_VERSION = "0.4.7"
 
 

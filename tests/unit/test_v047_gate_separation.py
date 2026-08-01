@@ -362,7 +362,7 @@ class TestSafetyEvaluation:
 
 class TestV047VersionIdentity:
     def test_package_version(self):
-        assert PACKAGE_VERSION == "2.15.11"
+        assert PACKAGE_VERSION == "2.15.12"
 
     def test_autolearn_version(self):
         assert AUTOLEARN_VERSION == "0.3.10"

@@ -4,7 +4,7 @@ from __future__ import annotations
 # ---------------------------------------------------------------------------
 # Version
 # ---------------------------------------------------------------------------
-PACKAGE_VERSION = "2.15.11"
+PACKAGE_VERSION = "2.15.12"
 AUTOLEARN_VERSION = "0.3.8"
 QUALIFICATION_VERSION = "0.4.7"
 

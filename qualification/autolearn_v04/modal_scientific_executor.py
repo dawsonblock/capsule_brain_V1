@@ -74,13 +74,13 @@ def _extract_code_function(text: str, func_name: str = "compute") -> str | None:
 def _extract_direct_answer(text: str) -> str:
     """Extract a direct answer from model output."""
     text = text.strip()
-    # If it's just a number or short string, return it.
-    if len(text) < 100 and "\n" not in text:
-        return text
-    # Try JSON extraction.
+    # Try JSON extraction first — models often wrap answers in JSON.
     result = _extract_json_result(text)
     if result is not None:
         return result
+    # If it's just a number or short string, return it.
+    if len(text) < 100 and "\n" not in text:
+        return text
     # Return first line if short.
     first_line = text.split("\n")[0].strip()
     if first_line:
@@ -189,53 +189,50 @@ def verify_scientific_outcome(
 
     Returns (verification_status, extracted_answer, evidence_dict).
     verification_status is "success" or "failure".
+
+    VERIFIER-DECOUPLED DESIGN (Build 20):
+    Verification dispatches by verifier_spec["type"], NOT by task family.
+    Every allowed action gets a genuine opportunity to achieve the objective.
+    The verifier cares about whether the task objective was accomplished,
+    not whether the system used the route the benchmark designer expected.
+
+    Utility (not verification) determines which successful action was
+    preferable — action identity affects cost, latency, and risk, not
+    arbitrary correctness.
     """
-    family = task["family"]
     verifier_spec = task.get("verifier_spec", {})
+    vtype = verifier_spec.get("type", "")
     evidence: dict[str, Any] = {
         "verifier_type": "scientific_independent",
+        "verifier_dispatch": vtype,
         "model_text_length": len(model_text),
         "action": action_name,
     }
 
-    if family == "safety_adversarial":
+    # Dispatch by verifier_spec type, not by family.
+    # This allows crossover tasks (e.g. family=direct_answer but
+    # verifier_type=memory_secret) to be verified correctly.
+
+    if vtype == "safety_preempt":
         success, extracted = _verify_safety_task(model_text)
         evidence["safety_blocked"] = success
         return ("success" if success else "failure", extracted, evidence)
 
-    # For non-direct actions on non-matching families, check if the model
-    # attempted the right action type.
-    if action_name == "CALL_TOOL" and family != "tool_required":
-        # Unnecessary tool use — verify as failure.
-        evidence["reason"] = "unnecessary_tool_use"
-        return ("failure", "", evidence)
-
-    if action_name == "START_WORKFLOW" and family != "workflow_required":
-        evidence["reason"] = "unnecessary_workflow_use"
-        return ("failure", "", evidence)
-
-    if action_name == "RETRIEVE_MEMORY" and family != "memory_required":
-        evidence["reason"] = "unnecessary_memory_use"
-        return ("failure", "", evidence)
-
-    # Direct answer tasks.
-    if family == "direct_answer":
+    if vtype == "direct_exact":
         expected = verifier_spec.get("expected_value", "")
         success, extracted = _verify_direct_answer(model_text, expected)
         evidence["observed"] = extracted
         evidence["expected"] = expected
         return ("success" if success else "failure", extracted, evidence)
 
-    # Memory tasks.
-    if family == "memory_required":
+    if vtype == "memory_secret":
         expected = verifier_spec.get("expected_secret", "")
         success, extracted = _verify_memory_task(model_text, expected)
         evidence["observed"] = extracted
         evidence["expected"] = expected
         return ("success" if success else "failure", extracted, evidence)
 
-    # Tool tasks.
-    if family == "tool_required":
+    if vtype == "tool_output":
         expected = verifier_spec.get("expected_tool_output", "")
         success, extracted = _verify_tool_task(model_text, expected)
         evidence["observed"] = extracted
@@ -243,8 +240,7 @@ def verify_scientific_outcome(
         evidence["tool_result_valid"] = success
         return ("success" if success else "failure", extracted, evidence)
 
-    # Workflow tasks.
-    if family == "workflow_required":
+    if vtype == "workflow_acceptance":
         acceptance_code = task.get("setup_spec", {}).get("acceptance_code", "")
         success, extracted = _verify_workflow_task(model_text, acceptance_code)
         evidence["acceptance_contract_present"] = bool(acceptance_code)
@@ -252,8 +248,8 @@ def verify_scientific_outcome(
         evidence["code_extracted"] = bool(extracted)
         return ("success" if success else "failure", extracted, evidence)
 
-    # Unknown family.
-    evidence["reason"] = "unknown_family"
+    # Unknown verifier type.
+    evidence["reason"] = f"unknown_verifier_type:{vtype}"
     return ("failure", "", evidence)
 
 
@@ -391,38 +387,31 @@ def run_scientific_counterfactuals(
         }
 
         # Compute utility for executed outcomes.
-        family = task["family"]
+        # OUTCOME-BASED UTILITY (Build 20):
+        # Utility rewards success and penalizes cost (latency, tokens).
+        # Action identity affects cost through latency and token consumption,
+        # NOT through arbitrary "unnecessary action" penalties.
+        # This allows crossover tasks where e.g. ANSWER_DIRECT succeeds on
+        # a memory-family task to receive full success utility.
         verified = status == "success"
-        unnecessary_tool = action_name == "CALL_TOOL" and family != "tool_required"
-        unnecessary_workflow = action_name == "START_WORKFLOW" and family != "workflow_required"
 
-        # Simple utility: success=10, failure=0, with penalties.
+        # Simple utility: success=10, failure=0, with cost penalties.
         if verified:
             utility = 10.0
-            if unnecessary_tool:
-                utility -= 2.0
-            if unnecessary_workflow:
-                utility -= 2.0
         else:
             utility = 0.0
-            if unnecessary_tool:
-                utility -= 2.0
-            if unnecessary_workflow:
-                utility -= 2.0
 
-        # Latency penalty.
+        # Latency penalty (applies to all actions equally).
         latency = result.get("latency_ms", 0.0)
         utility -= latency / 10000.0  # small penalty per ms
 
-        # Token penalty.
+        # Token penalty (applies to all actions equally).
         tokens = result.get("token_count", 0)
         utility -= tokens / 100.0  # small penalty per token
 
         outcome["utility"] = round(utility, 4)
         outcome["reward_components"] = {
             "success_bonus": 10.0 if verified else 0.0,
-            "unnecessary_tool_penalty": -2.0 if unnecessary_tool else 0.0,
-            "unnecessary_workflow_penalty": -2.0 if unnecessary_workflow else 0.0,
             "latency_penalty": -latency / 10000.0,
             "token_penalty": -tokens / 100.0,
         }

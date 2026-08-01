@@ -1107,9 +1107,20 @@ def _allocate_scientific_split(
     *,
     n_crossover: int,
 ) -> list[BenchmarkTask]:
+    """Allocate tasks for a single split.
+
+    The total number of tasks returned equals n exactly:
+      n_plain = n - 4 (within-family crossovers) - 2*n_matched_pairs
+    where n_matched_pairs = min(3, max(1, n//15)).
+    This ensures requested split size matches actual split size.
+    """
     tasks: list[BenchmarkTask] = []
-    n_crossover = min(n_crossover, n)
-    n_plain = n - n_crossover
+
+    # Reserve space for crossovers and matched pairs.
+    n_within_family = min(4, len(_WITHIN_FAMILY_CROSSOVERS))
+    n_matched_pairs = min(len(_MATCHED_PAIR_BUILDERS), max(1, n // 15))
+    n_aux = n_within_family + 2 * n_matched_pairs
+    n_plain = max(0, n - n_aux)
 
     # Direct answer tasks: reasoning-based types that LLMs can actually do.
     direct_types = [
@@ -1225,5 +1236,49 @@ def build_scientific_benchmark(
         tid = f"safety_scientific_{i:04d}"
         rng_local = random.Random(rng.getrandbits(31))
         tasks.append(_scientific_safety_task(tid, "safety", rng_local))
+
+    # --- Benchmark self-validation (Build 20) ---
+    # Assert that every crossover task's intended optimal action can
+    # actually pass the verifier under the new verifier-decoupled design.
+    # This catches verifier-benchmark inconsistencies before running
+    # expensive model experiments.
+    _VERIFIER_TO_OPTIMAL_ACTION = {
+        "direct_exact": "ANSWER_DIRECT",
+        "memory_secret": "RETRIEVE_MEMORY",
+        "tool_output": "CALL_TOOL",
+        "workflow_acceptance": "START_WORKFLOW",
+        "safety_preempt": "ANSWER_DIRECT",
+    }
+    _FAMILY_NATURAL_ACTION = {
+        "direct_answer": "ANSWER_DIRECT",
+        "memory_required": "RETRIEVE_MEMORY",
+        "tool_required": "CALL_TOOL",
+        "workflow_required": "START_WORKFLOW",
+    }
+    n_crossovers_validated = 0
+    n_crossovers_broken = 0
+    for t in tasks:
+        vtype = t.verifier_spec.get("type", "")
+        natural = _FAMILY_NATURAL_ACTION.get(t.family, "")
+        optimal = _VERIFIER_TO_OPTIMAL_ACTION.get(vtype, "")
+        # If this is a crossover (family's natural action != verifier's optimal action)
+        if natural and optimal and natural != optimal:
+            n_crossovers_validated += 1
+            # Verify that the verifier_spec has the required fields for
+            # the intended verification type.
+            if vtype == "direct_exact" and not t.verifier_spec.get("expected_value"):
+                n_crossovers_broken += 1
+            elif vtype == "memory_secret" and not t.verifier_spec.get("expected_secret"):
+                n_crossovers_broken += 1
+            elif vtype == "tool_output" and not t.verifier_spec.get("expected_tool_output"):
+                n_crossovers_broken += 1
+            elif vtype == "workflow_acceptance" and not (t.setup_spec or {}).get("acceptance_code"):
+                n_crossovers_broken += 1
+    if n_crossovers_broken > 0:
+        raise ValueError(
+            f"Benchmark self-validation FAILED: {n_crossovers_broken}/{n_crossovers_validated} "
+            f"crossover tasks have verifier_spec inconsistent with intended optimal action. "
+            f"The verifier cannot verify the intended action. Fix the benchmark before running."
+        )
 
     return tasks

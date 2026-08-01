@@ -173,7 +173,7 @@ class QualificationVerdict:
     def to_machine_verdict(self) -> dict[str, Any]:
         """Machine-readable verdict per the spec."""
         return {
-            "release": "2.15.11",
+            "release": "2.15.12",
             "autolearn": "0.3.10",
             "qualification": "0.4.7",
             "protocol": "0.4.7",
