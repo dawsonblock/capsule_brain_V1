@@ -272,7 +272,7 @@ def _blocked_result(reason: str) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate Gate A (causal AutoLearn).")
     parser.add_argument("--artifacts-dir", default="artifacts_v04")
-    parser.add_argument("--mode", choices=["smoke", "qualification"], default="qualification")
+    parser.add_argument("--mode", choices=["smoke", "infrastructure", "scientific", "scientific-mini"], default="scientific")
     parser.add_argument("--runtime", choices=["real", "simulated"], default="real")
     parser.add_argument("--provider", default="qual_grounded")
     parser.add_argument("--model", default="qual-grounded-v04")
