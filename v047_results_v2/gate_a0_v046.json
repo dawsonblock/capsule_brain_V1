@@ -1,0 +1,247 @@
+{
+  "autolearn_qualification_version": "0.4.7",
+  "baseline_mean_utility": -0.9829099999999997,
+  "candidate_mean_utility": -0.7189099999999998,
+  "delta_candidate": {
+    "ci_high": 0.4715,
+    "ci_low": 0.128,
+    "epsilon": 0.01,
+    "mean": 0.264,
+    "median": 0.2545,
+    "n_bootstrap": 10000,
+    "n_groups": 20,
+    "n_samples": 20,
+    "passes_threshold": true,
+    "std_error": 0.09228972
+  },
+  "delta_candidate_sham": {
+    "ci_high": 5.0255,
+    "ci_low": 2.1005,
+    "epsilon": 0.0,
+    "mean": 3.415,
+    "median": 3.411,
+    "n_bootstrap": 10000,
+    "n_groups": 20,
+    "n_samples": 20,
+    "passes_threshold": true,
+    "std_error": 0.75599479
+  },
+  "delta_sham": {
+    "ci_high": -1.709,
+    "ci_low": -4.814,
+    "epsilon": 0.0,
+    "mean": -3.151,
+    "median": -3.12,
+    "n_bootstrap": 10000,
+    "n_groups": 20,
+    "n_samples": 20,
+    "passes_threshold": false,
+    "std_error": 0.79785366
+  },
+  "family_results": {
+    "direct_answer": {
+      "ci_high": 0.82222222,
+      "ci_low": 0.25555556,
+      "epsilon": 0.0,
+      "mean": 0.44555556,
+      "median": 0.44555556,
+      "n_bootstrap": 10000,
+      "n_groups": 9,
+      "n_samples": 9,
+      "passes_threshold": true,
+      "std_error": 0.17808116
+    },
+    "memory_required": {
+      "ci_high": 0.0,
+      "ci_low": 0.0,
+      "epsilon": 0.0,
+      "mean": 0.0,
+      "median": 0.0,
+      "n_bootstrap": 10000,
+      "n_groups": 2,
+      "n_samples": 2,
+      "passes_threshold": false,
+      "std_error": 0.0
+    },
+    "tool_required": {
+      "ci_high": 0.32,
+      "ci_low": 0.3125,
+      "epsilon": 0.0,
+      "mean": 0.3175,
+      "median": 0.3175,
+      "n_bootstrap": 10000,
+      "n_groups": 4,
+      "n_samples": 4,
+      "passes_threshold": true,
+      "std_error": 0.00216968
+    },
+    "workflow_required": {
+      "ci_high": 0.0,
+      "ci_low": 0.0,
+      "epsilon": 0.0,
+      "mean": 0.0,
+      "median": 0.0,
+      "n_bootstrap": 10000,
+      "n_groups": 5,
+      "n_samples": 5,
+      "passes_threshold": false,
+      "std_error": 0.0
+    }
+  },
+  "gates": [
+    {
+      "category": "statistical_superiority",
+      "detail": {
+        "ci_low": 0.12799999999999997,
+        "epsilon": 0.01,
+        "mean_delta": 0.26400000000000007
+      },
+      "name": "gate_a_candidate_vs_baseline_lcb",
+      "status": "pass"
+    },
+    {
+      "category": "statistical_superiority",
+      "detail": {
+        "ci_low": 2.1004999999999994,
+        "mean_delta": 3.415
+      },
+      "name": "gate_a_candidate_vs_sham_lcb",
+      "status": "pass"
+    },
+    {
+      "category": "statistical_superiority",
+      "detail": {
+        "ci_low": 0.0,
+        "mean_delta": 0.0
+      },
+      "name": "gate_a_success_rate_improvement",
+      "status": "pass"
+    },
+    {
+      "category": "regression",
+      "detail": {
+        "family_results": {
+          "direct_answer": {
+            "ci_high": 0.82222222,
+            "ci_low": 0.25555556,
+            "epsilon": 0.0,
+            "mean": 0.44555556,
+            "median": 0.44555556,
+            "n_bootstrap": 10000,
+            "n_groups": 9,
+            "n_samples": 9,
+            "passes_threshold": true,
+            "std_error": 0.17808116
+          },
+          "memory_required": {
+            "ci_high": 0.0,
+            "ci_low": 0.0,
+            "epsilon": 0.0,
+            "mean": 0.0,
+            "median": 0.0,
+            "n_bootstrap": 10000,
+            "n_groups": 2,
+            "n_samples": 2,
+            "passes_threshold": false,
+            "std_error": 0.0
+          },
+          "tool_required": {
+            "ci_high": 0.32,
+            "ci_low": 0.3125,
+            "epsilon": 0.0,
+            "mean": 0.3175,
+            "median": 0.3175,
+            "n_bootstrap": 10000,
+            "n_groups": 4,
+            "n_samples": 4,
+            "passes_threshold": true,
+            "std_error": 0.00216968
+          },
+          "workflow_required": {
+            "ci_high": 0.0,
+            "ci_low": 0.0,
+            "epsilon": 0.0,
+            "mean": 0.0,
+            "median": 0.0,
+            "n_bootstrap": 10000,
+            "n_groups": 5,
+            "n_samples": 5,
+            "passes_threshold": false,
+            "std_error": 0.0
+          }
+        },
+        "regressions": []
+      },
+      "name": "gate_a_no_critical_family_regression",
+      "status": "pass"
+    },
+    {
+      "category": "evidence_completeness",
+      "detail": {
+        "max_share": 0.55
+      },
+      "name": "gate_a_action_diversity",
+      "status": "pass"
+    },
+    {
+      "category": "statistical_superiority",
+      "detail": {
+        "sham_ci_low": -4.814,
+        "sham_mean_delta": -3.151
+      },
+      "name": "gate_a_sham_neutrality",
+      "status": "pass"
+    },
+    {
+      "category": "evidence_completeness",
+      "detail": {
+        "n_missing": 0
+      },
+      "name": "gate_a_coverage_complete",
+      "status": "pass"
+    },
+    {
+      "category": "safety",
+      "detail": {
+        "n_missing": 0,
+        "safety_status": "evaluated"
+      },
+      "name": "gate_a_safety_no_increase",
+      "status": "pass"
+    },
+    {
+      "category": "evidence_completeness",
+      "detail": {
+        "oracle_gap": 0.0
+      },
+      "name": "gate_a_oracle_gap_nonnegative",
+      "status": "pass"
+    }
+  ],
+  "is_infrastructure_provider": false,
+  "model": "Qwen/Qwen2.5-3B-Instruct",
+  "oracle_mean_utility": -0.7189099999999998,
+  "package_version": "2.15.11",
+  "primary_gate_count": 9,
+  "primary_gates_blocked": 0,
+  "primary_gates_failed": 0,
+  "primary_gates_passed": 9,
+  "protocol_version": "0.4.7",
+  "provider": "real_model",
+  "schema_version": "gate-a-result/1",
+  "sham_mean_utility": -4.133909999999999,
+  "status": "PASS",
+  "success_rate_delta": {
+    "ci_high": 0.0,
+    "ci_low": 0.0,
+    "epsilon": 0.0,
+    "mean": 0.0,
+    "median": 0.0,
+    "n_bootstrap": 10000,
+    "n_groups": 20,
+    "n_samples": 20,
+    "passes_threshold": false,
+    "std_error": 0.0
+  },
+  "summary_decision": "PASS"
+}

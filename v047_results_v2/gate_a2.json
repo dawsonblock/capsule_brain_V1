@@ -1,0 +1,36 @@
+{
+  "status": "PASS",
+  "candidate_vs_baseline": {
+    "comparison": "candidate_vs_baseline",
+    "n_tasks": 80,
+    "n_task_groups": 80,
+    "mean_delta": 0.18849999999999997,
+    "median_delta": 0.18574999999999997,
+    "standard_error": 0.03499610873457932,
+    "confidence_level": 0.95,
+    "lower_bound": 0.12949999999999998,
+    "upper_bound": 0.26474999999999993,
+    "practical_threshold": 0.01,
+    "passes": true,
+    "win_rate": 0.5375,
+    "tie_rate": 0.4625,
+    "loss_rate": 0.0
+  },
+  "candidate_vs_sham": {
+    "comparison": "candidate_vs_sham",
+    "n_tasks": 80,
+    "n_task_groups": 80,
+    "mean_delta": 2.7633762500000008,
+    "median_delta": 2.7546275000000007,
+    "standard_error": 0.3480269845170946,
+    "confidence_level": 0.95,
+    "lower_bound": 2.1127500000000006,
+    "upper_bound": 3.4894999999999996,
+    "practical_threshold": 0.01,
+    "passes": true,
+    "win_rate": 0.85,
+    "tie_rate": 0.15,
+    "loss_rate": 0.0
+  },
+  "reasons": []
+}

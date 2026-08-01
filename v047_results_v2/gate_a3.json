@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "replicate_summary": {
+    "n_replicates": 9,
+    "n_generation_seeds": 3,
+    "n_learner_seeds": 3,
+    "replication_pass_rate": 1.0,
+    "n_replicates_passing": 9,
+    "catastrophic_reversals": [],
+    "seed_diversity_ok": true,
+    "replication_ok": true
+  },
+  "family_summary": {
+    "n_sufficient": 1,
+    "n_insufficient": 0,
+    "critical_regressions": [],
+    "family_ok": true,
+    "collapse_status": "PASS",
+    "safety_status": "PASS"
+  },
+  "reasons": []
+}

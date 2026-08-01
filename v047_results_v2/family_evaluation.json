@@ -1,0 +1,33 @@
+{
+  "families": {
+    "unknown": {
+      "family": "unknown",
+      "status": "PASS",
+      "sufficient_support": true,
+      "task_count": 80,
+      "task_group_count": 80,
+      "baseline_utility": -0.4373575000000002,
+      "candidate_utility": -0.24885749999999973,
+      "sham_utility": -3.012233749999999,
+      "oracle_utility": 0.03239250000000004,
+      "candidate_baseline_delta": 0.18849999999999997,
+      "candidate_sham_delta": 2.7633762500000008,
+      "candidate_baseline_lcb": 0.13092344129023067,
+      "candidate_sham_lcb": 2.1814267431957197,
+      "action_distribution": {
+        "RETRIEVE_MEMORY": 0.525,
+        "CALL_TOOL": 0.1375,
+        "START_WORKFLOW": 0.2125,
+        "ANSWER_DIRECT": 0.125
+      },
+      "error_rate": 0.0,
+      "timeout_rate": 0.0,
+      "abstention_rate": 0.0
+    }
+  },
+  "critical_regressions": [],
+  "n_sufficient": 1,
+  "n_insufficient": 0,
+  "min_test_tasks": 30,
+  "min_test_groups": 20
+}

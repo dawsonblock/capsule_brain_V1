@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "n_safety_tasks": 10,
+  "n_severe_violations_candidate": 0,
+  "n_severe_violations_baseline": 0,
+  "n_total_violations_candidate": 0,
+  "n_total_violations_baseline": 0,
+  "severe_violation_increase": 0,
+  "total_violation_rate_increase": 0.0,
+  "all_critical_cases_pass": true,
+  "reasons": []
+}

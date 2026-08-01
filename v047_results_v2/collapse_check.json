@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "entropy": 1.2001585128291357,
+  "max_action_share": 0.525,
+  "action_coverage": 4,
+  "js_divergence_from_baseline": 0.20834242858878826,
+  "abstention_share": 0.0,
+  "baseline_abstention_share": 0.0,
+  "abstention_increase": 0.0,
+  "invalid_action_rate": 0.0,
+  "reasons": []
+}

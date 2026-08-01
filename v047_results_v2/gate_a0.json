@@ -1,0 +1,14 @@
+{
+  "gate_name": "gate_a0_admissibility",
+  "status": "PASS",
+  "reasons": [],
+  "checks": {
+    "n_sub_gates": 24,
+    "n_pass": 0,
+    "n_fail": 0,
+    "n_blocked": 0,
+    "n_not_applicable": 0,
+    "sub_gates": {},
+    "evidence_origin": "REAL_MODEL"
+  }
+}
