@@ -814,6 +814,8 @@ def run_local_gpu_scientific_pipeline(
 
     # --- Leave-family-out evaluation ---
     # Train on all families except one, evaluate on the held-out family.
+    # Define test_task_dicts early for leave-family-out evaluation.
+    test_task_dicts = [t for t in task_dicts if t.get("split") == "test"]
     # A family lookup policy should collapse; a genuine state-conditioned
     # policy has at least a chance to transfer.
     all_families = sorted(family_action_counts.keys())
