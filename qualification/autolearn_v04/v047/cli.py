@@ -524,9 +524,19 @@ def _cmd_evaluate(args) -> int:
     # Build replicate results from available evidence.
     # In a full run, replicates come from multiple seeds. Here we build
     # a single-replicate summary from the available candidate results.
-    replicate_results = _build_replicate_results(
-        candidate_results, baseline_results, sham_results, config
-    )
+    # If a replicate_results.json file exists in the evidence directory,
+    # load it instead (produced by multi-seed runs).
+    replicate_file = Path(args.evidence_dir) / "replicate_results.json"
+    if replicate_file.exists():
+        replicate_results = _load_json_file(replicate_file) or []
+        if not replicate_results:
+            replicate_results = _build_replicate_results(
+                candidate_results, baseline_results, sham_results, config
+            )
+    else:
+        replicate_results = _build_replicate_results(
+            candidate_results, baseline_results, sham_results, config
+        )
     a3_result = evaluate_gate_a3(
         replicate_results=replicate_results,
         family_evaluation=family_eval,
